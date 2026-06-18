@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KodMaymunu - Algoritma Adası</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Sidebar: Level Map & Progress -->
+  <aside>
+    <div class="sidebar-container">
+      <div class="sidebar-header">
+        <h2>KodMaymunu</h2>
+        <p>Algoritma Adası Macerası</p>
+      </div>
+      <div class="level-list" id="level-list">
+        <!-- Dynamically populated level items -->
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Workspace -->
+  <main>
+    <header>
+      <div class="level-nav">
+        <button id="btn-prev-level" class="btn-icon" title="Önceki Seviye" aria-label="Önceki Seviye">◀</button>
+        <h1 id="active-level-title" class="active-level-title">Seviye 1</h1>
+        <button id="btn-next-level" class="btn-icon" title="Sonraki Seviye" aria-label="Sonraki Seviye">▶</button>
+      </div>
+
+      <div class="header-controls">
+        <button id="btn-sound-toggle" class="btn-secondary" title="Sesi Aç/Kapat">
+          <span id="sound-icon">🔊</span> Ses
+        </button>
+        <button id="btn-reset-code" class="btn-secondary" title="Kodu Sıfırla">
+          <span>🔄</span> Sıfırla
+        </button>
+        <a href="https://oyunlar.perinet.org" class="btn-secondary" style="text-decoration: none;">
+          <span>🏠</span> Portala Dön
+        </a>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <!-- Left side: Game Arena -->
+      <div class="arena-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span style="font-size: 1.2rem;">🌴</span> Algoritma Dünyası
+          </div>
+          <div id="banana-counter" style="font-size: 0.9rem; font-weight: 600; color: var(--accent);">
+            🍌 Muzlar: 0 / 0
+          </div>
+        </div>
+        <div id="instructions-card" class="instructions-card">
+          <!-- Dynamically populated level instruction text -->
+        </div>
+        <div class="canvas-container">
+          <canvas id="game-canvas"></canvas>
+        </div>
+      </div>
+
+      <!-- Right side: IDE / Editor Panel -->
+      <div class="ide-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span style="font-size: 1.2rem;">💻</span> Kod Düzenleyici
+          </div>
+          <div id="code-length-display" style="font-size: 0.85rem; color: var(--text-secondary);">
+            Karakter: 0
+          </div>
+        </div>
+
+        <!-- Editor Container -->
+        <div class="editor-container">
+          <div id="line-gutter">
+            <!-- Line numbers dynamically added here -->
+          </div>
+          <div class="editor-inputs">
+            <textarea id="code-editor" spellcheck="false" placeholder="// Algoritmanızı buraya yazın veya butonları kullanın..."></textarea>
+            <!-- Overlay element highlighting lines during execution -->
+            <div id="code-display-preview"></div>
+          </div>
+        </div>
+
+        <!-- Quick Code Buttons -->
+        <div class="quick-commands" id="quick-commands">
+          <span>Hızlı Ekle:</span>
+          <!-- Dynamically displayed based on allowed commands of the level -->
+          <button class="btn-command" data-cmd="ilerle()" id="cmd-ilerle">ilerle()</button>
+          <button class="btn-command" data-cmd="solaDon()" id="cmd-solaDon">solaDon()</button>
+          <button class="btn-command" data-cmd="sagaDon()" id="cmd-sagaDon">sagaDon()</button>
+          <button class="btn-command" data-cmd="tekrarla(3) {\n  ilerle()\n}" id="cmd-tekrarla">tekrarla() {}</button>
+        </div>
+
+        <!-- Code Run Controls -->
+        <div class="controls-bar">
+          <div class="action-buttons">
+            <button id="btn-run" class="btn-primary">
+              <span style="font-size: 1.1rem;">▶</span> Çalıştır
+            </button>
+            <button id="btn-stop" class="btn-danger" disabled>
+              <span style="font-size: 1.1rem;">⏹</span> Durdur
+            </button>
+          </div>
+
+          <div class="speed-control">
+            <span>Hız:</span>
+            <input type="range" id="speed-slider" min="150" max="1000" step="50" value="500" title="Animasyon Hızı">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom console output -->
+    <div class="console-panel">
+      <div class="console-header">
+        <span>KONSOL ÇIKTISI</span>
+        <button id="btn-clear-console" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.75rem;">Temizle</button>
+      </div>
+      <div class="console-output" id="console-output">
+        <!-- Log messages -->
+      </div>
+    </div>
+  </main>
+
+  <!-- Level Success Popup Modal -->
+  <div class="modal-overlay" id="success-modal">
+    <div class="modal-content">
+      <div class="modal-icon">🏆</div>
+      <h2 class="modal-title" id="modal-title">Seviye Tamamlandı!</h2>
+      <div class="modal-stars" id="modal-stars">
+        <span class="star-big">★</span>
+        <span class="star-big">★</span>
+        <span class="star-big">★</span>
+      </div>
+      <p class="modal-desc" id="modal-desc">Harika bir iş çıkardın Mojo hedefine ulaştı.</p>
+      <div class="modal-buttons">
+        <button id="modal-btn-retry" class="btn-secondary">Tekrar Oyna</button>
+        <button id="modal-btn-next" class="btn-primary">Sonraki Seviye</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script Modules setup -->
+  <script type="module">
+    import { LEVELS, Game } from './game.js?v=20260618-auto-banana';
+    import { soundEngine } from './audio.js?v=20260618-auto-banana';
+
+    let game;
+    let unlockedLevels = [0]; // default unlocked level 0 (Level 1)
+    let completedStars = {}; // Map of level index -> star count
+
+    // DOM References
+    const editor = document.getElementById('code-editor');
+    const gutter = document.getElementById('line-gutter');
+    const preview = document.getElementById('code-display-preview');
+    const runBtn = document.getElementById('btn-run');
+    const stopBtn = document.getElementById('btn-stop');
+    const speedSlider = document.getElementById('speed-slider');
+    const soundBtn = document.getElementById('btn-sound-toggle');
+    const resetBtn = document.getElementById('btn-reset-code');
+    const clearConsoleBtn = document.getElementById('btn-clear-console');
+    const consoleOutput = document.getElementById('console-output');
+    
+    const prevLvlBtn = document.getElementById('btn-prev-level');
+    const nextLvlBtn = document.getElementById('btn-next-level');
+    const levelTitle = document.getElementById('active-level-title');
+    const bananaCounter = document.getElementById('banana-counter');
+    const instructionsCard = document.getElementById('instructions-card');
+    
+    // Modal References
+    const modal = document.getElementById('success-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const modalDesc = document.getElementById('modal-desc');
+    const modalStars = document.getElementById('modal-stars').children;
+    const modalRetryBtn = document.getElementById('modal-btn-retry');
+    const modalNextBtn = document.getElementById('modal-btn-next');
+
+    // Initialize Page
+    window.addEventListener('DOMContentLoaded', () => {
+      game = new Game('game-canvas');
+
+      // Load progress
+      const savedUnlocked = localStorage.getItem('kodmaymunu_unlocked');
+      if (savedUnlocked) {
+        unlockedLevels = JSON.parse(savedUnlocked);
+      }
+      const savedStars = localStorage.getItem('kodmaymunu_stars');
+      if (savedStars) {
+        completedStars = JSON.parse(savedStars);
+      }
+
+      setupEventListeners();
+      loadActiveLevel();
+    });
+
+    function setSafeHTML(element, htmlString) {
+      element.replaceChildren();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlString, 'text/html');
+      while (doc.body.firstChild) {
+        element.appendChild(doc.body.firstChild);
+      }
+    }
+
+    function setupEventListeners() {
+      // Sync Gutter & Textarea line heights on input
+      editor.addEventListener('input', () => {
+        updateLineNumbers();
+        updateCharCounter();
+      });
+
+      // Synchronize editor scrolling with line numbers
+      editor.addEventListener('scroll', () => {
+        gutter.scrollTop = editor.scrollTop;
+      });
+
+      // Command click listeners
+      document.querySelectorAll('.btn-command').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const cmd = btn.getAttribute('data-cmd');
+          insertCommand(cmd);
+        });
+      });
+
+      // Execution action events
+      runBtn.addEventListener('click', () => {
+        const code = editor.value;
+        // Lock textarea, construct overlay preview
+        setupExecutionPreview(code);
+        
+        runBtn.disabled = true;
+        stopBtn.disabled = false;
+        disableQuickButtons(true);
+        
+        game.runCodeText(code);
+      });
+
+      stopBtn.addEventListener('click', () => {
+        game.stop();
+      });
+
+      resetBtn.addEventListener('click', () => {
+        if (confirm("Yazdığınız tüm kodlar silinecek. Emin misiniz?")) {
+          editor.value = '';
+          updateLineNumbers();
+          updateCharCounter();
+          logToConsole("Kod düzenleyici sıfırlandı.", "info");
+        }
+      });
+
+      clearConsoleBtn.addEventListener('click', () => {
+        consoleOutput.replaceChildren();
+      });
+
+      // Navigation
+      prevLvlBtn.addEventListener('click', () => {
+        if (game.currentLevelIdx > 0) {
+          game.loadLevel(game.currentLevelIdx - 1);
+          loadActiveLevel();
+        }
+      });
+
+      nextLvlBtn.addEventListener('click', () => {
+        if (game.currentLevelIdx < LEVELS.length - 1 && unlockedLevels.includes(game.currentLevelIdx + 1)) {
+          game.loadLevel(game.currentLevelIdx + 1);
+          loadActiveLevel();
+        }
+      });
+
+      // Speed Slider
+      speedSlider.addEventListener('input', (e) => {
+        game.executionSpeed = parseInt(e.target.value, 10);
+      });
+
+      // Sound Engine toggle
+      soundBtn.addEventListener('click', () => {
+        const enabled = soundEngine.toggleSound();
+        const icon = document.getElementById('sound-icon');
+        icon.textContent = enabled ? '🔊' : '🔇';
+        logToConsole(enabled ? "Sesler açıldı." : "Sesler kapatıldı.", "info");
+      });
+
+      // Modal buttons
+      modalRetryBtn.addEventListener('click', () => {
+        modal.classList.remove('show');
+        game.stop();
+      });
+
+      modalNextBtn.addEventListener('click', () => {
+        modal.classList.remove('show');
+        if (game.currentLevelIdx < LEVELS.length - 1) {
+          game.loadLevel(game.currentLevelIdx + 1);
+          loadActiveLevel();
+        }
+      });
+
+      // Game engine callbacks
+      game.onLogMessage = (msg, type) => {
+        logToConsole(msg, type);
+      };
+
+      game.onBananaChange = () => {
+        updateBananaCounter();
+      };
+
+      game.onExecutionStep = (lineNum) => {
+        highlightExecutingLine(lineNum);
+      };
+
+      game.onExecutionFinished = () => {
+        restoreEditorState();
+      };
+
+      game.onLevelComplete = (stars, lineCount) => {
+        restoreEditorState();
+        showVictoryScreen(stars, lineCount);
+      };
+    }
+
+    function loadActiveLevel() {
+      const idx = game.currentLevelIdx;
+      const level = LEVELS[idx];
+
+      // Update titles/headers
+      levelTitle.textContent = level.title;
+      setSafeHTML(instructionsCard, level.instructions);
+
+      // Level limits
+      prevLvlBtn.disabled = idx === 0;
+      nextLvlBtn.disabled = idx === LEVELS.length - 1 || !unlockedLevels.includes(idx + 1);
+
+      updateBananaCounter();
+
+      // Populate sidebar list
+      renderSidebarList();
+
+      // Configure quick buttons according to allowed level actions
+      configureQuickButtons(level.allowedCommands);
+
+      // Restore code template or sample if empty
+      const savedCodeKey = `kodmaymunu_code_lvl_${idx}`;
+      const savedCode = localStorage.getItem(savedCodeKey);
+      if (savedCode) {
+        editor.value = savedCode;
+      } else {
+        // Build initial placeholder hint
+        editor.value = `// Seviye ${idx + 1}\n// Muzlar temas edince otomatik toplanır.\n`;
+      }
+
+      updateLineNumbers();
+      updateCharCounter();
+      logToConsole(`${level.title} yüklendi. Mojonun talimatlarını izleyin.`, "info");
+    }
+
+    function renderSidebarList() {
+      const listContainer = document.getElementById('level-list');
+      listContainer.replaceChildren();
+
+      LEVELS.forEach((lvl, i) => {
+        const item = document.createElement('div');
+        item.className = 'level-item';
+        if (i === game.currentLevelIdx) {
+          item.classList.add('active');
+        }
+
+        const isLocked = i > 0 && !unlockedLevels.includes(i);
+        if (isLocked) {
+          item.classList.add('locked');
+        }
+
+        // Info container
+        const info = document.createElement('div');
+        info.className = 'level-info';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'level-name';
+        nameSpan.textContent = lvl.title;
+        info.appendChild(nameSpan);
+
+        // Render stars container
+        const starsContainer = document.createElement('div');
+        starsContainer.className = 'level-stars';
+        
+        const earnedStarsCount = completedStars[i] || 0;
+        for (let s = 1; s <= 3; s++) {
+          const starIcon = document.createElement('span');
+          starIcon.className = 'star';
+          if (s <= earnedStarsCount) {
+            starIcon.classList.add('earned');
+          }
+          starIcon.textContent = '★';
+          starsContainer.appendChild(starIcon);
+        }
+        info.appendChild(starsContainer);
+        item.appendChild(info);
+
+        // Add lock status icon
+        if (isLocked) {
+          const lock = document.createElement('span');
+          lock.className = 'lock-icon';
+          lock.textContent = '🔒';
+          item.appendChild(lock);
+        }
+
+        // Click handler
+        if (!isLocked) {
+          item.addEventListener('click', () => {
+            // Save current code before switching
+            saveCurrentCode();
+            game.loadLevel(i);
+            loadActiveLevel();
+          });
+        }
+
+        listContainer.appendChild(item);
+      });
+    }
+
+    function saveCurrentCode() {
+      const idx = game.currentLevelIdx;
+      localStorage.setItem(`kodmaymunu_code_lvl_${idx}`, editor.value);
+    }
+
+    function updateBananaCounter() {
+      const activeLevel = LEVELS[game.currentLevelIdx];
+      const totalBananas = activeLevel.grid.join('').split('B').length - 1;
+      const collectedCount = game.bananas.filter(b => b.collected).length;
+      bananaCounter.textContent = `🍌 Muzlar: ${collectedCount} / ${totalBananas}`;
+    }
+
+    function configureQuickButtons(allowedCommands) {
+      // Allowed keys map
+      const btns = {
+        "ilerle": document.getElementById('cmd-ilerle'),
+        "solaDon": document.getElementById('cmd-solaDon'),
+        "sagaDon": document.getElementById('cmd-sagaDon'),
+        "tekrarla": document.getElementById('cmd-tekrarla')
+      };
+
+      for (const [key, btn] of Object.entries(btns)) {
+        if (btn) {
+          const show = allowedCommands.includes(key);
+          btn.style.display = show ? 'inline-block' : 'none';
+        }
+      }
+    }
+
+    function disableQuickButtons(disable) {
+      document.querySelectorAll('.btn-command').forEach(btn => {
+        btn.disabled = disable;
+      });
+    }
+
+    function insertCommand(cmd) {
+      const startPos = editor.selectionStart;
+      const endPos = editor.selectionEnd;
+      const text = editor.value;
+      const insertText = cmd + '\n';
+      
+      editor.value = text.substring(0, startPos) + insertText + text.substring(endPos);
+      editor.focus();
+      
+      const newCursor = startPos + insertText.length;
+      editor.setSelectionRange(newCursor, newCursor);
+      
+      updateLineNumbers();
+      updateCharCounter();
+      saveCurrentCode();
+    }
+
+    function updateLineNumbers() {
+      const code = editor.value;
+      const lines = code.split('\n');
+      gutter.replaceChildren();
+      for (let i = 1; i <= lines.length; i++) {
+        const num = document.createElement('div');
+        num.textContent = i;
+        num.className = 'line-num';
+        num.id = `line-num-${i}`;
+        gutter.appendChild(num);
+      }
+    }
+
+    function updateCharCounter() {
+      const display = document.getElementById('code-length-display');
+      display.textContent = `Karakter: ${editor.value.length}`;
+    }
+
+    function logToConsole(text, type = 'info') {
+      const line = document.createElement('div');
+      line.className = `log-entry ${type}`;
+      
+      // Timestamp
+      const timeSpan = document.createElement('span');
+      timeSpan.style.opacity = '0.4';
+      timeSpan.style.marginRight = '8px';
+      const now = new Date();
+      timeSpan.textContent = `[${now.toTimeString().split(' ')[0]}]`;
+      
+      const msgSpan = document.createElement('span');
+      msgSpan.textContent = text;
+      
+      line.appendChild(timeSpan);
+      line.appendChild(msgSpan);
+      consoleOutput.appendChild(line);
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+
+    // Overlay code execution runner preview
+    function setupExecutionPreview(code) {
+      preview.replaceChildren();
+      const lines = code.split('\n');
+      
+      lines.forEach((lineText, idx) => {
+        const lineDiv = document.createElement('div');
+        lineDiv.className = 'run-line';
+        lineDiv.id = `run-line-${idx + 1}`;
+
+        const numSpan = document.createElement('span');
+        numSpan.className = 'run-line-num';
+        numSpan.textContent = idx + 1;
+
+        const codeSpan = document.createElement('span');
+        codeSpan.className = 'run-line-code';
+        codeSpan.textContent = lineText;
+
+        lineDiv.appendChild(numSpan);
+        lineDiv.appendChild(codeSpan);
+        preview.appendChild(lineDiv);
+      });
+
+      preview.scrollTop = editor.scrollTop;
+      preview.style.display = 'block';
+    }
+
+    function highlightExecutingLine(lineNum) {
+      // Gutter highlighting
+      document.querySelectorAll('.line-num').forEach(el => el.classList.remove('active'));
+      const activeGutter = document.getElementById(`line-num-${lineNum}`);
+      if (activeGutter) activeGutter.classList.add('active');
+
+      // Overlay container highlighting
+      document.querySelectorAll('.run-line').forEach(el => el.classList.remove('running-active'));
+      const activeLine = document.getElementById(`run-line-${lineNum}`);
+      if (activeLine) {
+        activeLine.classList.add('running-active');
+        // Scroll active preview line into center view
+        activeLine.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      updateBananaCounter();
+    }
+
+    function restoreEditorState() {
+      preview.style.display = 'none';
+      runBtn.disabled = false;
+      stopBtn.disabled = true;
+      disableQuickButtons(false);
+      document.querySelectorAll('.line-num').forEach(el => el.classList.remove('active'));
+      updateBananaCounter();
+      saveCurrentCode();
+    }
+
+    function showVictoryScreen(stars, lineCount) {
+      modalTitle.textContent = `Seviye ${game.currentLevelIdx + 1} Tamamlandı!`;
+      const descHtml = `Mojo hedefe başarıyla ulaştı! Yazdığın satır sayısı: <strong>${lineCount}</strong>.<br>` +
+                       `Bu seviye için ideal satır sayısı: <strong>${LEVELS[game.currentLevelIdx].starRating.three} satır</strong>.`;
+      setSafeHTML(modalDesc, descHtml);
+
+      // Draw stars state
+      for (let i = 0; i < 3; i++) {
+        if (i < stars) {
+          modalStars[i].classList.add('earned');
+        } else {
+          modalStars[i].classList.remove('earned');
+        }
+      }
+
+      // Update unlock progression
+      const currentIdx = game.currentLevelIdx;
+      if (currentIdx < LEVELS.length - 1) {
+        const nextIdx = currentIdx + 1;
+        if (!unlockedLevels.includes(nextIdx)) {
+          unlockedLevels.push(nextIdx);
+          localStorage.setItem('kodmaymunu_unlocked', JSON.stringify(unlockedLevels));
+        }
+      }
+
+      // Save star scores
+      const currentStoredStars = completedStars[currentIdx] || 0;
+      if (stars > currentStoredStars) {
+        completedStars[currentIdx] = stars;
+        localStorage.setItem('kodmaymunu_stars', JSON.stringify(completedStars));
+      }
+
+      // Toggle next button if last level
+      modalNextBtn.style.display = currentIdx === LEVELS.length - 1 ? 'none' : 'block';
+
+      // Update UI state
+      renderSidebarList();
+      prevLvlBtn.disabled = currentIdx === 0;
+      nextLvlBtn.disabled = currentIdx === LEVELS.length - 1 || !unlockedLevels.includes(currentIdx + 1);
+
+      // Show modal
+      modal.classList.add('show');
+    }
+  </script>
+</body>
+</html>
