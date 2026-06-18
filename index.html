@@ -14,6 +14,9 @@
       <div class="sidebar-header">
         <h2>KodMaymunu</h2>
         <p>Algoritma Adası Macerası</p>
+        <div class="stars-summary" id="stars-summary">
+          🏆 <span>0 / 42</span> Yıldız
+        </div>
       </div>
       <div class="level-list" id="level-list">
         <!-- Dynamically populated level items -->
@@ -31,6 +34,9 @@
       </div>
 
       <div class="header-controls">
+        <button id="btn-theme-toggle" class="btn-secondary" title="Temayı Değiştir (Açık/Koyu)">
+          <span id="theme-icon">☀️</span> <span id="theme-text">Açık</span>
+        </button>
         <button id="btn-sound-toggle" class="btn-secondary" title="Sesi Aç/Kapat">
           <span id="sound-icon">🔊</span> Ses
         </button>
@@ -50,8 +56,13 @@
           <div class="panel-title">
             <span style="font-size: 1.2rem;">🌴</span> Algoritma Dünyası
           </div>
-          <div id="banana-counter" style="font-size: 0.9rem; font-weight: 600; color: var(--accent);">
-            🍌 Muzlar: 0 / 0
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <button id="btn-ruler" class="btn-secondary" style="padding: 4px 10px; font-size: 0.85rem;" title="Mesafe Ölçer Cetvel">
+              📏 Cetvel
+            </button>
+            <div id="banana-counter" style="font-size: 0.9rem; font-weight: 600; color: var(--accent);">
+              🍌 Muzlar: 0 / 0
+            </div>
           </div>
         </div>
         <div id="instructions-card" class="instructions-card">
@@ -101,6 +112,12 @@
             <button id="btn-run" class="btn-primary">
               <span style="font-size: 1.1rem;">▶</span> Çalıştır
             </button>
+            <button id="btn-step" class="btn-secondary" title="Kodu adım adım çalıştır">
+              <span style="font-size: 1.1rem;">⏯</span> Adım Adım
+            </button>
+            <button id="btn-smart-route" class="btn-secondary" title="Akıllı rota örneği oluştur">
+              <span style="font-size: 1.1rem;">✦</span> Akıllı Rota
+            </button>
             <button id="btn-stop" class="btn-danger" disabled>
               <span style="font-size: 1.1rem;">⏹</span> Durdur
             </button>
@@ -146,18 +163,30 @@
 
   <!-- Script Modules setup -->
   <script type="module">
-    import { LEVELS, Game } from './game.js?v=20260618-auto-banana';
-    import { soundEngine } from './audio.js?v=20260618-auto-banana';
+    import { LEVELS, Game } from './game.js?v=20260618-smart-route';
+    import { soundEngine } from './audio.js?v=20260618-smart-route';
 
     let game;
     let unlockedLevels = [0]; // default unlocked level 0 (Level 1)
     let completedStars = {}; // Map of level index -> star count
+
+    let expandedGroups = new Set([1]); // default group 1 expanded
+
+    function getLevelGroup(id) {
+      if (id <= 20) return 1;
+      if (id <= 40) return 2;
+      if (id <= 60) return 3;
+      if (id <= 80) return 4;
+      return 5;
+    }
 
     // DOM References
     const editor = document.getElementById('code-editor');
     const gutter = document.getElementById('line-gutter');
     const preview = document.getElementById('code-display-preview');
     const runBtn = document.getElementById('btn-run');
+    const stepBtn = document.getElementById('btn-step');
+    const smartRouteBtn = document.getElementById('btn-smart-route');
     const stopBtn = document.getElementById('btn-stop');
     const speedSlider = document.getElementById('speed-slider');
     const soundBtn = document.getElementById('btn-sound-toggle');
@@ -171,6 +200,9 @@
     const bananaCounter = document.getElementById('banana-counter');
     const instructionsCard = document.getElementById('instructions-card');
     
+    const themeBtn = document.getElementById('btn-theme-toggle');
+    const rulerBtn = document.getElementById('btn-ruler');
+    
     // Modal References
     const modal = document.getElementById('success-modal');
     const modalTitle = document.getElementById('modal-title');
@@ -181,7 +213,16 @@
 
     // Initialize Page
     window.addEventListener('DOMContentLoaded', () => {
+      // Initialize Theme
+      const savedTheme = localStorage.getItem('kodmaymunu_theme') || 'light';
+      if (savedTheme === 'light') {
+        document.body.classList.add('light-theme');
+      } else {
+        document.body.classList.remove('light-theme');
+      }
+
       game = new Game('game-canvas');
+      updateThemeUI(savedTheme);
 
       // Load progress
       const savedUnlocked = localStorage.getItem('kodmaymunu_unlocked');
@@ -226,17 +267,145 @@
         });
       });
 
+      // Theme Toggle Event Listener
+      if (themeBtn) {
+        themeBtn.addEventListener('click', () => {
+          const isLight = document.body.classList.toggle('light-theme');
+          const theme = isLight ? 'light' : 'dark';
+          localStorage.setItem('kodmaymunu_theme', theme);
+          updateThemeUI(theme);
+          if (game) {
+            game.draw();
+          }
+        });
+      }
+
+      // Ruler Toggle Event Listener
+      if (rulerBtn) {
+        rulerBtn.addEventListener('click', () => {
+          if (!game) return;
+          game.rulerActive = !game.rulerActive;
+          rulerBtn.classList.toggle('btn-active', game.rulerActive);
+          if (!game.rulerActive) {
+            game.hoveredCell = null;
+          }
+          game.draw();
+        });
+      }
+
+      // Canvas Ruler Mouse interaction
+      const canvasEl = document.getElementById('game-canvas');
+      if (canvasEl) {
+        canvasEl.addEventListener('mousemove', (e) => {
+          if (!game || !game.rulerActive) return;
+          const rect = canvasEl.getBoundingClientRect();
+          const scaleX = canvasEl.width / rect.width;
+          const scaleY = canvasEl.height / rect.height;
+          const clickX = (e.clientX - rect.left) * scaleX;
+          const clickY = (e.clientY - rect.top) * scaleY;
+          
+          const cellX = Math.floor(clickX / game.tileSize);
+          const cellY = Math.floor(clickY / game.tileSize);
+          
+          if (cellX >= 0 && cellX < game.gridWidth && cellY >= 0 && cellY < game.gridHeight) {
+            if (!game.hoveredCell || game.hoveredCell.x !== cellX || game.hoveredCell.y !== cellY) {
+              game.hoveredCell = { x: cellX, y: cellY };
+              game.draw();
+            }
+          }
+        });
+
+        canvasEl.addEventListener('mouseleave', () => {
+          if (game && game.rulerActive) {
+            game.hoveredCell = null;
+            game.draw();
+          }
+        });
+      }
+
+      // Smart Editor Assistants (Auto-indent and Auto-close brackets)
+      editor.addEventListener('keydown', (e) => {
+        const start = editor.selectionStart;
+        const end = editor.selectionEnd;
+        const text = editor.value;
+
+        if (e.key === 'Enter') {
+          const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+          const currentLine = text.substring(lineStart, start);
+          const indentMatch = currentLine.match(/^(\s*)/);
+          const indent = indentMatch ? indentMatch[1] : '';
+          const extraIndent = currentLine.trim().endsWith('{') ? '  ' : '';
+          
+          e.preventDefault();
+          const insertion = '\n' + indent + extraIndent;
+          editor.value = text.substring(0, start) + insertion + text.substring(end);
+          editor.selectionStart = editor.selectionEnd = start + insertion.length;
+          
+          updateLineNumbers();
+          updateCharCounter();
+        } else if (e.key === '{') {
+          e.preventDefault();
+          editor.value = text.substring(0, start) + '{}' + text.substring(end);
+          editor.selectionStart = editor.selectionEnd = start + 1;
+          
+          updateLineNumbers();
+          updateCharCounter();
+        } else if (e.key === '(') {
+          e.preventDefault();
+          editor.value = text.substring(0, start) + '()' + text.substring(end);
+          editor.selectionStart = editor.selectionEnd = start + 1;
+          
+          updateLineNumbers();
+          updateCharCounter();
+        }
+      });
+
       // Execution action events
       runBtn.addEventListener('click', () => {
         const code = editor.value;
-        // Lock textarea, construct overlay preview
         setupExecutionPreview(code);
         
         runBtn.disabled = true;
+        stepBtn.disabled = true;
+        smartRouteBtn.disabled = true;
         stopBtn.disabled = false;
         disableQuickButtons(true);
         
+        game.isDebugMode = false;
         game.runCodeText(code);
+      });
+
+      stepBtn.addEventListener('click', () => {
+        const code = editor.value;
+        if (!game.isRunning) {
+          setupExecutionPreview(code);
+          runBtn.disabled = true;
+          stepBtn.disabled = false;
+          smartRouteBtn.disabled = true;
+          stopBtn.disabled = false;
+          disableQuickButtons(true);
+          
+          game.isDebugMode = true;
+          game.isWaitingForStep = false;
+          game.runCodeText(code);
+        } else if (game.isWaitingForStep) {
+          game.isWaitingForStep = false;
+          game.step();
+        }
+      });
+
+      smartRouteBtn.addEventListener('click', () => {
+        const routeCode = game.createSmartRouteCode();
+        if (!routeCode) {
+          logToConsole("Bu seviye için güvenli akıllı rota bulunamadı.", "error");
+          return;
+        }
+
+        editor.value = routeCode;
+        updateLineNumbers();
+        updateCharCounter();
+        saveCurrentCode();
+        logToConsole("Akıllı rota örneği editöre eklendi.", "success");
       });
 
       stopBtn.addEventListener('click', () => {
@@ -325,15 +494,40 @@
       const idx = game.currentLevelIdx;
       const level = LEVELS[idx];
 
+      // Auto-expand group of active level
+      const activeGroup = getLevelGroup(level.id);
+      expandedGroups.add(activeGroup);
+
       // Update titles/headers
       levelTitle.textContent = level.title;
-      setSafeHTML(instructionsCard, level.instructions);
+      
+      // Load instructions and tip box
+      let instructionHtml = `<div class="instruction-text">${level.instructions}</div>`;
+      if (level.tip) {
+        instructionHtml += `
+          <div class="tip-box">
+            <span class="tip-icon">💡</span>
+            <div class="tip-content">
+              <strong>Mojo'nun İpucu:</strong> ${level.tip}
+            </div>
+          </div>
+        `;
+      }
+      setSafeHTML(instructionsCard, instructionHtml);
+
+      // Reset ruler state on level switch
+      if (game) {
+        game.rulerActive = false;
+        game.hoveredCell = null;
+        if (rulerBtn) rulerBtn.classList.remove('btn-active');
+      }
 
       // Level limits
       prevLvlBtn.disabled = idx === 0;
       nextLvlBtn.disabled = idx === LEVELS.length - 1 || !unlockedLevels.includes(idx + 1);
 
       updateBananaCounter();
+      updateStarsSummary();
 
       // Populate sidebar list
       renderSidebarList();
@@ -356,68 +550,146 @@
       logToConsole(`${level.title} yüklendi. Mojonun talimatlarını izleyin.`, "info");
     }
 
+    function updateStarsSummary() {
+      const summaryEl = document.getElementById('stars-summary');
+      if (!summaryEl) return;
+      
+      let totalEarned = 0;
+      LEVELS.forEach((_, i) => {
+        totalEarned += completedStars[i] || 0;
+      });
+      const maxPossible = LEVELS.length * 3;
+      summaryEl.querySelector('span').textContent = `${totalEarned} / ${maxPossible}`;
+    }
+
+    function updateThemeUI(theme) {
+      const themeIcon = document.getElementById('theme-icon');
+      const themeText = document.getElementById('theme-text');
+      if (theme === 'light') {
+        if (themeIcon) themeIcon.textContent = '☀️';
+        if (themeText) themeText.textContent = 'Açık';
+      } else {
+        if (themeIcon) themeIcon.textContent = '🌙';
+        if (themeText) themeText.textContent = 'Koyu';
+      }
+    }
+
     function renderSidebarList() {
       const listContainer = document.getElementById('level-list');
       listContainer.replaceChildren();
 
-      LEVELS.forEach((lvl, i) => {
-        const item = document.createElement('div');
-        item.className = 'level-item';
-        if (i === game.currentLevelIdx) {
-          item.classList.add('active');
-        }
-
-        const isLocked = i > 0 && !unlockedLevels.includes(i);
-        if (isLocked) {
-          item.classList.add('locked');
-        }
-
-        // Info container
-        const info = document.createElement('div');
-        info.className = 'level-info';
-
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'level-name';
-        nameSpan.textContent = lvl.title;
-        info.appendChild(nameSpan);
-
-        // Render stars container
-        const starsContainer = document.createElement('div');
-        starsContainer.className = 'level-stars';
-        
-        const earnedStarsCount = completedStars[i] || 0;
-        for (let s = 1; s <= 3; s++) {
-          const starIcon = document.createElement('span');
-          starIcon.className = 'star';
-          if (s <= earnedStarsCount) {
-            starIcon.classList.add('earned');
-          }
-          starIcon.textContent = '★';
-          starsContainer.appendChild(starIcon);
-        }
-        info.appendChild(starsContainer);
-        item.appendChild(info);
-
-        // Add lock status icon
-        if (isLocked) {
-          const lock = document.createElement('span');
-          lock.className = 'lock-icon';
-          lock.textContent = '🔒';
-          item.appendChild(lock);
-        }
-
-        // Click handler
-        if (!isLocked) {
-          item.addEventListener('click', () => {
-            // Save current code before switching
-            saveCurrentCode();
-            game.loadLevel(i);
-            loadActiveLevel();
-          });
-        }
-
-        listContainer.appendChild(item);
+      const groups = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+      LEVELS.forEach((lvl, idx) => {
+        const g = getLevelGroup(lvl.id);
+        groups[g].push({ lvl, idx });
       });
+
+      const GROUP_NAMES = {
+        1: "1. Sıralı Komutlar (1-20)",
+        2: "2. Döngüler (21-40)",
+        3: "3. Anahtar & Kapı (41-60)",
+        4: "4. Labirent & Engel (61-80)",
+        5: "5. Usta Mücadeleler (81-100)"
+      };
+
+      for (let g = 1; g <= 5; g++) {
+        // Group Wrapper
+        const groupWrapper = document.createElement('div');
+        groupWrapper.className = `level-group-wrapper ${expandedGroups.has(g) ? 'expanded' : 'collapsed'}`;
+
+        // Group Header
+        const header = document.createElement('div');
+        header.className = 'level-group-header';
+        
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'group-title';
+        titleSpan.textContent = (expandedGroups.has(g) ? "▼ " : "▶ ") + GROUP_NAMES[g];
+        
+        let groupStars = 0;
+        groups[g].forEach(item => {
+          groupStars += completedStars[item.idx] || 0;
+        });
+        const groupMaxStars = groups[g].length * 3;
+        
+        const badge = document.createElement('span');
+        badge.className = 'group-stars-badge';
+        badge.textContent = `⭐ ${groupStars}/${groupMaxStars}`;
+
+        header.appendChild(titleSpan);
+        header.appendChild(badge);
+        groupWrapper.appendChild(header);
+
+        header.addEventListener('click', () => {
+          if (expandedGroups.has(g)) {
+            expandedGroups.delete(g);
+          } else {
+            expandedGroups.add(g);
+          }
+          renderSidebarList();
+        });
+
+        // Group Items Container
+        const levelsContainer = document.createElement('div');
+        levelsContainer.className = 'level-group-items';
+
+        // We always append levelsContainer to DOM, but its height and opacity are handled by CSS based on expanded class
+        groups[g].forEach(({ lvl, idx }) => {
+          const item = document.createElement('div');
+          item.className = 'level-item';
+          if (idx === game.currentLevelIdx) {
+            item.classList.add('active');
+          }
+
+          const isLocked = idx > 0 && !unlockedLevels.includes(idx);
+          if (isLocked) {
+            item.classList.add('locked');
+          }
+
+          const info = document.createElement('div');
+          info.className = 'level-info';
+
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'level-name';
+          nameSpan.textContent = lvl.title;
+          info.appendChild(nameSpan);
+
+          const starsContainer = document.createElement('div');
+          starsContainer.className = 'level-stars';
+          
+          const earnedStarsCount = completedStars[idx] || 0;
+          for (let s = 1; s <= 3; s++) {
+            const starIcon = document.createElement('span');
+            starIcon.className = 'star';
+            if (s <= earnedStarsCount) {
+              starIcon.classList.add('earned');
+            }
+            starIcon.textContent = '★';
+            starsContainer.appendChild(starIcon);
+          }
+          info.appendChild(starsContainer);
+          item.appendChild(info);
+
+          if (isLocked) {
+            const lock = document.createElement('span');
+            lock.className = 'lock-icon';
+            lock.textContent = '🔒';
+            item.appendChild(lock);
+          }
+
+          if (!isLocked) {
+            item.addEventListener('click', () => {
+              saveCurrentCode();
+              game.loadLevel(idx);
+              loadActiveLevel();
+            });
+          }
+
+          levelsContainer.appendChild(item);
+        });
+
+        groupWrapper.appendChild(levelsContainer);
+        listContainer.appendChild(groupWrapper);
+      }
     }
 
     function saveCurrentCode() {
@@ -558,11 +830,17 @@
     function restoreEditorState() {
       preview.style.display = 'none';
       runBtn.disabled = false;
+      stepBtn.disabled = false;
+      smartRouteBtn.disabled = false;
       stopBtn.disabled = true;
       disableQuickButtons(false);
       document.querySelectorAll('.line-num').forEach(el => el.classList.remove('active'));
       updateBananaCounter();
       saveCurrentCode();
+      if (game) {
+        game.isDebugMode = false;
+        game.isWaitingForStep = false;
+      }
     }
 
     function showVictoryScreen(stars, lineCount) {
@@ -602,6 +880,7 @@
 
       // Update UI state
       renderSidebarList();
+      updateStarsSummary();
       prevLvlBtn.disabled = currentIdx === 0;
       nextLvlBtn.disabled = currentIdx === LEVELS.length - 1 || !unlockedLevels.includes(currentIdx + 1);
 
