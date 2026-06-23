@@ -662,6 +662,13 @@ canvas {
   box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
 }
 
+.btn-secondary:disabled, .btn-danger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .speed-control {
   display: flex;
   align-items: center;

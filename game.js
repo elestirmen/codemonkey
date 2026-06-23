@@ -229,15 +229,16 @@ export const LEVELS = [
   }
 ];
 
-// Parser function that parses our safe custom language subset and returns a flat command array mapped to line numbers
+// Parser function that parses our safe custom language subset and returns compiled VM instructions
 export function parseCode(code) {
   // Strip single line and multiline comments
   let cleanCode = code.replace(/\/\/.*$/gm, '');
   cleanCode = cleanCode.replace(/\/\*[\s\S]*?\*\//g, '');
 
   const lines = cleanCode.split('\n');
-  const program = [];
-  const loopStack = [];
+  const instructions = [];
+  const blockStack = [];
+  let nextLoopId = 1;
 
   for (let i = 0; i < lines.length; i++) {
     const lineText = lines[i].trim();
@@ -246,26 +247,45 @@ export function parseCode(code) {
     // Supported formats:
     // 1. command()
     // 2. tekrarla(N) {
-    // 3. }
-    const cmdRegex = /^(ilerle|solaDon|sagaDon|muzAl)\s*\(\s*\)\s*;?$/;
-    const deprecatedStepCountRegex = /^(ilerle|solaDon|sagaDon|muzAl)\s*\(\s*\d+\s*\)\s*;?$/;
+    // 3. ise(onumdeEngelVar()) {
+    // 4. } degilse {
+    // 5. }
+    const cmdRegex = /^(ilerle|adimla|solaDon|sagaDon|muzAl)\s*\(\s*(-?\d+)?\s*\)\s*;?$/;
     const loopStartRegex = /^tekrarla\s*\(\s*(\d+)\s*\)\s*\{$/;
+    const ifStartRegex = /^ise\s*\(\s*(onumdeEngelVar|onumdeMuzVar|onumdeKayaVar|onumdeSuVar|onumdeKilitVar)\s*\(\s*\)\s*\)\s*\{$/;
+    const elseStartRegex = /^\}\s*degilse\s*\{$/;
     const loopEndRegex = /^\}$/;
 
     let match;
     const lineNumber = i + 1;
 
     if ((match = cmdRegex.exec(lineText)) !== null) {
-      const [_, name] = match;
+      const [_, name, countStr] = match;
+      const count = countStr ? parseInt(countStr, 10) : 1;
 
-      program.push({
-        type: 'command',
-        name,
-        arg: 1,
-        line: lineNumber
-      });
-    } else if (deprecatedStepCountRegex.test(lineText)) {
-      throw new Error(`Satır ${lineNumber}: Komutlara sayı yazma kaldırıldı. Tekrar için tekrarla(N) { ... } kullan.`);
+      if (Math.abs(count) < 1 || Math.abs(count) > 100) {
+        throw new Error(`Satır ${lineNumber}: Geçersiz parametre değeri. Adım sayısı 1 ile 100 arasında olmalıdır.`);
+      }
+
+      if (count < 0 && (name === 'solaDon' || name === 'sagaDon' || name === 'muzAl')) {
+        throw new Error(`Satır ${lineNumber}: Dönüş veya muz alma komutları negatif parametre alamaz.`);
+      }
+
+      const isBackward = count < 0;
+      const repeats = Math.abs(count);
+      let compileName = name;
+      
+      if (name === 'adimla' || name === 'ilerle') {
+        compileName = isBackward ? 'geriGit' : 'ilerle';
+      }
+
+      for (let r = 0; r < repeats; r++) {
+        instructions.push({
+          type: 'command',
+          name: compileName,
+          line: lineNumber
+        });
+      }
     } else if ((match = loopStartRegex.exec(lineText)) !== null) {
       const [_, countStr] = match;
       const count = parseInt(countStr, 10);
@@ -274,61 +294,81 @@ export function parseCode(code) {
         throw new Error(`Satır ${lineNumber}: Geçersiz tekrar sayısı. Tekrarlama değeri 1 ile 100 arasında olmalıdır.`);
       }
 
-      const loopToken = {
-        type: 'loop_start',
+      const loopId = nextLoopId++;
+      instructions.push({
+        type: 'loop_init',
         count,
-        line: lineNumber,
-        body: []
-      };
-      program.push(loopToken);
-      loopStack.push(loopToken);
-    } else if (loopEndRegex.test(lineText)) {
-      if (loopStack.length === 0) {
-        throw new Error(`Satır ${lineNumber}: Eşleşmeyen kapatma parantezi '}'. Açık bir 'tekrarla' döngüsü bulunamadı.`);
-      }
-      program.push({
-        type: 'loop_end',
+        loopId,
         line: lineNumber
       });
-      loopStack.pop();
+      blockStack.push({
+        type: 'loop',
+        loopId,
+        startIdx: instructions.length,
+        line: lineNumber
+      });
+    } else if ((match = ifStartRegex.exec(lineText)) !== null) {
+      const [_, condition] = match;
+      instructions.push({
+        type: 'jump_if_false',
+        condition,
+        target: -1, // patched on closing
+        line: lineNumber
+      });
+      blockStack.push({
+        type: 'if',
+        jumpIfFalseIdx: instructions.length - 1,
+        line: lineNumber
+      });
+    } else if (elseStartRegex.test(lineText)) {
+      if (blockStack.length === 0 || blockStack[blockStack.length - 1].type !== 'if') {
+        throw new Error(`Satır ${lineNumber}: 'degilse' yapısı yalnızca bir 'ise' bloğunun hemen ardından kullanılabilir.`);
+      }
+      const ifBlock = blockStack.pop();
+      instructions.push({
+        type: 'jump',
+        target: -1, // patched on closing
+        line: lineNumber
+      });
+      // Point the 'if' condition failure to the else block start
+      instructions[ifBlock.jumpIfFalseIdx].target = instructions.length;
+      blockStack.push({
+        type: 'else',
+        jumpIdx: instructions.length - 1,
+        line: lineNumber
+      });
+    } else if (loopEndRegex.test(lineText)) {
+      if (blockStack.length === 0) {
+        throw new Error(`Satır ${lineNumber}: Eşleşmeyen kapatma parantezi '}'. Açık bir blok bulunamadı.`);
+      }
+      const block = blockStack.pop();
+      if (block.type === 'loop') {
+        instructions.push({
+          type: 'loop_step',
+          loopId: block.loopId,
+          target: block.startIdx,
+          line: lineNumber
+        });
+      } else if (block.type === 'if') {
+        // Point the 'if' condition failure past the block end
+        instructions[block.jumpIfFalseIdx].target = instructions.length;
+      } else if (block.type === 'else') {
+        // Point the 'else' end-of-block jump past the else block end
+        instructions[block.jumpIdx].target = instructions.length;
+      }
     } else {
       // Syntax error
-      throw new Error(`Satır ${lineNumber}: Bilinmeyen veya hatalı komut yazımı: "${lineText}". Geçerli komutlar: ilerle(), solaDon(), sagaDon(), tekrarla(N) { ... }`);
+      throw new Error(`Satır ${lineNumber}: Bilinmeyen veya hatalı komut yazımı: "${lineText}". Geçerli komutlar: ilerle(), solaDon(), sagaDon(), tekrarla(N) { ... }, ise(koşul) { ... }`);
     }
   }
 
-  if (loopStack.length > 0) {
-    throw new Error(`Kod sonu: Kapatılmamış döngü mevcut. Lütfen '}' kullanarak 'tekrarla' döngüsünü kapatın.`);
+  if (blockStack.length > 0) {
+    const topBlock = blockStack[blockStack.length - 1];
+    const name = topBlock.type === 'loop' ? 'tekrarla döngüsü' : (topBlock.type === 'if' ? 'ise bloğu' : 'degilse bloğu');
+    throw new Error(`Kod sonu: Kapatılmamış bir ${name} mevcut (Satır ${topBlock.line}).`);
   }
 
-  // Flatten logic
-  let idx = 0;
-  function flatten(tokens) {
-    const flatActions = [];
-    while (idx < tokens.length) {
-      const token = tokens[idx];
-      if (token.type === 'command') {
-        for (let r = 0; r < token.arg; r++) {
-          flatActions.push({ action: token.name, line: token.line });
-        }
-        idx++;
-      } else if (token.type === 'loop_start') {
-        idx++;
-        const loopBody = flatten(tokens);
-        for (let r = 0; r < token.count; r++) {
-          for (const item of loopBody) {
-            flatActions.push({ ...item });
-          }
-        }
-      } else if (token.type === 'loop_end') {
-        idx++;
-        break; // Return this block
-      }
-    }
-    return flatActions;
-  }
-
-  return flatten(program);
+  return instructions;
 }
 
 // Game State Class
@@ -368,6 +408,8 @@ export class Game {
     this.animationProgress = 1; // 0 to 1 for current transition
     this.executionSpeed = 500; // ms per step
     this.lastSourceCode = '';
+    this.loopCounters = {}; // VM loop counters (nested loop support)
+    this.historyStack = []; // Step-by-step history for Step Back (Undo) support
 
     // Advanced gameplay features state
     this.keys = [];
@@ -376,10 +418,26 @@ export class Game {
     this.isDebugMode = false;
     this.isWaitingForStep = false;
     
+    // Particles and special animations state
+    this.particles = []; // Visual particle effects (banana pick, victory fanfare)
+    this.flyingKey = null; // Key-to-gate animation trajectory
+    this.showVictoryFanfare = false; // continuous fireworks toggle
+    this.crashType = null; // 'water', 'rock', 'gate', or 'outOfBounds'
+    
+    // Load and process banana illustration image
+    this.bananaImg = new Image();
+    this.bananaImgProcessed = null;
+    this.bananaImg.onload = () => {
+      this.bananaImgProcessed = this.makeTransparent(this.bananaImg);
+      this.draw();
+    };
+    this.bananaImg.src = 'banana.png';
+
     // UI Callbacks
     this.onLevelComplete = null;
     this.onExecutionStep = null; // Callback for current line highlight
     this.onExecutionFinished = null;
+    this.onDebugStepComplete = null; // Callback for debug step finish
     this.onLogMessage = null;
     this.onBananaChange = null;
 
@@ -402,8 +460,25 @@ export class Game {
     this.currentLevelIdx = idx;
     this.saveState();
     this.level = LEVELS[this.currentLevelIdx];
+
+    // Automatically allow 'ise' if 'tekrarla' is allowed in the level
+    if (this.level.allowedCommands.includes("tekrarla") && !this.level.allowedCommands.includes("ise")) {
+      this.level.allowedCommands.push("ise");
+    }
+
+    // Automatically allow 'adimla' if 'ilerle' is allowed in the level
+    if (this.level.allowedCommands.includes("ilerle") && !this.level.allowedCommands.includes("adimla")) {
+      this.level.allowedCommands.push("adimla");
+    }
+
     this.isRunning = false;
     this.currentQueueIdx = -1;
+    this.loopCounters = {};
+    this.historyStack = [];
+    this.particles = [];
+    this.flyingKey = null;
+    this.showVictoryFanfare = false;
+    this.crashType = null;
     if (this.animationTimer) {
       clearTimeout(this.animationTimer);
       this.animationTimer = null;
@@ -738,6 +813,12 @@ export class Game {
   stop() {
     this.isRunning = false;
     this.currentQueueIdx = -1;
+    this.loopCounters = {};
+    this.historyStack = [];
+    this.particles = [];
+    this.flyingKey = null;
+    this.showVictoryFanfare = false;
+    this.crashType = null;
     if (this.animationTimer) {
       clearTimeout(this.animationTimer);
       this.animationTimer = null;
@@ -752,61 +833,161 @@ export class Game {
   step() {
     if (!this.isRunning) return;
 
-    if (this.currentQueueIdx >= this.executionQueue.length) {
-      // Done executing all steps. Check win conditions.
-      this.checkWinCondition();
-      return;
-    }
+    // Run control flow instructions instantly, pausing only on move commands
+    while (this.currentQueueIdx < this.executionQueue.length) {
+      const currentStep = this.executionQueue[this.currentQueueIdx];
+      
+      if (currentStep.type === 'command') {
+        // Highlight UI line
+        if (this.onExecutionStep) {
+          this.onExecutionStep(currentStep.line);
+        }
 
-    const currentStep = this.executionQueue[this.currentQueueIdx];
-    
-    // Highlight UI line
-    if (this.onExecutionStep) {
-      this.onExecutionStep(currentStep.line);
-    }
+        // Save state history for step back (Undo) support
+        if (this.isDebugMode) {
+          this.historyStack.push({
+            player: { x: this.player.x, y: this.player.y, dir: this.player.dir },
+            keys: this.keys.map(k => ({ ...k })),
+            bananas: this.bananas.map(b => ({ ...b })),
+            loopCounters: { ...this.loopCounters },
+            queueIdx: this.currentQueueIdx
+          });
+        }
 
-    // Execute step
-    const success = this.applyAction(currentStep.action);
-    
-    if (!success) {
-      // Crash or failed action
-      this.isRunning = false;
-      if (this.onExecutionFinished) {
-        this.onExecutionFinished();
+        // Execute command action
+        const success = this.applyAction(currentStep.name);
+        if (!success) {
+          this.isRunning = false;
+          if (this.onExecutionFinished) {
+            this.onExecutionFinished();
+          }
+          return;
+        }
+
+        // Pause VM loop and trigger movement animations
+        this.animationProgress = 0;
+        this.animate();
+        return; // exit function, wait for animate() callback to resume
+      } else if (currentStep.type === 'loop_init') {
+        this.loopCounters[currentStep.loopId] = currentStep.count;
+        this.currentQueueIdx++;
+      } else if (currentStep.type === 'loop_step') {
+        this.loopCounters[currentStep.loopId]--;
+        if (this.loopCounters[currentStep.loopId] > 0) {
+          this.currentQueueIdx = currentStep.target;
+        } else {
+          this.currentQueueIdx++;
+        }
+      } else if (currentStep.type === 'jump') {
+        this.currentQueueIdx = currentStep.target;
+      } else if (currentStep.type === 'jump_if_false') {
+        const condVal = this.evaluateCondition(currentStep.condition);
+        if (condVal) {
+          this.currentQueueIdx++;
+        } else {
+          this.currentQueueIdx = currentStep.target;
+        }
+      } else {
+        this.currentQueueIdx++;
       }
-      return;
     }
 
-    // Setup animation
-    this.animationProgress = 0;
-    this.animate();
+    // Program reached the end
+    this.checkWinCondition();
+  }
+
+  stepBack() {
+    if (!this.isRunning || !this.isDebugMode || this.historyStack.length === 0) {
+      return false;
+    }
+
+    const prevState = this.historyStack.pop();
+    this.player.x = prevState.player.x;
+    this.player.y = prevState.player.y;
+    this.player.dir = prevState.player.dir;
+    this.player.animX = prevState.player.x;
+    this.player.animY = prevState.player.y;
+    this.setRotationByDir(prevState.player.dir);
+    this.player.animRotation = this.player.targetRotation;
+
+    this.keys = prevState.keys;
+    this.bananas = prevState.bananas;
+    this.loopCounters = prevState.loopCounters;
+    this.currentQueueIdx = prevState.queueIdx; // Point IP back to this instruction
+
+    this.animationProgress = 1;
+    this.draw();
+
+    if (this.onBananaChange) {
+      this.onBananaChange();
+    }
+
+    if (this.onExecutionStep) {
+      const step = this.executionQueue[this.currentQueueIdx];
+      if (step) {
+        this.onExecutionStep(step.line);
+      }
+    }
+
+    this.isWaitingForStep = true;
+    return true;
+  }
+
+  evaluateCondition(condition) {
+    const { dx, dy } = this.getDirectionOffset(this.player.dir);
+    const frontX = this.player.x + dx;
+    const frontY = this.player.y + dy;
+
+    // Check bounds
+    const isOutOfBounds = frontX < 0 || frontX >= this.gridWidth || frontY < 0 || frontY >= this.gridHeight;
+    const cell = isOutOfBounds ? '#' : this.gridData[frontY][frontX];
+
+    switch (condition) {
+      case 'onumdeEngelVar':
+        return isOutOfBounds || cell === '#' || cell === '~' || (cell === 'G' && !this.hasKeyCollected());
+      case 'onumdeMuzVar':
+        return cell === 'B' && this.bananas.some(b => b.x === frontX && b.y === frontY && !b.collected);
+      case 'onumdeKayaVar':
+        return cell === '#';
+      case 'onumdeSuVar':
+        return cell === '~';
+      case 'onumdeKilitVar':
+        return cell === 'G' && !this.hasKeyCollected();
+      default:
+        return false;
+    }
   }
 
   applyAction(action) {
     const { dx, dy } = this.getDirectionOffset(this.player.dir);
     
-    if (action === 'ilerle') {
-      const nextX = this.player.x + dx;
-      const nextY = this.player.y + dy;
+    if (action === 'ilerle' || action === 'geriGit') {
+      const isBackward = action === 'geriGit';
+      const offsetFactor = isBackward ? -1 : 1;
+      const nextX = this.player.x + dx * offsetFactor;
+      const nextY = this.player.y + dy * offsetFactor;
 
-      // Check collision using isWalkableCell which checks grid bounds, rocks, water, and locked gates
       if (!this.isWalkableCell(nextX, nextY)) {
         const cell = nextX >= 0 && nextX < this.gridWidth && nextY >= 0 && nextY < this.gridHeight ? this.gridData[nextY][nextX] : '#';
+        let obstacleType = 'outOfBounds';
+        const crashDir = isBackward ? "geri giderken" : "giderken";
         if (cell === 'G') {
-          this.log("Mojo kilitli kapıya çarptı! Önce anahtarı almalısın.", "error");
+          this.log(`Mojo ${crashDir} kilitli kapıya çarptı! Önce anahtarı almalısın.`, "error");
+          obstacleType = 'gate';
         } else if (cell === '#') {
-          this.log("Mojo kayaya çarptı! Algoritma başarısız.", "error");
+          this.log(`Mojo ${crashDir} kayaya çarptı! Algoritma başarısız.`, "error");
+          obstacleType = 'rock';
         } else if (cell === '~') {
-          this.log("Mojo suya düştü! Algoritma başarısız.", "error");
+          this.log(`Mojo ${crashDir} suya düştü! Algoritma başarısız.`, "error");
+          obstacleType = 'water';
         } else {
-          this.log("Mojo harita dışına çıktı! Algoritma başarısız.", "error");
+          this.log(`Mojo ${crashDir} harita dışına çıktı! Algoritma başarısız.`, "error");
         }
         soundEngine.playFail();
-        this.triggerCrashAnimation();
+        this.triggerCrashAnimation(obstacleType);
         return false;
       }
 
-      // Safe to move
       this.player.x = nextX;
       this.player.y = nextY;
       this.collectBananaAtPlayer();
@@ -842,6 +1023,27 @@ export class Game {
     key.collected = true;
     this.log("Harika! Anahtarı aldın, kilitli kapı artık açıldı.", "success");
     soundEngine.playCoin();
+
+    // Trigger sliding key flying animation to the gate!
+    let gateX = -1, gateY = -1;
+    for (let y = 0; y < this.gridHeight; y++) {
+      for (let x = 0; x < this.gridWidth; x++) {
+        if (this.gridData[y][x] === 'G') {
+          gateX = x;
+          gateY = y;
+          break;
+        }
+      }
+    }
+    if (gateX !== -1) {
+      this.flyingKey = {
+        startX: this.player.x,
+        startY: this.player.y,
+        targetX: gateX,
+        targetY: gateY,
+        progress: 0
+      };
+    }
     return true;
   }
 
@@ -852,24 +1054,71 @@ export class Game {
     banana.collected = true;
     this.log("Nefis! Muz otomatik toplandı.", "success");
     soundEngine.playCoin();
+    
+    // Spawn pick particles
+    this.spawnBananaParticles(this.player.x, this.player.y);
+    
     if (this.onBananaChange) {
       this.onBananaChange(this.bananas.filter(b => b.collected).length, this.bananas.length);
     }
     return true;
   }
 
-  triggerCrashAnimation() {
+  spawnBananaParticles(cellX, cellY) {
+    const center = this.tileSize / 2;
+    const px = cellX * this.tileSize + center;
+    const py = cellY * this.tileSize + center;
+    for (let i = 0; i < 15; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1 + Math.random() * 3;
+      this.particles.push({
+        x: px,
+        y: py,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1, // slight upwards bias
+        color: '#facc15', // yellow gold
+        size: 3 + Math.random() * 3,
+        alpha: 1,
+        life: 0,
+        maxLife: 20 + Math.random() * 15
+      });
+    }
+  }
+
+  spawnVictoryParticles() {
+    const px = this.starTile.x * this.tileSize + this.tileSize / 2;
+    const py = this.starTile.y * this.tileSize + this.tileSize / 2;
+    const colors = ['#facc15', '#10b981', '#ef4444', '#3b82f6', '#ec4899'];
+    for (let i = 0; i < 5; i++) {
+      const angle = -Math.PI / 4 - Math.random() * Math.PI / 2; // shoot upwards
+      const speed = 2 + Math.random() * 4;
+      this.particles.push({
+        x: px,
+        y: py,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 1.5, // upward force
+        color: colors[Math.floor(Math.random() * colors.length)],
+        size: 4 + Math.random() * 4,
+        alpha: 1,
+        life: 0,
+        maxLife: 40 + Math.random() * 25
+      });
+    }
+  }
+
+  triggerCrashAnimation(obstacleType) {
     this.animationProgress = 0;
+    this.crashType = obstacleType; // 'water', 'rock', 'gate', or 'outOfBounds'
     const self = this;
     let frames = 0;
     
     function crashLoop() {
-      if (frames < 20) {
+      if (frames < 30) {
         frames++;
-        // Shake canvas logic or redraw with crash effect
         self.drawCrash(frames);
         requestAnimationFrame(crashLoop);
       } else {
+        self.crashType = null;
         self.loadLevel(self.currentLevelIdx);
       }
     }
@@ -877,9 +1126,35 @@ export class Game {
   }
 
   drawCrash(frames) {
-    this.draw();
-    // Simple red tint flash
-    this.ctx.fillStyle = `rgba(239, 68, 68, ${Math.max(0, 0.4 - frames * 0.02)})`;
+    const center = this.tileSize / 2;
+    const px = this.player.x * this.tileSize + center;
+    const py = this.player.y * this.tileSize + center;
+
+    this.ctx.save();
+    
+    if (this.crashType === 'water') {
+      // Drowning animation: spin and scale down
+      this.draw(); // draw normal scene first
+      this.ctx.translate(px, py);
+      this.ctx.rotate(frames * 0.25);
+      const scale = Math.max(0, 1 - frames / 30);
+      this.ctx.scale(scale, scale);
+      this.ctx.translate(-px, -py);
+      this.drawPlayer(px, py, false);
+    } else {
+      // Rock/gate/outOfBounds shake
+      const shakeX = (Math.random() - 0.5) * 8;
+      const shakeY = (Math.random() - 0.5) * 8;
+      this.ctx.translate(shakeX, shakeY);
+      this.draw(); // draw normal scene with shake
+      this.ctx.translate(-shakeX, -shakeY);
+      // Draw player override as dizzy (stars around head)
+      this.drawPlayer(px + shakeX, py + shakeY, true);
+    }
+    this.ctx.restore();
+
+    // Red tint flash
+    this.ctx.fillStyle = `rgba(239, 68, 68, ${Math.max(0, 0.4 - frames * 0.015)})`;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
@@ -922,8 +1197,8 @@ export class Game {
         self.currentQueueIdx++;
         if (self.isDebugMode) {
           self.isWaitingForStep = true;
-          if (self.onExecutionFinished) {
-            self.onExecutionFinished(); // triggers UI update
+          if (self.onDebugStepComplete) {
+            self.onDebugStepComplete(); // triggers UI update for debug step complete
           }
         } else {
           self.animationTimer = setTimeout(() => {
@@ -944,6 +1219,7 @@ export class Game {
       this.log("Tebrikler! Mojo hedefe ulaştı ve tüm muzları topladı!", "success");
       soundEngine.playVictory();
       this.isRunning = false;
+      this.showVictoryFanfare = true; // Turn on confettis/fireworks particle generation
       
       // Calculate code efficiency stars
       const lineCount = this.getUniqueCodeLineCount();
@@ -1036,12 +1312,80 @@ export class Game {
     }
 
     // 5. Draw Player (Mojo)
-    this.drawPlayer();
+    if (this.crashType === null) {
+      this.drawPlayer();
+    }
 
-    // 6. Draw Ruler Tool Overlay
+    // 6. Draw flying key if active
+    if (this.flyingKey) {
+      this.flyingKey.progress = Math.min(1, this.flyingKey.progress + 0.04);
+      const kx = this.flyingKey.startX * this.tileSize + (this.flyingKey.targetX - this.flyingKey.startX) * this.flyingKey.progress * this.tileSize;
+      const ky = this.flyingKey.startY * this.tileSize + (this.flyingKey.targetY - this.flyingKey.startY) * this.flyingKey.progress * this.tileSize;
+      this.drawKey(kx, ky);
+      if (this.flyingKey.progress >= 1) {
+        this.flyingKey = null;
+      }
+    }
+
+    // 7. Update and draw particles
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.life++;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.06; // gravity
+      p.alpha = Math.max(0, 1 - p.life / p.maxLife);
+      
+      this.ctx.save();
+      this.ctx.globalAlpha = p.alpha;
+      this.ctx.fillStyle = p.color;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.restore();
+
+      if (p.life >= p.maxLife) {
+        this.particles.splice(i, 1);
+      }
+    }
+
+    // Continuously spawn victory fanfare particles if active
+    if (this.showVictoryFanfare && Math.random() < 0.25) {
+      this.spawnVictoryParticles();
+    }
+
+    // 8. Draw Grid Coordinates HUD (Numbers along borders)
+    this.drawCoordinatesHUD();
+
+    // 9. Draw Ruler Tool Overlay
     if (this.rulerActive && this.hoveredCell) {
       this.drawRulerOverlay();
     }
+  }
+
+  drawCoordinatesHUD() {
+    const isLight = document.body.classList.contains('light-theme');
+    this.ctx.save();
+    this.ctx.font = 'bold 9px monospace';
+    this.ctx.fillStyle = isLight ? 'rgba(5, 150, 105, 0.45)' : 'rgba(16, 185, 129, 0.35)';
+    
+    // Draw column numbers (1 to 20) at top border
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'top';
+    for (let x = 0; x < this.gridWidth; x++) {
+      const px = x * this.tileSize + this.tileSize / 2;
+      this.ctx.fillText(x + 1, px, 4);
+    }
+
+    // Draw row letters (A to L) at left border
+    this.ctx.textAlign = 'left';
+    this.ctx.textBaseline = 'middle';
+    const alphabet = 'ABCDEFGHIJKL';
+    for (let y = 0; y < this.gridHeight; y++) {
+      const py = y * this.tileSize + this.tileSize / 2;
+      this.ctx.fillText(alphabet[y] || y, 4, py);
+    }
+    this.ctx.restore();
   }
 
   drawRock(x, y) {
@@ -1094,29 +1438,112 @@ export class Game {
     const by = y + center;
 
     // Glowing aura effect
-    const grad = this.ctx.createRadialGradient(bx, by, 4, bx, by, 20);
-    grad.addColorStop(0, isLight ? 'rgba(234, 179, 8, 0.35)' : 'rgba(253, 224, 71, 0.4)');
+    const grad = this.ctx.createRadialGradient(bx, by, 4, bx, by, 22);
+    grad.addColorStop(0, isLight ? 'rgba(234, 179, 8, 0.4)' : 'rgba(253, 224, 71, 0.45)');
     grad.addColorStop(1, 'rgba(253, 224, 71, 0)');
     this.ctx.fillStyle = grad;
     this.ctx.beginPath();
-    this.ctx.arc(bx, by, 22, 0, Math.PI * 2);
+    this.ctx.arc(bx, by, 24, 0, Math.PI * 2);
     this.ctx.fill();
 
-    // Stylized banana curve (drawn using SVG path logic safe in Canvas)
-    this.ctx.strokeStyle = '#eab308';
-    this.ctx.lineWidth = 4;
-    this.ctx.lineCap = 'round';
+    // Draw the processed real banana illustration if loaded
+    if (this.bananaImgProcessed) {
+      this.ctx.save();
+      // Center the banana inside the tile and scale down to 48x48
+      const size = this.tileSize - 16;
+      this.ctx.translate(bx, by);
+      this.ctx.rotate(-Math.PI / 12); // subtle tilt for natural look
+      this.ctx.drawImage(this.bananaImgProcessed, -size / 2, -size / 2, size, size);
+      this.ctx.restore();
+      return;
+    }
+
+    // Fallback: Draw realistic thick banana shape (vector code)
+    this.ctx.save();
+    // Center it on tile and rotate slightly for a natural look
+    this.ctx.translate(bx, by);
+    this.ctx.rotate(-Math.PI / 6);
+
+    // Outer skin (Yellow)
+    this.ctx.fillStyle = '#facc15'; // bright banana yellow
+    this.ctx.strokeStyle = '#eab308'; // darker border
+    this.ctx.lineWidth = 1.5;
+
     this.ctx.beginPath();
-    this.ctx.arc(bx - 2, by + 2, 10, -Math.PI / 4, Math.PI * 0.7);
+    // Start at stem base
+    this.ctx.moveTo(-10, -7);
+    // Outer curve to tip
+    this.ctx.quadraticCurveTo(8, -12, 12, 6);
+    // Tip edge
+    this.ctx.lineTo(10, 8);
+    // Inner curve back to stem base
+    this.ctx.quadraticCurveTo(4, -4, -6, -4);
+    this.ctx.closePath();
+    this.ctx.fill();
     this.ctx.stroke();
 
-    // Banana stem
-    this.ctx.strokeStyle = '#854d0e';
-    this.ctx.lineWidth = 3;
+    // Volumetric 3D highlight (light yellow line inside body)
+    this.ctx.strokeStyle = '#fef08a';
+    this.ctx.lineWidth = 2.5;
+    this.ctx.lineCap = 'round';
     this.ctx.beginPath();
-    this.ctx.moveTo(bx + 5, by - 5);
-    this.ctx.lineTo(bx + 8, by - 9);
+    this.ctx.moveTo(-6, -5);
+    this.ctx.quadraticCurveTo(4, -8, 8, 2);
     this.ctx.stroke();
+
+    // Dark stem at base (Brown)
+    this.ctx.fillStyle = '#78350f';
+    this.ctx.beginPath();
+    this.ctx.moveTo(-10, -7);
+    this.ctx.lineTo(-14, -10);
+    this.ctx.lineTo(-11, -12);
+    this.ctx.lineTo(-6, -9);
+    this.ctx.closePath();
+    this.ctx.fill();
+
+    // Dark tip at end (Brown)
+    this.ctx.fillStyle = '#451a03';
+    this.ctx.beginPath();
+    this.ctx.moveTo(12, 6);
+    this.ctx.lineTo(13.5, 9.5);
+    this.ctx.lineTo(10, 8);
+    this.ctx.closePath();
+    this.ctx.fill();
+
+    this.ctx.restore();
+  }
+
+  makeTransparent(img) {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    try {
+      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imgData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i+1];
+        const b = data[i+2];
+        const a = data[i+3];
+        // Key out white/light gray background (R, G, B > 240)
+        // Also handle the case where it might already be transparent
+        if (a > 0 && r > 240 && g > 240 && b > 240) {
+          data[i+3] = 0;
+        } else if (a > 0 && r > 220 && g > 220 && b > 220) {
+          // Softly feather alpha for smoother edges near light colors
+          const maxVal = Math.max(r, g, b);
+          const ratio = (maxVal - 220) / 20; // 0 to 1
+          data[i+3] = Math.max(0, Math.min(255, Math.round((1 - ratio) * 255)));
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+    } catch (e) {
+      console.warn("Could not process image transparency (likely CORS):", e);
+      return img;
+    }
+    return canvas;
   }
 
   drawStar(x, y) {
@@ -1309,22 +1736,25 @@ export class Game {
     this.ctx.fillText(distanceText, midX, midY);
   }
 
-  drawPlayer() {
+  drawPlayer(xOverride = null, yOverride = null, isDizzy = false) {
     const center = this.tileSize / 2;
-    const px = this.player.animX * this.tileSize + center;
-    const py = this.player.animY * this.tileSize + center;
+    const px = xOverride !== null ? xOverride : (this.player.animX * this.tileSize + center);
+    const py = yOverride !== null ? yOverride : (this.player.animY * this.tileSize + center);
 
     this.ctx.save();
     this.ctx.translate(px, py);
     this.ctx.rotate(this.player.animRotation);
 
-    // 1. Tail (Behind body)
+    const time = performance.now() * 0.005;
+
+    // 1. Swaying Tail (using sine time if not dizzy)
     this.ctx.strokeStyle = '#b45309';
     this.ctx.lineWidth = 4;
     this.ctx.lineCap = 'round';
     this.ctx.beginPath();
     this.ctx.moveTo(-12, 5);
-    this.ctx.bezierCurveTo(-25, 12, -22, -15, -30, -5);
+    const sway = isDizzy ? 0 : Math.sin(time * 2.5) * 5;
+    this.ctx.bezierCurveTo(-25, 12 + sway, -22, -15 + sway, -30, -5 + sway);
     this.ctx.stroke();
 
     // 2. Ears
@@ -1354,21 +1784,73 @@ export class Game {
     this.ctx.arc(8, 0, 7, 0, Math.PI * 2);
     this.ctx.fill();
 
-    // 5. Eyes (Facing right by default)
-    this.ctx.fillStyle = '#0f172a'; // Dark eyes
-    this.ctx.beginPath();
-    this.ctx.arc(7, -4, 2, 0, Math.PI * 2);
-    this.ctx.arc(7, 4, 2, 0, Math.PI * 2);
-    this.ctx.fill();
+    // 5. Eyes
+    if (isDizzy) {
+      // Draw cross dizzy eyes
+      this.ctx.strokeStyle = '#0f172a';
+      this.ctx.lineWidth = 2;
+      // Left eye X
+      this.ctx.beginPath();
+      this.ctx.moveTo(5, -6); this.ctx.lineTo(9, -2);
+      this.ctx.moveTo(9, -6); this.ctx.lineTo(5, -2);
+      this.ctx.stroke();
+      // Right eye X
+      this.ctx.beginPath();
+      this.ctx.moveTo(5, 2); this.ctx.lineTo(9, 6);
+      this.ctx.moveTo(9, 2); this.ctx.lineTo(5, 6);
+      this.ctx.stroke();
+    } else {
+      // Blinking eyes using time
+      const isBlinking = Math.floor(time) % 5 === 0 && (time % 1 < 0.15);
+      this.ctx.fillStyle = '#0f172a'; // Dark eyes
+      if (isBlinking) {
+        this.ctx.strokeStyle = '#0f172a';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(5, -4); this.ctx.lineTo(9, -4);
+        this.ctx.moveTo(5, 4); this.ctx.lineTo(9, 4);
+        this.ctx.stroke();
+      } else {
+        this.ctx.beginPath();
+        this.ctx.arc(7, -4, 2, 0, Math.PI * 2);
+        this.ctx.arc(7, 4, 2, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+    }
 
-    // Snout / Smile
+    // 6. Snout / Smile / Dizzy Mouth
     this.ctx.strokeStyle = '#b45309';
     this.ctx.lineWidth = 1;
     this.ctx.beginPath();
-    this.ctx.arc(10, 0, 2, 0, Math.PI);
+    if (isDizzy) {
+      // Dizzy wavy mouth
+      this.ctx.moveTo(7, -2);
+      this.ctx.quadraticCurveTo(8, 1, 9, -1);
+      this.ctx.quadraticCurveTo(10, 1, 11, 0);
+    } else {
+      this.ctx.arc(10, 0, 2, 0, Math.PI);
+    }
     this.ctx.stroke();
 
     this.ctx.restore();
+
+    // 7. Spinning dizzy stars above head
+    if (isDizzy) {
+      this.ctx.save();
+      const starsAngle = time * 7;
+      this.ctx.translate(px, py - 18);
+      this.ctx.rotate(starsAngle);
+      this.ctx.fillStyle = '#facc15';
+      for (let i = 0; i < 3; i++) {
+        const angle = (i * Math.PI * 2) / 3;
+        const sx = Math.cos(angle) * 8;
+        const sy = Math.sin(angle) * 4;
+        this.ctx.beginPath();
+        this.ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+      this.ctx.restore();
+    }
   }
 }
 

@@ -101,9 +101,11 @@
           <span>Hızlı Ekle:</span>
           <!-- Dynamically displayed based on allowed commands of the level -->
           <button class="btn-command" data-cmd="ilerle()" id="cmd-ilerle">ilerle()</button>
+          <button class="btn-command" data-cmd="adimla(1)" id="cmd-adimla">adimla()</button>
           <button class="btn-command" data-cmd="solaDon()" id="cmd-solaDon">solaDon()</button>
           <button class="btn-command" data-cmd="sagaDon()" id="cmd-sagaDon">sagaDon()</button>
           <button class="btn-command" data-cmd="tekrarla(3) {\n  ilerle()\n}" id="cmd-tekrarla">tekrarla() {}</button>
+          <button class="btn-command" data-cmd="ise(onumdeEngelVar()) {\n  solaDon()\n}" id="cmd-ise">ise() {}</button>
         </div>
 
         <!-- Code Run Controls -->
@@ -114,6 +116,9 @@
             </button>
             <button id="btn-step" class="btn-secondary" title="Kodu adım adım çalıştır">
               <span style="font-size: 1.1rem;">⏯</span> Adım Adım
+            </button>
+            <button id="btn-step-back" class="btn-secondary" title="Bir adım geri al" disabled>
+              <span style="font-size: 1.1rem;">⏮</span> Geri Al
             </button>
             <button id="btn-smart-route" class="btn-secondary" title="Akıllı rota örneği oluştur">
               <span style="font-size: 1.1rem;">✦</span> Akıllı Rota
@@ -163,8 +168,8 @@
 
   <!-- Script Modules setup -->
   <script type="module">
-    import { LEVELS, Game } from './game.js?v=20260618-smart-route';
-    import { soundEngine } from './audio.js?v=20260618-smart-route';
+    import { LEVELS, Game } from './game.js?v=20260623-banana-illustration';
+    import { soundEngine } from './audio.js?v=20260623-banana-illustration';
 
     let game;
     let unlockedLevels = [0]; // default unlocked level 0 (Level 1)
@@ -186,6 +191,7 @@
     const preview = document.getElementById('code-display-preview');
     const runBtn = document.getElementById('btn-run');
     const stepBtn = document.getElementById('btn-step');
+    const stepBackBtn = document.getElementById('btn-step-back');
     const smartRouteBtn = document.getElementById('btn-smart-route');
     const stopBtn = document.getElementById('btn-stop');
     const speedSlider = document.getElementById('speed-slider');
@@ -381,6 +387,7 @@
           setupExecutionPreview(code);
           runBtn.disabled = true;
           stepBtn.disabled = false;
+          stepBackBtn.disabled = true;
           smartRouteBtn.disabled = true;
           stopBtn.disabled = false;
           disableQuickButtons(true);
@@ -390,7 +397,19 @@
           game.runCodeText(code);
         } else if (game.isWaitingForStep) {
           game.isWaitingForStep = false;
+          stepBtn.disabled = true; // disable while animating
+          stepBackBtn.disabled = true;
           game.step();
+        }
+      });
+
+      stepBackBtn.addEventListener('click', () => {
+        if (game && game.isRunning && game.isDebugMode && game.isWaitingForStep) {
+          const success = game.stepBack();
+          if (success) {
+            stepBackBtn.disabled = game.historyStack.length === 0;
+            logToConsole("Bir adım geri alındı.", "info");
+          }
         }
       });
 
@@ -482,6 +501,11 @@
 
       game.onExecutionFinished = () => {
         restoreEditorState();
+      };
+
+      game.onDebugStepComplete = () => {
+        stepBackBtn.disabled = game.historyStack.length === 0;
+        stepBtn.disabled = false;
       };
 
       game.onLevelComplete = (stars, lineCount) => {
@@ -708,9 +732,11 @@
       // Allowed keys map
       const btns = {
         "ilerle": document.getElementById('cmd-ilerle'),
+        "adimla": document.getElementById('cmd-adimla'),
         "solaDon": document.getElementById('cmd-solaDon'),
         "sagaDon": document.getElementById('cmd-sagaDon'),
-        "tekrarla": document.getElementById('cmd-tekrarla')
+        "tekrarla": document.getElementById('cmd-tekrarla'),
+        "ise": document.getElementById('cmd-ise')
       };
 
       for (const [key, btn] of Object.entries(btns)) {
@@ -731,7 +757,10 @@
       const startPos = editor.selectionStart;
       const endPos = editor.selectionEnd;
       const text = editor.value;
-      const insertText = cmd + '\n';
+      
+      // Convert literal '\n' sequences in data-cmd attributes to real newlines
+      const formattedCmd = cmd.replace(/\\n/g, '\n');
+      const insertText = formattedCmd + '\n';
       
       editor.value = text.substring(0, startPos) + insertText + text.substring(endPos);
       editor.focus();
@@ -831,6 +860,7 @@
       preview.style.display = 'none';
       runBtn.disabled = false;
       stepBtn.disabled = false;
+      stepBackBtn.disabled = true;
       smartRouteBtn.disabled = false;
       stopBtn.disabled = true;
       disableQuickButtons(false);

@@ -1,6 +1,9 @@
 // Web Audio API Sound Effects Engine for KodMaymunu
 let audioCtx = null;
 let soundEnabled = true;
+let ambientOsc = null;
+let ambientGain = null;
+let ambientInterval = null;
 
 function initAudio() {
   if (!audioCtx) {
@@ -9,17 +12,103 @@ function initAudio() {
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
   }
+  if (soundEnabled && !ambientOsc) {
+    playAmbient();
+  }
+}
+
+function playAmbient() {
+  if (!soundEnabled) return;
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
+    if (ambientOsc) return; // already playing
+
+    // Low gentle forest background drone (wind sound)
+    ambientOsc = audioCtx.createOscillator();
+    ambientGain = audioCtx.createGain();
+
+    ambientOsc.type = 'sine';
+    ambientOsc.frequency.setValueAtTime(65.41, audioCtx.currentTime); // C2 (Low drone)
+    
+    ambientGain.gain.setValueAtTime(0.015, audioCtx.currentTime); // extremely quiet background pad
+    
+    ambientOsc.connect(ambientGain);
+    ambientGain.connect(audioCtx.destination);
+    ambientOsc.start();
+
+    // Periodic wind chime / pentatonic bell sounds
+    const notes = [261.63, 293.66, 329.63, 392.00, 440.00]; // C4, D4, E4, G4, A4 (Pentatonic)
+    
+    ambientInterval = setInterval(() => {
+      if (!soundEnabled || audioCtx.state === 'suspended') return;
+      
+      if (Math.random() > 0.4) {
+        const freq = notes[Math.floor(Math.random() * notes.length)];
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        
+        // Very slow attack and release chime bubble
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.008, audioCtx.currentTime + 1.2);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 3.5);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 3.5);
+      }
+    }, 4000);
+
+  } catch (e) {
+    console.warn("Ambient play error", e);
+  }
+}
+
+function stopAmbient() {
+  if (ambientOsc) {
+    try {
+      ambientOsc.stop();
+      ambientOsc.disconnect();
+    } catch(e) {}
+    ambientOsc = null;
+  }
+  if (ambientGain) {
+    try {
+      ambientGain.disconnect();
+    } catch(e) {}
+    ambientGain = null;
+  }
+  if (ambientInterval) {
+    clearInterval(ambientInterval);
+    ambientInterval = null;
+  }
 }
 
 export const soundEngine = {
   toggleSound() {
     soundEnabled = !soundEnabled;
+    if (soundEnabled) {
+      playAmbient();
+    } else {
+      stopAmbient();
+    }
     return soundEnabled;
   },
 
   isSoundEnabled() {
     return soundEnabled;
   },
+
 
   playStep() {
     if (!soundEnabled) return;
