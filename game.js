@@ -38,8 +38,8 @@ export const LEVELS = [
     grid: [
       "######",
       "#M...#",
-      "####B#",
-      "####S#",
+      "#...B#",
+      "#...S#",
       "######"
     ],
     startDir: "RIGHT",
@@ -53,9 +53,9 @@ export const LEVELS = [
     tip: "Sola dönüş komutu karakteri saat yönünün tersine 90 derece döndürür.",
     grid: [
       "#######",
-      "#..S###",
-      "#..B###",
-      "#M..###",
+      "#..S..#",
+      "#..B..#",
+      "#M....#",
       "#######"
     ],
     startDir: "RIGHT",
@@ -70,7 +70,7 @@ export const LEVELS = [
     grid: [
       "########",
       "#M..~..#",
-      "###.##.#",
+      "#......#",
       "#..B.S.#",
       "########"
     ],
@@ -99,10 +99,10 @@ export const LEVELS = [
     tip: "Kalıp şu fikre benzer: ilerle, sağa dön, ilerle, sola dön.",
     grid: [
       "########",
-      "#M.#####",
-      "##.B####",
-      "###.B###",
-      "####.S##",
+      "#M.....#",
+      "#..B...#",
+      "#...B..#",
+      "#....S.#",
       "########"
     ],
     startDir: "RIGHT",
@@ -116,9 +116,9 @@ export const LEVELS = [
     tip: "Aynı yönde çok ilerlediğin bölümlerde <code>tekrarla</code> kullan.",
     grid: [
       "##########",
-      "#M.B.B..##",
-      "######..##",
-      "#S.B...B##",
+      "#M.B.B...#",
+      "#........#",
+      "#S.B...B.#",
       "##########"
     ],
     startDir: "RIGHT",
@@ -229,10 +229,159 @@ export const LEVELS = [
   }
 ];
 
-// Parser function that parses our safe custom language subset and returns compiled VM instructions
-export function parseCode(code) {
-  // Strip single line and multiline comments
-  let cleanCode = code.replace(/\/\/.*$/gm, '');
+function preprocessIndentation(code) {
+  const cleanCode = code.replace(/\r\n/g, '\n');
+  const lines = cleanCode.split('\n');
+  const result = [];
+  const indentStack = [0];
+  const parsedLines = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const original = lines[i];
+    // Strip comments to check if line is empty (supports JS and Python comments)
+    let clean = original.replace(/\/\/.*$/g, '').replace(/#.*$/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
+    const trimmed = clean.trim();
+    
+    if (trimmed === '') {
+      parsedLines.push({ original, isWord: false, indent: 0, text: '' });
+      continue;
+    }
+    
+    // Count leading spaces/tabs
+    let indent = 0;
+    for (let char of original) {
+      if (char === ' ') indent++;
+      else if (char === '\t') indent += 4;
+      else break;
+    }
+    
+    parsedLines.push({ original, isWord: true, indent, text: trimmed });
+  }
+
+  for (let i = 0; i < parsedLines.length; i++) {
+    const line = parsedLines[i];
+    if (!line.isWord) {
+      result.push(line.original);
+      continue;
+    }
+
+    const currentIndent = line.indent;
+    let topIndent = indentStack[indentStack.length - 1];
+
+    if (currentIndent > topIndent) {
+      // New block started! Add " {" to the previous statement line
+      let prevWordIdx = -1;
+      for (let j = result.length - 1; j >= 0; j--) {
+        if (parsedLines[j] && parsedLines[j].isWord) {
+          prevWordIdx = j;
+          break;
+        }
+      }
+      if (prevWordIdx !== -1) {
+        let prevLine = result[prevWordIdx];
+        prevLine = prevLine.trimEnd();
+        if (prevLine.endsWith(':')) {
+          prevLine = prevLine.slice(0, -1);
+        }
+        if (!prevLine.endsWith('{')) {
+          result[prevWordIdx] = prevLine + ' {';
+        }
+      }
+      indentStack.push(currentIndent);
+    } else if (currentIndent < topIndent) {
+      // One or more blocks ended! Pop and add closing brackets
+      while (indentStack.length > 1 && currentIndent < indentStack[indentStack.length - 1]) {
+        indentStack.pop();
+        const parentIndent = indentStack[indentStack.length - 1];
+        result.push(' '.repeat(parentIndent) + '}');
+      }
+    }
+
+    let processedText = line.original;
+    let trimmed = line.text;
+    
+    // Remove trailing colon
+    if (trimmed.endsWith(':')) {
+      const colonIdx = processedText.lastIndexOf(':');
+      processedText = processedText.slice(0, colonIdx) + processedText.slice(colonIdx + 1);
+    }
+
+    // Combine closing brackets and "degilse" if they align
+    if (trimmed.startsWith('degilse')) {
+      let lastLineIdx = -1;
+      for (let j = result.length - 1; j >= 0; j--) {
+        if (result[j].trim() !== '') {
+          lastLineIdx = j;
+          break;
+        }
+      }
+      if (lastLineIdx !== -1 && result[lastLineIdx].trim() === '}') {
+        const originalClosed = result[lastLineIdx];
+        result.splice(lastLineIdx, 1);
+        processedText = originalClosed.replace('}', '') + '} ' + processedText.trimStart();
+      }
+    }
+
+    result.push(processedText);
+  }
+
+  while (indentStack.length > 1) {
+    indentStack.pop();
+    const parentIndent = indentStack[indentStack.length - 1];
+    result.push(' '.repeat(parentIndent) + '}');
+  }
+
+  return result.join('\n');
+}
+
+function compressSequence(actions) {
+  const n = actions.length;
+  if (n === 0) return [];
+
+  for (let len = 1; len <= Math.floor(n / 2); len++) {
+    const pattern = actions.slice(0, len);
+    let repeats = 1;
+    while (true) {
+      const nextStart = repeats * len;
+      if (nextStart + len > n) break;
+      
+      const nextSlice = actions.slice(nextStart, nextStart + len);
+      let match = true;
+      for (let i = 0; i < len; i++) {
+        if (nextSlice[i] !== pattern[i]) {
+          match = false;
+          break;
+        }
+      }
+      if (match) {
+        repeats++;
+      } else {
+        break;
+      }
+    }
+
+    const minRepeats = (len === 1) ? 3 : 2;
+    if (repeats >= minRepeats) {
+      const loopBody = compressSequence(pattern);
+      const loopBlock = { type: 'loop', count: repeats, body: loopBody };
+      const remaining = compressSequence(actions.slice(repeats * len));
+      return [loopBlock, ...remaining];
+    }
+  }
+
+  const firstBlock = { type: 'simple', action: actions[0] };
+  const remaining = compressSequence(actions.slice(1));
+  return [firstBlock, ...remaining];
+}
+
+export function parseCode(code, syntaxMode = 'indent') {
+  let processedCode = code;
+  if (syntaxMode === 'indent' && !code.includes('{')) {
+    processedCode = preprocessIndentation(code);
+  }
+  // Strip single line and multiline comments (supports JS and Python comments)
+  let cleanCode = processedCode.replace(/\/\/.*$/gm, '');
+  cleanCode = cleanCode.replace(/#.*$/gm, '');
   cleanCode = cleanCode.replace(/\/\*[\s\S]*?\*\//g, '');
 
   const lines = cleanCode.split('\n');
@@ -417,6 +566,10 @@ export class Game {
     this.hoveredCell = null;
     this.isDebugMode = false;
     this.isWaitingForStep = false;
+
+    // Syntax Mode (indent or bracket)
+    const savedSyntaxMode = localStorage.getItem('kodmaymunu_syntax_mode');
+    this.syntaxMode = savedSyntaxMode === 'bracket' ? 'bracket' : 'indent';
     
     // Particles and special animations state
     this.particles = []; // Visual particle effects (banana pick, victory fanfare)
@@ -747,31 +900,37 @@ export class Game {
   }
 
   formatRoutePlan(actions) {
+    const isIndent = this.syntaxMode === 'indent';
+    const comment = isIndent ? '#' : '//';
     const lines = [
-      '// Akilli rota ornegi',
-      '// Once en kisa hedef sirasi bulundu, sonra uzun yuruyusler donguye cevrildi.'
+      `${comment} Akilli rota ornegi`,
+      `${comment} Once en kisa hedef sirasi bulundu, sonra tekrarlayan hareketler donguye cevrildi.`
     ];
 
-    for (let i = 0; i < actions.length;) {
-      const action = actions[i];
-      let count = 1;
-      while (actions[i + count] === action) {
-        count++;
-      }
+    const blocks = compressSequence(actions);
 
-      if (action === 'ilerle' && count >= 3) {
-        lines.push(`tekrarla(${count}) {`);
-        lines.push('  ilerle()');
-        lines.push('}');
-      } else {
-        for (let j = 0; j < count; j++) {
-          lines.push(`${action}()`);
+    const renderBlocks = (blockArray, depth = 0) => {
+      const indent = '    '.repeat(depth);
+      const subLines = [];
+      for (const block of blockArray) {
+        if (block.type === 'simple') {
+          const actionName = block.action === 'ilerle' ? 'adimla' : block.action;
+          subLines.push(`${indent}${actionName}()`);
+        } else if (block.type === 'loop') {
+          if (isIndent) {
+            subLines.push(`${indent}tekrarla(${block.count}):`);
+            subLines.push(...renderBlocks(block.body, depth + 1));
+          } else {
+            subLines.push(`${indent}tekrarla(${block.count}) {`);
+            subLines.push(...renderBlocks(block.body, depth + 1));
+            subLines.push(`${indent}}`);
+          }
         }
       }
+      return subLines;
+    };
 
-      i += count;
-    }
-
+    lines.push(...renderBlocks(blocks, 0));
     return `${lines.join('\n')}\n`;
   }
 
@@ -786,7 +945,7 @@ export class Game {
 
     try {
       this.lastSourceCode = code;
-      this.executionQueue = parseCode(code);
+      this.executionQueue = parseCode(code, this.syntaxMode);
       if (this.executionQueue.length === 0) {
         this.log("Hata: Çalıştırılacak geçerli bir kod bulunamadı!", "error");
         soundEngine.playFail();

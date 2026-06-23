@@ -34,6 +34,13 @@
       </div>
 
       <div class="header-controls">
+        <div style="display: flex; align-items: center; gap: 6px; margin-right: 8px;">
+          <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">Yazım:</span>
+          <select id="syntax-mode" class="btn-secondary" style="font-family: var(--font-main); font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border-color); background: var(--btn-sec-bg); color: var(--text-primary); outline: none;">
+            <option value="indent" style="background: var(--bg-darker); color: var(--text-primary);">Python (Girinti)</option>
+            <option value="bracket" style="background: var(--bg-darker); color: var(--text-primary);">JavaScript ({})</option>
+          </select>
+        </div>
         <button id="btn-theme-toggle" class="btn-secondary" title="Temayı Değiştir (Açık/Koyu)">
           <span id="theme-icon">☀️</span> <span id="theme-text">Açık</span>
         </button>
@@ -168,8 +175,8 @@
 
   <!-- Script Modules setup -->
   <script type="module">
-    import { LEVELS, Game } from './game.js?v=20260623-banana-illustration';
-    import { soundEngine } from './audio.js?v=20260623-banana-illustration';
+    import { LEVELS, Game } from './game.js?v=20260623-banana-illustration-v6';
+    import { soundEngine } from './audio.js?v=20260623-banana-illustration-v6';
 
     let game;
     let unlockedLevels = [0]; // default unlocked level 0 (Level 1)
@@ -208,6 +215,7 @@
     
     const themeBtn = document.getElementById('btn-theme-toggle');
     const rulerBtn = document.getElementById('btn-ruler');
+    const syntaxModeSelect = document.getElementById('syntax-mode');
     
     // Modal References
     const modal = document.getElementById('success-modal');
@@ -229,6 +237,14 @@
 
       game = new Game('game-canvas');
       updateThemeUI(savedTheme);
+
+      // Initialize Syntax Mode
+      const savedSyntaxMode = localStorage.getItem('kodmaymunu_syntax_mode') || 'indent';
+      if (syntaxModeSelect) {
+        syntaxModeSelect.value = savedSyntaxMode;
+      }
+      updateSyntaxModeUI(savedSyntaxMode);
+      game.syntaxMode = savedSyntaxMode;
 
       // Load progress
       const savedUnlocked = localStorage.getItem('kodmaymunu_unlocked');
@@ -272,6 +288,28 @@
           insertCommand(cmd);
         });
       });
+
+      // Syntax Mode Event Listener
+      if (syntaxModeSelect) {
+        syntaxModeSelect.addEventListener('change', () => {
+          const mode = syntaxModeSelect.value;
+          localStorage.setItem('kodmaymunu_syntax_mode', mode);
+          if (game) {
+            game.syntaxMode = mode;
+          }
+          updateSyntaxModeUI(mode);
+          
+          // Reload code template if empty
+          const idx = game.currentLevelIdx;
+          const savedCode = localStorage.getItem(`kodmaymunu_code_lvl_${idx}`);
+          if (!savedCode || savedCode.startsWith('// Seviye') || savedCode.startsWith('# Seviye')) {
+            const comment = mode === 'indent' ? '#' : '//';
+            editor.value = `${comment} Seviye ${idx + 1}\n${comment} Muzlar temas edince otomatik toplanır.\n`;
+            updateLineNumbers();
+            updateCharCounter();
+          }
+        });
+      }
 
       // Theme Toggle Event Listener
       if (themeBtn) {
@@ -340,7 +378,7 @@
           const currentLine = text.substring(lineStart, start);
           const indentMatch = currentLine.match(/^(\s*)/);
           const indent = indentMatch ? indentMatch[1] : '';
-          const extraIndent = currentLine.trim().endsWith('{') ? '  ' : '';
+          const extraIndent = (currentLine.trim().endsWith('{') || currentLine.trim().endsWith(':')) ? '  ' : '';
           
           e.preventDefault();
           const insertion = '\n' + indent + extraIndent;
@@ -566,7 +604,9 @@
         editor.value = savedCode;
       } else {
         // Build initial placeholder hint
-        editor.value = `// Seviye ${idx + 1}\n// Muzlar temas edince otomatik toplanır.\n`;
+        const isIndent = game ? game.syntaxMode === 'indent' : true;
+        const comment = isIndent ? '#' : '//';
+        editor.value = `${comment} Seviye ${idx + 1}\n${comment} Muzlar temas edince otomatik toplanır.\n`;
       }
 
       updateLineNumbers();
@@ -751,6 +791,31 @@
       document.querySelectorAll('.btn-command').forEach(btn => {
         btn.disabled = disable;
       });
+    }
+
+    function updateSyntaxModeUI(mode) {
+      const cmdTekrarla = document.getElementById('cmd-tekrarla');
+      const cmdIse = document.getElementById('cmd-ise');
+      
+      if (mode === 'indent') {
+        if (cmdTekrarla) {
+          cmdTekrarla.setAttribute('data-cmd', 'tekrarla(3):\n    adimla()');
+          cmdTekrarla.textContent = 'tekrarla:';
+        }
+        if (cmdIse) {
+          cmdIse.setAttribute('data-cmd', 'ise(onumdeEngelVar()):\n    solaDon()');
+          cmdIse.textContent = 'ise:';
+        }
+      } else {
+        if (cmdTekrarla) {
+          cmdTekrarla.setAttribute('data-cmd', 'tekrarla(3) {\n  adimla()\n}');
+          cmdTekrarla.textContent = 'tekrarla() {}';
+        }
+        if (cmdIse) {
+          cmdIse.setAttribute('data-cmd', 'ise(onumdeEngelVar()) {\n  solaDon()\n}');
+          cmdIse.textContent = 'ise() {}';
+        }
+      }
     }
 
     function insertCommand(cmd) {
