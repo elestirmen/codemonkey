@@ -1,4 +1,7 @@
 import { soundEngine } from './audio.js';
+// Version query busts the browser cache when `npm run levels` rewrites the
+// baked board data; keep it in step with the game.js query in index.html.
+import { GENERATED_LEVELS } from './generated-levels.js?v=20260904-v3';
 
 // Level definitions with increasing difficulty
 export const LEVELS = [
@@ -13,8 +16,6 @@ export const LEVELS = [
       "#######"
     ],
     startDir: "RIGHT",
-    allowedCommands: ["ilerle"],
-    starRating: { three: 4, two: 5 }
   },
   {
     id: 2,
@@ -27,8 +28,6 @@ export const LEVELS = [
       "#######"
     ],
     startDir: "RIGHT",
-    allowedCommands: ["ilerle"],
-    starRating: { three: 4, two: 5 }
   },
   {
     id: 3,
@@ -43,8 +42,6 @@ export const LEVELS = [
       "######"
     ],
     startDir: "RIGHT",
-    allowedCommands: ["ilerle", "sagaDon"],
-    starRating: { three: 6, two: 8 }
   },
   {
     id: 4,
@@ -59,8 +56,6 @@ export const LEVELS = [
       "#######"
     ],
     startDir: "RIGHT",
-    allowedCommands: ["ilerle", "solaDon"],
-    starRating: { three: 6, two: 8 }
   },
   {
     id: 5,
@@ -75,8 +70,6 @@ export const LEVELS = [
       "########"
     ],
     startDir: "RIGHT",
-    allowedCommands: ["ilerle", "solaDon", "sagaDon"],
-    starRating: { three: 9, two: 11 }
   },
   {
     id: 6,
@@ -89,25 +82,21 @@ export const LEVELS = [
       "#########"
     ],
     startDir: "RIGHT",
-    allowedCommands: ["ilerle", "tekrarla"],
-    starRating: { three: 2, two: 5 }
   },
   {
     id: 7,
     title: "7. Merdiven Kalıbı",
-    instructions: "Merdivende aynı hareket kalıbı üç kez tekrarlanıyor. Döngünün içine birden fazla komut yazabilirsin.",
-    tip: "Kalıp şu fikre benzer: ilerle, sağa dön, ilerle, sola dön.",
+    instructions: "Yol tam bir merdiven. Aynı dört hareket üç kez tekrarlanıyor: <code>ilerle</code>, <code>sagaDon</code>, <code>ilerle</code>, <code>solaDon</code>. Bunu bir döngüye al.",
+    tip: "Önce kalıbı elle yaz, tekrarlandığını gör, sonra <code>tekrarla(3)</code> içine taşı ve son adımı dışarıda bırak.",
     grid: [
       "########",
-      "#M.....#",
-      "#..B...#",
-      "#...B..#",
-      "#....S.#",
+      "#M.#####",
+      "##.B####",
+      "###.B###",
+      "####.S##",
       "########"
     ],
     startDir: "RIGHT",
-    allowedCommands: ["ilerle", "solaDon", "sagaDon", "tekrarla"],
-    starRating: { three: 6, two: 9 }
   },
   {
     id: 8,
@@ -122,8 +111,6 @@ export const LEVELS = [
       "##########"
     ],
     startDir: "RIGHT",
-    allowedCommands: ["ilerle", "solaDon", "sagaDon", "tekrarla"],
-    starRating: { three: 8, two: 11 }
   },
   {
     id: 9,
@@ -140,8 +127,6 @@ export const LEVELS = [
       "##########"
     ],
     startDir: "RIGHT",
-    allowedCommands: ["ilerle", "solaDon", "sagaDon", "tekrarla"],
-    starRating: { three: 16, two: 20 }
   },
   {
     id: 10,
@@ -158,8 +143,6 @@ export const LEVELS = [
       "###########"
     ],
     startDir: "RIGHT",
-    allowedCommands: ["ilerle", "solaDon", "sagaDon", "tekrarla"],
-    starRating: { three: 12, two: 16 }
   },
   {
     id: 11,
@@ -176,8 +159,6 @@ export const LEVELS = [
       "############"
     ],
     startDir: "RIGHT",
-    allowedCommands: ["ilerle", "solaDon", "sagaDon", "tekrarla"],
-    starRating: { three: 18, two: 22 }
   },
   {
     id: 12,
@@ -194,8 +175,6 @@ export const LEVELS = [
       "############"
     ],
     startDir: "RIGHT",
-    allowedCommands: ["ilerle", "solaDon", "sagaDon", "tekrarla"],
-    starRating: { three: 17, two: 21 }
   },
   {
     id: 13,
@@ -203,13 +182,11 @@ export const LEVELS = [
     instructions: "Mojo'nun önünde kilitli bir kapı var. Kapıyı açmak için önce <code>K</code> karesindeki anahtarı almalı, ardından kapıdan geçerek sandığa ulaşmalıdır.",
     tip: "Anahtarı aldığında kapı otomatik olarak açılır.",
     grid: [
-      "#########",
+      "##########",
       "#M..K.G.S#",
-      "#########"
+      "##########"
     ],
     startDir: "RIGHT",
-    allowedCommands: ["ilerle"],
-    starRating: { three: 8, two: 10 }
   },
   {
     id: 14,
@@ -224,173 +201,942 @@ export const LEVELS = [
       "########"
     ],
     startDir: "RIGHT",
-    allowedCommands: ["ilerle", "solaDon", "sagaDon", "tekrarla"],
-    starRating: { three: 12, two: 15 }
+  },
+  // ── Bölüm 1 (1-20) finali: döngü + dönüş kalıpları ──
+  {
+    id: 15,
+    title: "15. Kare Döngüsü",
+    instructions: "Mojo bir kareyi turlayarak muzları topluyor. Her kenar 3 adım, her köşede bir sağa dönüş var. Döngü içinde döngü kullanmayı dene.",
+    tip: "Bir kenar = <code>tekrarla(3)</code> içinde <code>ilerle()</code>. Kenar + dönüş kalıbı 3 kez tekrarlanır, sonra son kenarda 2 adım kalır.",
+    grid: [
+      "######",
+      "#M.B.#",
+      "#S..B#",
+      "#....#",
+      "#.B..#",
+      "######"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 16,
+    title: "16. Zigzag Yürüyüşü",
+    instructions: "Patika basamak basamak aşağı iniyor. Bir adım at, sonra <code>solaDon-ilerle-sagaDon-ilerle</code> kalıbını üç kez tekrarla.",
+    tip: "Kalıbın döngüye giren kısmı dönüşle başlıyor: ilk <code>ilerle()</code> döngünün dışında kalır.",
+    grid: [
+      "#######",
+      "#M#####",
+      "#.B####",
+      "##.B###",
+      "###.B##",
+      "####S##",
+      "#######"
+    ],
+    startDir: "DOWN",
+  },
+  {
+    id: 17,
+    title: "17. Spiral Toplama",
+    instructions: "Muzlar spiral bir yol boyunca dizilmiş. Önce uzun kenarı yürü, sonra dön. Her turda yol biraz kısalıyor.",
+    tip: "Muzlar sıralar hâlinde duruyor. Bir sırayı baştan sona tara, sonra bir alt sıraya geç; tekrar eden düz parçaları döngüye al.",
+    grid: [
+      "##########",
+      "#M.B.B.B.#",
+      "#........#",
+      "#.B....B.#",
+      "#........#",
+      "#..S.B.B.#",
+      "##########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 18,
+    title: "18. Çift Koridor",
+    instructions: "İki paralel koridor arasında gidip gelerek muzları topla. Her koridorda döngü kullanarak ilerle.",
+    tip: "Üst koridorda ilerle, sonra alt koridora geç ve geri dön. Her koridordaki düz yolları döngüyle kısalt.",
+    grid: [
+      "##########",
+      "#M.B.B...#",
+      "########.#",
+      "#S.B.B...#",
+      "##########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 19,
+    title: "19. Labirent Girişi",
+    instructions: "Kayaların arasındaki dar geçitlerden ilerleyerek çıkışı bul. Sıralı komutları ve dönüşleri doğru sırada kullan.",
+    tip: "Kayalara çarpmamaya dikkat et! Cetvel ile mesafeleri ölçerek hangi yönde kaç adım gideceğini hesapla.",
+    grid: [
+      "###########",
+      "#M..#.....#",
+      "#...#.B.#.#",
+      "#.###...#.#",
+      "#.....#.#.#",
+      "#B.####...#",
+      "#.......S.#",
+      "###########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 20,
+    title: "20. Büyük Final",
+    instructions: "Grup 1'in son sınavı! Tüm öğrendiğin komutları ve döngüleri kullanarak bu karmaşık rotayı en az satırla çöz.",
+    tip: "Önce rotanı kafanda planla, sonra tekrar eden kalıpları bul. Her uzun düz parçayı döngüyle kısaltabilirsin.",
+    grid: [
+      "############",
+      "#M..B......#",
+      "#..........#",
+      "#..###.....#",
+      "#..#B#..B..#",
+      "#..#.#.....#",
+      "#..#.......#",
+      "#.......S..#",
+      "############"
+    ],
+    startDir: "RIGHT",
+  },
+  // ── Bölüm 2 (21-40) açılışı: köprüler, nehir geçişleri, döngüler ──
+  {
+    id: 21,
+    title: "21. Köprü Geçişi",
+    instructions: "Mojo nehrin üzerinden geçen köprüden döngü kullanarak güvenli geçmeli ve sandığa ulaşmalıdır.",
+    tip: "Köprü (<code>=</code>) karoları nehirlerin (<code>~</code>) üzerinden güvenli geçiş sağlar.",
+    grid: [
+      "##########",
+      "#M...B...#",
+      "~~~~~=~~~~",
+      "#....S...#",
+      "##########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 22,
+    title: "22. Çift Köprü",
+    instructions: "İki nehir iki köprüyle aşılmalı. Her köprü geçişinde dönüş yapıp bir sonraki köprüye yönelmelisin.",
+    tip: "Birinci köprüden geç, sonra sağa dönüp ikinci köprüye ilerle. Simetrik kalıp var!",
+    grid: [
+      "###########",
+      "#M..B.....#",
+      "~~~~~=~~~~~",
+      "#.........#",
+      "~~~~~=~~~~~",
+      "#.....B.S.#",
+      "###########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 23,
+    title: "23. Nehir Kenarı Rotası",
+    instructions: "Nehir boyunca ilerleyip köprüden geçerek karşı kıyıdaki muzları topla. Tek köprü var, iyi planla!",
+    tip: "Önce nehir kenarında ilerle, köprüyü geç, sonra karşı taraftan geri dön.",
+    grid: [
+      "###########",
+      "#M.B......#",
+      "#~~~~=~~~~#",
+      "#~~~~=~~~~#",
+      "#~~~~=~~~~#",
+      "#......B.S#",
+      "###########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 24,
+    title: "24. Ada Atlaması",
+    instructions: "Küçük adalar köprülerle birbirine bağlı. Her adada bir muz var. Hepsini toplayıp son adadaki sandığa ulaş.",
+    tip: "Her adada muzu al, sonra köprüye yönel. Düz parçalarda döngü kullan, köprü dönüşlerini tek tek yaz.",
+    grid: [
+      "###########",
+      "#M.B~.B~.S#",
+      "#...=..=..#",
+      "#~~~.~~.~~#",
+      "###########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 25,
+    title: "25. Kıvrımlı Nehir",
+    instructions: "Nehir S şeklinde kıvrılıyor. İki köprüden geçerek nehrin iki kıvrımını da aşmalısın.",
+    tip: "Uzun düz parçaları döngüyle kısalt, köprü geçişlerinde dönüş yap.",
+    grid: [
+      "###########",
+      "#M........#",
+      "#.B..~~~~~#",
+      "#....=....#",
+      "#~~~~.B...#",
+      "#....=....#",
+      "#.~~~~~...#",
+      "#.......S.#",
+      "###########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 26,
+    title: "26. Döngülü Köprü Kalıbı",
+    instructions: "Üç ada, üç köprü, tek kalıp: <code>ilerle, ilerle, sagaDon, ilerle, solaDon</code>. Kalıbı <code>tekrarla(3)</code> içine al, sandığa son bir adım kalır.",
+    tip: "Her adada iki adım yürüyorsun, sonra köprüye dönüp bir adımla karşıya geçiyorsun. Kalıp birebir aynı.",
+    grid: [
+      "##########",
+      "#MB.~~~~~#",
+      "#~~=B.~~~#",
+      "#~~~~=B.~#",
+      "#~~~~~~=S#",
+      "##########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 27,
+    title: "27. Su Labirenti",
+    instructions: "Kayalar ve sular arasındaki dar geçitlerden yol bul. Köprüler tek güvenli geçiş noktaları!",
+    tip: "Dikkatli ol, yanlış yöne dönersen suya düşersin. Cetvelle mesafeleri ölç.",
+    grid: [
+      "############",
+      "#M..#......#",
+      "#.~.#.B....#",
+      "#.~.=......#",
+      "#.~.#..#...#",
+      "#...#..#.B.#",
+      "#......#.S.#",
+      "############"
+    ],
+    startDir: "DOWN",
+  },
+  {
+    id: 28,
+    title: "28. Nehir Vadisi Finali",
+    instructions: "Grup 2'nin son sınavı! Köprüleri, döngüleri ve dönüşleri birleştirerek bu karmaşık nehir vadisini geç.",
+    tip: "Önce tüm rotanı kafanda planla. Köprüler seni kısıtlıyor, ama döngüler seni hızlandırıyor.",
+    grid: [
+      "##############",
+      "#M..B........#",
+      "#~~~=~~~~~~~~#",
+      "#............#",
+      "#.B..........#",
+      "#~~~~~~~~=~~~#",
+      "#............#",
+      "#.........B.S#",
+      "##############"
+    ],
+    startDir: "RIGHT",
+  },
+  // ── Bölüm 3 (41-60) açılışı: nilüfer yaprakları, anahtar ve kilit ──
+  {
+    id: 41,
+    title: "41. Nilüfer Patikası",
+    instructions: "Nilüfer yaprakları çok narindir, üstünden geçtikten hemen sonra suya batarlar. Rota üzerinde her yaprağı sadece bir kez kullanabilirsin!",
+    tip: "Anahtarı alarak kilitli kapıyı açmalısın, ancak nilüferlerin batacağını unutma! Tek yönlü bir plan kur.",
+    grid: [
+      "#########",
+      "#M.LLLLK#",
+      "#~.LLLLG#",
+      "#S.LLLL.#",
+      "#########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 42,
+    title: "42. Batan Yapraklar",
+    instructions: "Nilüfer yaprakları üzerinden yürüyerek karşıya geç. Ama dikkat: bastığın yaprak hemen batar, geri dönemezsin!",
+    tip: "Doğrusal bir rota çiz. Geri dönüş yok, bu yüzden en kısa yolu seçmelisin.",
+    grid: [
+      "##########",
+      "#M.......#",
+      "#~~LLLLL~#",
+      "#~~LLLLL~#",
+      "#......BS#",
+      "##########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 43,
+    title: "43. Nilüfer Labirenti",
+    instructions: "Nilüfer yaprakları arasında labirent var. Her yaprağa sadece bir kez basabilirsin, bu yüzden doğru yolu seçmelisin!",
+    tip: "Yanlış yaprağa basarsan geri dönüş yolun kapanır. Önce rotayı kafanda planla.",
+    grid: [
+      "###########",
+      "#M..~.....#",
+      "#.L.~.L.B.#",
+      "#.L.L.L.~.#",
+      "#.~.L.L.~.#",
+      "#...~.L.S.#",
+      "###########"
+    ],
+    startDir: "DOWN",
+  },
+  {
+    id: 44,
+    title: "44. Anahtarlı Nilüfer",
+    instructions: "Anahtar nilüfer yapraklarının arasında! Anahtarı al, geri dönmeden kapıya ulaş. Yapraklar batacak!",
+    tip: "Rotanı önceden planla: anahtarı aldıktan sonra kapıya giden yolun nilüfer üzerinden geçmesi gerekebilir.",
+    grid: [
+      "###########",
+      "#M........#",
+      "#.LLL.....#",
+      "#.L.L.K...#",
+      "#.LLL.....#",
+      "#.....G.S.#",
+      "###########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 45,
+    title: "45. Çift Kilit Bulmacası",
+    instructions: "İki anahtar ve iki kapı var! Her iki anahtarı da alarak her iki kapıyı açmalı ve tüm muzları toplamalısın.",
+    tip: "Önce hangi anahtarı alacağını planla. Yanlış sırayla gidersen tıkanabilirsin.",
+    grid: [
+      "###########",
+      "#M..K.G.B.#",
+      "#.........#",
+      "#.B.G.K...#",
+      "#.......S.#",
+      "###########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 46,
+    title: "46. Nilüfer Köprüsü",
+    instructions: "Nehrin üzerindeki nilüfer yaprakları tek geçiş yolun. Ama batacakları için geri dönemezsin! Karşıdaki muzu al ve sandığa ulaş.",
+    tip: "Düz bir hat çizerek nilüferlerden geç. Döngü kullanarak adım sayısını kısaltabilirsin.",
+    grid: [
+      "###########",
+      "#M........#",
+      "#~~~L~~~~~#",
+      "#~~~L~~~~~#",
+      "#~~~L~~~~~#",
+      "#.....B.S.#",
+      "###########"
+    ],
+    startDir: "DOWN",
+  },
+  {
+    id: 47,
+    title: "47. Anahtar Avı",
+    instructions: "Anahtar haritanın bir köşesinde gizli! Onu bul, kapıyı aç ve sandığa ulaş. Su ve kayalar yolunu kesiyor.",
+    tip: "Anahtarı aldıktan sonra en kısa yoldan kapıya git. Gereksiz dolaşma yıldız kaybettirir.",
+    grid: [
+      "############",
+      "#M....#....#",
+      "#.B...#..K.#",
+      "#.....#....#",
+      "#..####....#",
+      "#..........#",
+      "#.G......S.#",
+      "############"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 48,
+    title: "48. Nilüfer Finali",
+    instructions: "Grup 3'ün son sınavı! Batan nilüfer yaprakları, anahtar-kapı kilitleri ve su engelleri bir arada. Tüm muzları toplayarak sandığa ulaş.",
+    tip: "Nilüferler batacak, kapılar kilitli. Her adımını önceden planla, geri dönüş yok!",
+    grid: [
+      "############",
+      "#M..B.~.K..#",
+      "#.....~....#",
+      "#.LLL.~.G..#",
+      "#.~.L.~....#",
+      "#.~.L......#",
+      "#.~...B..S.#",
+      "############"
+    ],
+    startDir: "RIGHT",
+  },
+  // ── Bölüm 4 (61-80) açılışı: kaplumbağa zamanlama bulmacaları ──
+  {
+    id: 61,
+    title: "61. Kaplumbağa Zamanı",
+    instructions: "Yüzen kaplumbağalar suya dalar ve çıkar. Zamanlamayı ayarlamak için <code>bekle()</code> komutunu kullan!",
+    tip: "Kaplumbağa 2 adım su üstünde, 2 adım su altında kalır. Oraya vardığında su üstünde olmasını sağlamak için geride beklemelisin.",
+    grid: [
+      "#########",
+      "#...~...#",
+      "#M..T.BS#",
+      "#...~...#",
+      "#########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 62,
+    title: "62. Sabırlı Geçiş",
+    instructions: "Kaplumbağa şu an su altında! Üzerine basmadan önce <code>bekle()</code> ile suyun üstüne çıkmasını bekle.",
+    tip: "Kaplumbağanın döngüsünü say: 2 adım üstte, 2 adım altta. Doğru zamanda ilerle!",
+    grid: [
+      "##########",
+      "#M...B...#",
+      "#...~T~..#",
+      "#........#",
+      "#....S...#",
+      "##########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 63,
+    title: "63. Çift Kaplumbağa",
+    instructions: "İki kaplumbağa farklı zamanlarda dalıyor! Her birinin zamanlamasını ayrı ayrı hesaplamalısın.",
+    tip: "İlk kaplumbağayı geçtikten sonra, ikinci kaplumbağanın ne zaman su üstüne çıkacağını hesapla.",
+    grid: [
+      "###########",
+      "#M..~.~..S#",
+      "#...T.T..B#",
+      "#...~.~...#",
+      "###########"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 64,
+    title: "64. Kaplumbağa Köprüsü",
+    instructions: "Nehrin üzerinde kaplumbağalar köprü görevi yapıyor. Ama dalacaklar! Zamanlamayı iyi ayarla.",
+    tip: "Kaplumbağanın üzerindeyken dönüş yaparsan ve o anda dalarsa boğulursun! Hızlı geç.",
+    grid: [
+      "###########",
+      "#M.B......#",
+      "#~~~~=~~~~#",
+      "#~~~~T~~~~#",
+      "#~~~~=~~~~#",
+      "#......B.S#",
+      "###########"
+    ],
+    startDir: "DOWN",
+  },
+  {
+    id: 65,
+    title: "65. Zamanlama Ustası",
+    instructions: "Kaplumbağa, köprü ve su engelleri bir arada! Köprüler güvenli ama kaplumbağalar dalıyor. Rotanı zamanla.",
+    tip: "Köprüden güvenle geçebilirsin ama kaplumbağa geçişleri zamanlama gerektirir. <code>bekle()</code> kullan.",
+    grid: [
+      "############",
+      "#M..B......#",
+      "#~~=~~~~~~~#",
+      "#..........#",
+      "#~~~~~~~T~~#",
+      "#..........#",
+      "#.....B..S.#",
+      "############"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 66,
+    title: "66. Ritmik Geçiş",
+    instructions: "Üç kaplumbağa sırayla dizilmiş. Hepsinin üzerinden sırayla geçmelisin ama zamanlama kritik!",
+    tip: "Her kaplumbağaya adım atarken bir öncekinin üzerinde kalma. Gerekirse <code>bekle()</code> kullan.",
+    grid: [
+      "###########",
+      "#M........#",
+      "#~~T~T~T~~#",
+      "#.........#",
+      "#....B..S.#",
+      "###########"
+    ],
+    startDir: "DOWN",
+  },
+  {
+    id: 67,
+    title: "67. Kaplumbağa Labirenti",
+    instructions: "Kayalar ve kaplumbağalar arasında yol bul. Kaplumbağalar tek güvenli geçiş noktaları ama zamanlama gerekli!",
+    tip: "Kayalar sabit engeller, kaplumbağalar ise açılıp kapanan kapılar gibi düşün.",
+    grid: [
+      "############",
+      "#M...#.....#",
+      "#.B..#..B..#",
+      "#.~..T..~..#",
+      "#.~..#..~..#",
+      "#....#.....#",
+      "#........S.#",
+      "############"
+    ],
+    startDir: "RIGHT",
+  },
+  {
+    id: 68,
+    title: "68. Zamanlama Finali",
+    instructions: "Grup 4'ün son sınavı! Kaplumbağalar, köprüler ve kayalar bir arada. Tüm becerilerin sınanıyor.",
+    tip: "Tüm araçlarını kullan: döngüler kısa kod için, bekle() zamanlama için, cetvel mesafe ölçmek için.",
+    grid: [
+      "#############",
+      "#M..B.#.....#",
+      "#.....#..B..#",
+      "#~~=~~#~~T~~#",
+      "#.....=.....#",
+      "#..B..#.....#",
+      "#.....#...S.#",
+      "#############"
+    ],
+    startDir: "RIGHT"
+  },
+  // ── Bölüm 2 finali: toplu adım komutu ──
+  {
+    id: 29,
+    title: "29. Uzun Düzlük",
+    instructions: "Uzun düzlükler için yeni bir komut: <code>adimla(10)</code> tek satırda 10 kare ilerletir. Aynı rotayı döngüyle 8, <code>adimla</code> ile 5 satırda yazabilirsin.",
+    tip: "<code>adimla(N)</code> yalnızca ilerlemek içindir; dönüşleri hâlâ tek tek yazarsın. Negatif değer (<code>adimla(-3)</code>) geri geri yürütür.",
+    grid: [
+      "#############",
+      "#M.........B#",
+      "#.#########.#",
+      "#.#########.#",
+      "#S.........B#",
+      "#############"
+    ],
+    startDir: "RIGHT"
+  },
+  // ── Bölüm 4 finali: kaplumbağanın dümenine geçmek ──
+  {
+    id: 69,
+    title: "69. Kaplumbağa Kaptanı",
+    instructions: "Bu nehirde kaplumbağa dalmıyor ama yanlış yerde duruyor. <code>kaplumbaga.adimla()</code> ile kaplumbağayı kendi baktığı yönde bir kare kaydır, geçit hizasına gelince üzerinden yürü.",
+    tip: "Kaplumbağa hareket ettiğinde Mojo onunla birlikte gitmez. Önce kaplumbağayı yerine getir, sonra üzerine bas.",
+    grid: [
+      "###########",
+      "#M........#",
+      "##.########",
+      "#~~~~~T~~~#",
+      "##.########",
+      "#....B...S#",
+      "###########"
+    ],
+    startDir: "RIGHT",
+    pilotTurtles: true,
+    solution: [
+      "ilerle",
+      "sagaDon",
+      "ilerle",
+      { type: "loop", count: 4, body: ["kaplumbaga.adimla"] },
+      { type: "compact", action: "ilerle", count: 3 },
+      "solaDon",
+      { type: "compact", action: "ilerle", count: 7 }
+    ]
+  },
+  // ── Bölüm 5 açılışı: koşullu komutlar ──
+  {
+    id: 81,
+    title: "81. İlk Karar",
+    instructions: "Şimdiye kadar her adımı sen ölçtün. <code>ise(onumdeEngelVar())</code> ise kararı Mojo'ya bırakır: önü kapalıysa dön, açıksa ilerle. Tek bir döngü tüm turu yürüyebilir.",
+    tip: "Kalıp şu: <code>ise(onumdeEngelVar())</code> → <code>sagaDon()</code>, <code>degilse</code> → <code>ilerle()</code>. Kaç kez tekrarlaması gerektiğini adımları sayarak bul.",
+    grid: [
+      "#######",
+      "#M.B..#",
+      "#.....#",
+      "#....B#",
+      "#.....#",
+      "#S.B..#",
+      "#######"
+    ],
+    startDir: "RIGHT",
+    solution: [
+      {
+        type: "loop",
+        count: 14,
+        body: [
+          {
+            type: "branch",
+            condition: "onumdeEngelVar",
+            then: ["sagaDon"],
+            otherwise: ["ilerle"]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    id: 82,
+    title: "82. Kayaya Çarpmadan",
+    instructions: "Aynı beş satırlık karar döngüsü, farklı bir harita. Mojo kayaya çarpmadan sağa dönüp yolunu kendisi bulur; sen sadece kaç adım süreceğini hesaplarsın.",
+    tip: "Kullanabileceğin koşullar: <code>onumdeEngelVar()</code>, <code>onumdeKayaVar()</code>, <code>onumdeSuVar()</code>, <code>onumdeMuzVar()</code>, <code>onumdeKilitVar()</code>. Artık haritayı ölçmek yerine davranışı tanımlıyorsun.",
+    grid: [
+      "#########",
+      "#M.B#...#",
+      "#...#...#",
+      "#..B#...#",
+      "#...#...#",
+      "#S.B....#",
+      "#########"
+    ],
+    startDir: "RIGHT",
+    solution: [
+      {
+        type: "loop",
+        count: 10,
+        body: [
+          {
+            type: "branch",
+            condition: "onumdeEngelVar",
+            then: ["sagaDon"],
+            otherwise: ["ilerle"]
+          }
+        ]
+      }
+    ]
   }
+
 ];
 
-function preprocessIndentation(code) {
-  const cleanCode = code.replace(/\r\n/g, '\n');
-  const lines = cleanCode.split('\n');
-  const result = [];
-  const indentStack = [0];
-  const parsedLines = [];
+function stripCommentsPreservingLines(code) {
+  const lines = code.replace(/\r\n?/g, '\n').split('\n');
+  let insideBlockComment = false;
 
-  for (let i = 0; i < lines.length; i++) {
-    const original = lines[i];
-    // Strip comments to check if line is empty (supports JS and Python comments)
-    let clean = original.replace(/\/\/.*$/g, '').replace(/#.*$/g, '').replace(/\/\*[\s\S]*?\*\//g, '');
-    const trimmed = clean.trim();
-    
-    if (trimmed === '') {
-      parsedLines.push({ original, isWord: false, indent: 0, text: '' });
-      continue;
+  return lines.map((line) => {
+    let clean = '';
+    let cursor = 0;
+
+    while (cursor < line.length) {
+      if (insideBlockComment) {
+        const commentEnd = line.indexOf('*/', cursor);
+        if (commentEnd === -1) {
+          break;
+        }
+        insideBlockComment = false;
+        cursor = commentEnd + 2;
+        continue;
+      }
+
+      if (line.startsWith('/*', cursor)) {
+        insideBlockComment = true;
+        cursor += 2;
+        continue;
+      }
+      if (line.startsWith('//', cursor) || line[cursor] === '#') {
+        break;
+      }
+
+      clean += line[cursor];
+      cursor++;
     }
-    
-    // Count leading spaces/tabs
-    let indent = 0;
-    for (let char of original) {
-      if (char === ' ') indent++;
-      else if (char === '\t') indent += 4;
-      else break;
-    }
-    
-    parsedLines.push({ original, isWord: true, indent, text: trimmed });
+
+    return clean;
+  });
+}
+
+function getIndentWidth(line) {
+  let width = 0;
+  for (const char of line) {
+    if (char === ' ') width++;
+    else if (char === '\t') width += 4;
+    else break;
+  }
+  return width;
+}
+
+function isIndentBlockHeader(text) {
+  const header = text.trim().replace(/:\s*$/, '');
+  return /^(?:tekrarla|ise)\s*\(/.test(header) || /^(?:}\s*)?degilse$/.test(header);
+}
+
+function openIndentBlock(text) {
+  const header = text.trim().replace(/:\s*$/, '');
+  return `${header} {`;
+}
+
+// Convert Python-style indentation to parser tokens while retaining every
+// command's original source line. Synthetic closing braces never shift the
+// line numbers used by errors or the execution highlighter.
+function preprocessIndentation(code) {
+  const cleanLines = stripCommentsPreservingLines(code);
+  const statements = [];
+
+  cleanLines.forEach((line, index) => {
+    const text = line.trim();
+    if (!text) return;
+    statements.push({
+      text,
+      indent: getIndentWidth(line),
+      line: index + 1
+    });
+  });
+
+  if (statements.length === 0) return [];
+  if (statements[0].indent !== 0) {
+    throw new Error(`Satır ${statements[0].line}: Kod beklenmeyen bir girintiyle başlayamaz.`);
   }
 
-  for (let i = 0; i < parsedLines.length; i++) {
-    const line = parsedLines[i];
-    if (!line.isWord) {
-      result.push(line.original);
-      continue;
-    }
+  const result = [];
+  const indentStack = [0];
+  let previousStatement = null;
 
-    const currentIndent = line.indent;
+  for (const statement of statements) {
+    const currentIndent = statement.indent;
     let topIndent = indentStack[indentStack.length - 1];
 
     if (currentIndent > topIndent) {
-      // New block started! Add " {" to the previous statement line
-      let prevWordIdx = -1;
-      for (let j = result.length - 1; j >= 0; j--) {
-        if (parsedLines[j] && parsedLines[j].isWord) {
-          prevWordIdx = j;
-          break;
-        }
+      if (!previousStatement || !isIndentBlockHeader(previousStatement.text)) {
+        throw new Error(`Satır ${statement.line}: Bu girintiden önce tekrarla, ise veya degilse bloğu bulunmalıdır.`);
       }
-      if (prevWordIdx !== -1) {
-        let prevLine = result[prevWordIdx];
-        prevLine = prevLine.trimEnd();
-        if (prevLine.endsWith(':')) {
-          prevLine = prevLine.slice(0, -1);
-        }
-        if (!prevLine.endsWith('{')) {
-          result[prevWordIdx] = prevLine + ' {';
-        }
-      }
+      previousStatement.text = openIndentBlock(previousStatement.text);
       indentStack.push(currentIndent);
     } else if (currentIndent < topIndent) {
-      // One or more blocks ended! Pop and add closing brackets
       while (indentStack.length > 1 && currentIndent < indentStack[indentStack.length - 1]) {
         indentStack.pop();
-        const parentIndent = indentStack[indentStack.length - 1];
-        result.push(' '.repeat(parentIndent) + '}');
+        result.push({ text: '}', line: statement.line, syntheticClose: true });
+      }
+      topIndent = indentStack[indentStack.length - 1];
+      if (currentIndent !== topIndent) {
+        throw new Error(`Satır ${statement.line}: Girinti önceki blok seviyelerinden biriyle eşleşmiyor.`);
       }
     }
 
-    let processedText = line.original;
-    let trimmed = line.text;
-    
-    // Remove trailing colon
-    if (trimmed.endsWith(':')) {
-      const colonIdx = processedText.lastIndexOf(':');
-      processedText = processedText.slice(0, colonIdx) + processedText.slice(colonIdx + 1);
+    let text = statement.text;
+    if (/^degilse\s*:?\s*$/.test(text)) {
+      const closingToken = result[result.length - 1];
+      if (!closingToken || !closingToken.syntheticClose) {
+        throw new Error(`Satır ${statement.line}: 'degilse' yalnızca tamamlanmış bir 'ise' bloğundan sonra kullanılabilir.`);
+      }
+      result.pop();
+      text = text.endsWith(':') ? '} degilse:' : '} degilse';
     }
 
-    // Combine closing brackets and "degilse" if they align
-    if (trimmed.startsWith('degilse')) {
-      let lastLineIdx = -1;
-      for (let j = result.length - 1; j >= 0; j--) {
-        if (result[j].trim() !== '') {
-          lastLineIdx = j;
-          break;
-        }
-      }
-      if (lastLineIdx !== -1 && result[lastLineIdx].trim() === '}') {
-        const originalClosed = result[lastLineIdx];
-        result.splice(lastLineIdx, 1);
-        processedText = originalClosed.replace('}', '') + '} ' + processedText.trimStart();
-      }
-    }
-
-    result.push(processedText);
+    const token = { text, line: statement.line, syntheticClose: false };
+    result.push(token);
+    previousStatement = token;
   }
 
+  const finalLine = statements[statements.length - 1].line;
   while (indentStack.length > 1) {
     indentStack.pop();
-    const parentIndent = indentStack[indentStack.length - 1];
-    result.push(' '.repeat(parentIndent) + '}');
+    result.push({ text: '}', line: finalLine, syntheticClose: true });
   }
 
-  return result.join('\n');
+  return result;
 }
 
-function compressSequence(actions) {
-  const n = actions.length;
-  if (n === 0) return [];
+// Reference solutions are pure functions of the level data, so they are worth
+// computing once per level id and keeping for the rest of the session.
+const REFERENCE_CACHE = new Map();
 
-  for (let len = 1; len <= Math.floor(n / 2); len++) {
-    const pattern = actions.slice(0, len);
-    let repeats = 1;
-    while (true) {
-      const nextStart = repeats * len;
-      if (nextStart + len > n) break;
-      
-      const nextSlice = actions.slice(nextStart, nextStart + len);
-      let match = true;
-      for (let i = 0; i < len; i++) {
-        if (nextSlice[i] !== pattern[i]) {
-          match = false;
-          break;
+// ── Program encoder ─────────────────────────────────────────────────────────
+// Turns a flat action list into the *fewest scored lines* that reproduce it.
+// The grammar the editor understands is small, so the optimum is reachable
+// with a straightforward interval dynamic program instead of the greedy
+// left-to-right pass this used to do:
+//
+//   single      cmd()                    -> 1 line,  1 action
+//   compact     adimla(n) / adimla(-n)   -> 1 line,  n identical moves
+//   loop        tekrarla(n) + body       -> 1 line + body lines, n * body
+//
+// cost[i][j] holds the cheapest encoding of actions[i..j-1]; a loop is only
+// considered when the whole interval is a whole number of copies of its
+// period, which is exactly what `tekrarla` can express.
+const ENCODER_MAX_COUNT = 100;
+
+export function encodeActions(actions, { allowLoops = true, allowCompact = false } = {}) {
+  const length = actions.length;
+  if (length === 0) return { lines: 0, blocks: [] };
+
+  const cost = Array.from({ length: length + 1 }, () => new Array(length + 1).fill(Infinity));
+  const choice = Array.from({ length: length + 1 }, () => new Array(length + 1).fill(null));
+
+  const isSingleRun = (from, to) => {
+    for (let i = from + 1; i < to; i++) {
+      if (actions[i] !== actions[from]) return false;
+    }
+    return true;
+  };
+
+  const hasPeriod = (from, to, period) => {
+    for (let i = from + period; i < to; i++) {
+      if (actions[i] !== actions[i - period]) return false;
+    }
+    return true;
+  };
+
+  for (let i = 0; i < length; i++) {
+    cost[i][i + 1] = 1;
+    choice[i][i + 1] = { kind: 'simple' };
+  }
+
+  for (let span = 2; span <= length; span++) {
+    for (let from = 0; from + span <= length; from++) {
+      const to = from + span;
+      let best = Infinity;
+      let bestChoice = null;
+
+      const isMove = actions[from] === 'ilerle' || actions[from] === 'geriGit';
+      if (allowCompact && isMove && span <= ENCODER_MAX_COUNT && isSingleRun(from, to)) {
+        best = 1;
+        bestChoice = { kind: 'compact', count: span };
+      }
+
+      // Splits are considered before loops so a tie never produces a
+      // `tekrarla(2)` around a single command, which reads worse than simply
+      // writing the command twice.
+      for (let split = from + 1; split < to; split++) {
+        const candidate = cost[from][split] + cost[split][to];
+        if (candidate < best) {
+          best = candidate;
+          bestChoice = { kind: 'split', split };
         }
       }
-      if (match) {
-        repeats++;
-      } else {
-        break;
-      }
-    }
 
-    const minRepeats = (len === 1) ? 3 : 2;
-    if (repeats >= minRepeats) {
-      const loopBody = compressSequence(pattern);
-      const loopBlock = { type: 'loop', count: repeats, body: loopBody };
-      const remaining = compressSequence(actions.slice(repeats * len));
-      return [loopBlock, ...remaining];
+      if (allowLoops) {
+        for (let period = 1; period * 2 <= span; period++) {
+          if (span % period !== 0) continue;
+          const repeats = span / period;
+          if (repeats > ENCODER_MAX_COUNT) continue;
+          if (!hasPeriod(from, to, period)) continue;
+          const candidate = 1 + cost[from][from + period];
+          if (candidate < best) {
+            best = candidate;
+            bestChoice = { kind: 'loop', period, repeats };
+          }
+        }
+      }
+
+      cost[from][to] = best;
+      choice[from][to] = bestChoice;
     }
   }
 
-  const firstBlock = { type: 'simple', action: actions[0] };
-  const remaining = compressSequence(actions.slice(1));
-  return [firstBlock, ...remaining];
+  const build = (from, to) => {
+    const picked = choice[from][to];
+    if (picked.kind === 'simple') return [{ type: 'simple', action: actions[from] }];
+    if (picked.kind === 'compact') return [{ type: 'compact', action: actions[from], count: picked.count }];
+    if (picked.kind === 'loop') {
+      return [{ type: 'loop', count: picked.repeats, body: build(from, from + picked.period) }];
+    }
+    return [...build(from, picked.split), ...build(picked.split, to)];
+  };
+
+  return { lines: cost[0][length], blocks: build(0, length) };
+}
+
+// ── Block helpers ───────────────────────────────────────────────────────────
+// Authored reference solutions and generated ones share this block shape, so a
+// single renderer covers both syntax modes and a single expander feeds the
+// engine. `countBlockLines` mirrors Game#getUniqueCodeLineCount exactly, which
+// is what keeps a level's star target and its reference solution in agreement.
+
+export function normalizeBlocks(blocks) {
+  const normalized = [];
+  for (const raw of blocks) {
+    if (typeof raw === 'string') {
+      normalized.push({ type: 'simple', action: raw });
+      continue;
+    }
+    if (Array.isArray(raw)) {
+      normalized.push(...normalizeBlocks(raw));
+      continue;
+    }
+    if (raw && raw.type === 'loop') {
+      normalized.push({ type: 'loop', count: raw.count, body: normalizeBlocks(raw.body) });
+      continue;
+    }
+    if (raw && raw.type === 'branch') {
+      normalized.push({
+        type: 'branch',
+        condition: raw.condition,
+        then: normalizeBlocks(raw.then || []),
+        otherwise: raw.otherwise ? normalizeBlocks(raw.otherwise) : null
+      });
+      continue;
+    }
+    normalized.push({ ...raw });
+  }
+  return normalized;
+}
+
+export function countBlockLines(blocks) {
+  let total = 0;
+  for (const block of normalizeBlocks(blocks)) {
+    if (block.type === 'loop') {
+      total += 1 + countBlockLines(block.body);
+    } else if (block.type === 'branch') {
+      // `ise(...)` opens a line; `degilse` reuses the closing brace line in
+      // bracket mode and is its own line in indentation mode, so both modes
+      // score identically only when it is counted once here.
+      total += 1 + countBlockLines(block.then);
+      if (block.otherwise) total += 1 + countBlockLines(block.otherwise);
+    } else {
+      total += 1;
+    }
+  }
+  return total;
+}
+
+export function renderBlocks(blocks, syntaxMode = 'indent', depth = 0) {
+  const isIndent = syntaxMode === 'indent';
+  const pad = (isIndent ? '    ' : '  ').repeat(depth);
+  const lines = [];
+
+  for (const block of normalizeBlocks(blocks)) {
+    if (block.type === 'loop') {
+      if (isIndent) {
+        lines.push(`${pad}tekrarla(${block.count}):`);
+        lines.push(...renderBlocks(block.body, syntaxMode, depth + 1));
+      } else {
+        lines.push(`${pad}tekrarla(${block.count}) {`);
+        lines.push(...renderBlocks(block.body, syntaxMode, depth + 1));
+        lines.push(`${pad}}`);
+      }
+      continue;
+    }
+
+    if (block.type === 'branch') {
+      if (isIndent) {
+        lines.push(`${pad}ise(${block.condition}()):`);
+        lines.push(...renderBlocks(block.then, syntaxMode, depth + 1));
+        if (block.otherwise) {
+          lines.push(`${pad}degilse:`);
+          lines.push(...renderBlocks(block.otherwise, syntaxMode, depth + 1));
+        }
+      } else {
+        lines.push(`${pad}ise(${block.condition}()) {`);
+        lines.push(...renderBlocks(block.then, syntaxMode, depth + 1));
+        if (block.otherwise) {
+          lines.push(`${pad}} degilse {`);
+          lines.push(...renderBlocks(block.otherwise, syntaxMode, depth + 1));
+        }
+        lines.push(`${pad}}`);
+      }
+      continue;
+    }
+
+    if (block.type === 'compact') {
+      const count = block.action === 'geriGit' ? -block.count : block.count;
+      lines.push(`${pad}adimla(${count})`);
+      continue;
+    }
+
+    lines.push(`${pad}${block.action}()`);
+  }
+
+  return lines;
 }
 
 export function parseCode(code, syntaxMode = 'indent') {
-  let processedCode = code;
-  if (syntaxMode === 'indent' && !code.includes('{')) {
-    processedCode = preprocessIndentation(code);
+  if (typeof code !== 'string') {
+    throw new Error('Kod metni okunamadı.');
   }
-  // Strip single line and multiline comments (supports JS and Python comments)
-  let cleanCode = processedCode.replace(/\/\/.*$/gm, '');
-  cleanCode = cleanCode.replace(/#.*$/gm, '');
-  cleanCode = cleanCode.replace(/\/\*[\s\S]*?\*\//g, '');
+  if (code.length > 20_000 || code.split(/\r?\n/).length > 500) {
+    throw new Error('Kod sınırı aşıldı. En fazla 500 satır veya 20.000 karakter kullanabilirsin.');
+  }
 
-  const lines = cleanCode.split('\n');
+  const cleanLines = stripCommentsPreservingLines(code);
+  const containsCodeBraces = cleanLines.some(line => line.includes('{') || line.includes('}'));
+  const lines = syntaxMode === 'indent' && !containsCodeBraces
+    ? preprocessIndentation(code)
+    : cleanLines.map((text, index) => ({ text, line: index + 1, syntheticClose: false }));
   const instructions = [];
   const blockStack = [];
   let nextLoopId = 1;
 
   for (let i = 0; i < lines.length; i++) {
-    const lineText = lines[i].trim();
+    const lineText = lines[i].text.trim();
     if (!lineText) continue;
 
     // Supported formats:
@@ -399,31 +1145,31 @@ export function parseCode(code, syntaxMode = 'indent') {
     // 3. ise(onumdeEngelVar()) {
     // 4. } degilse {
     // 5. }
-    const cmdRegex = /^(ilerle|adimla|solaDon|sagaDon|muzAl)\s*\(\s*(-?\d+)?\s*\)\s*;?$/;
+    const cmdRegex = /^(?:(kaplumbaga)\.)?(ilerle|adimla|solaDon|sagaDon|muzAl|bekle)\s*\(\s*(-?\d+)?\s*\)\s*;?$/;
     const loopStartRegex = /^tekrarla\s*\(\s*(\d+)\s*\)\s*\{$/;
     const ifStartRegex = /^ise\s*\(\s*(onumdeEngelVar|onumdeMuzVar|onumdeKayaVar|onumdeSuVar|onumdeKilitVar)\s*\(\s*\)\s*\)\s*\{$/;
     const elseStartRegex = /^\}\s*degilse\s*\{$/;
     const loopEndRegex = /^\}$/;
 
     let match;
-    const lineNumber = i + 1;
+    const lineNumber = lines[i].line;
 
     if ((match = cmdRegex.exec(lineText)) !== null) {
-      const [_, name, countStr] = match;
+      const [_, target, name, countStr] = match;
       const count = countStr ? parseInt(countStr, 10) : 1;
 
       if (Math.abs(count) < 1 || Math.abs(count) > 100) {
         throw new Error(`Satır ${lineNumber}: Geçersiz parametre değeri. Adım sayısı 1 ile 100 arasında olmalıdır.`);
       }
 
-      if (count < 0 && (name === 'solaDon' || name === 'sagaDon' || name === 'muzAl')) {
-        throw new Error(`Satır ${lineNumber}: Dönüş veya muz alma komutları negatif parametre alamaz.`);
+      if (count < 0 && (name === 'solaDon' || name === 'sagaDon' || name === 'muzAl' || name === 'bekle')) {
+        throw new Error(`Satır ${lineNumber}: Dönüş, bekleme veya muz alma komutları negatif parametre alamaz.`);
       }
 
       const isBackward = count < 0;
       const repeats = Math.abs(count);
       let compileName = name;
-      
+
       if (name === 'adimla' || name === 'ilerle') {
         compileName = isBackward ? 'geriGit' : 'ilerle';
       }
@@ -431,14 +1177,17 @@ export function parseCode(code, syntaxMode = 'indent') {
       for (let r = 0; r < repeats; r++) {
         instructions.push({
           type: 'command',
+          target: target || 'mojo',
           name: compileName,
+          sourceName: name,
+          sourceCount: count,
           line: lineNumber
         });
       }
     } else if ((match = loopStartRegex.exec(lineText)) !== null) {
       const [_, countStr] = match;
       const count = parseInt(countStr, 10);
-      
+
       if (count < 1 || count > 100) {
         throw new Error(`Satır ${lineNumber}: Geçersiz tekrar sayısı. Tekrarlama değeri 1 ile 100 arasında olmalıdır.`);
       }
@@ -507,7 +1256,7 @@ export function parseCode(code, syntaxMode = 'indent') {
       }
     } else {
       // Syntax error
-      throw new Error(`Satır ${lineNumber}: Bilinmeyen veya hatalı komut yazımı: "${lineText}". Geçerli komutlar: ilerle(), solaDon(), sagaDon(), tekrarla(N) { ... }, ise(koşul) { ... }`);
+      throw new Error(`Satır ${lineNumber}: Bilinmeyen veya hatalı komut yazımı: "${lineText}". Geçerli komutlar: ilerle(), adimla(N), solaDon(), sagaDon(), bekle(), kaplumbaga.adimla(), tekrarla(N) { ... }, ise(koşul) { ... } degilse { ... }`);
     }
   }
 
@@ -520,6 +1269,242 @@ export function parseCode(code, syntaxMode = 'indent') {
   return instructions;
 }
 
+// ── Route planning core ─────────────────────────────────────────────────────
+// One planner serves the smart-route button, the star calibration and the
+// level generator. Keeping a single implementation is the only way the
+// generator's "is this solvable?" check can agree with what the engine
+// actually allows at runtime.
+
+const DIRECTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT'];
+
+export function directionOffset(dir) {
+  switch (dir) {
+    case 'UP': return { dx: 0, dy: -1 };
+    case 'RIGHT': return { dx: 1, dy: 0 };
+    case 'DOWN': return { dx: 0, dy: 1 };
+    case 'LEFT': return { dx: -1, dy: 0 };
+    default: return { dx: 0, dy: 0 };
+  }
+}
+
+export function turnDirection(dir, turn) {
+  const index = DIRECTIONS.indexOf(dir);
+  if (index === -1) return dir;
+  return DIRECTIONS[(index + (turn === 'LEFT' ? 3 : 1)) % 4];
+}
+
+// Mirrors loadLevel's turtle setup so a planned route and a played route see
+// the same dive rhythm. Turtles alternate phase in row-major discovery order.
+function deriveTurtleDirection(grid, x, y) {
+  const at = (cx, cy) => (grid[cy] && grid[cy][cx]) || '#';
+  const isWater = (cx, cy) => at(cx, cy) === '~' || at(cx, cy) === 'T';
+  let dir = 'UP';
+  if (isWater(x - 1, y) || isWater(x + 1, y)) dir = isWater(x - 1, y) ? 'LEFT' : 'RIGHT';
+  if (isWater(x, y - 1) || isWater(x, y + 1)) dir = isWater(x, y - 1) ? 'UP' : 'DOWN';
+  return dir;
+}
+
+export function buildRouteWorld(grid, startDir, options = {}) {
+  const height = grid.length;
+  const width = height > 0 ? grid[0].length : 0;
+  const rows = grid.map(row => (Array.isArray(row) ? [...row] : [...row]));
+
+  const world = {
+    width,
+    height,
+    startDir,
+    start: null,
+    goal: null,
+    bananas: [],
+    keys: [],
+    lilypads: new Map(),
+    turtles: [],
+    allowWait: Boolean(options.allowWait),
+    turtlesControllable: Boolean(options.turtlesControllable),
+    cells: rows
+  };
+
+  const providedTurtles = options.turtles;
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const char = rows[y][x];
+      if (char === 'M') world.start = { x, y };
+      else if (char === 'S') world.goal = { x, y };
+      else if (char === 'B') world.bananas.push({ x, y });
+      else if (char === 'K') world.keys.push({ x, y });
+      else if (char === 'L') world.lilypads.set(`${x},${y}`, world.lilypads.size);
+      else if (char === 'T' && !providedTurtles) {
+        world.turtles.push({
+          x,
+          y,
+          dir: deriveTurtleDirection(rows, x, y),
+          phase: (world.turtles.length % 2) * 2
+        });
+      }
+    }
+  }
+
+  if (providedTurtles) {
+    world.turtles = providedTurtles.map(turtle => ({
+      x: turtle.x,
+      y: turtle.y,
+      dir: turtle.dir,
+      phase: turtle.phase || 0
+    }));
+  } else {
+    // Turtles sit in the river; the board stores water under them.
+    for (const turtle of world.turtles) {
+      rows[turtle.y][turtle.x] = '~';
+    }
+  }
+
+  return world;
+}
+
+export function isWorldCellWalkable(world, x, y, hasKeys, stepCount, lilyMask) {
+  if (x < 0 || x >= world.width || y < 0 || y >= world.height) return false;
+  const char = world.cells[y][x];
+
+  if (char === 'L') {
+    const index = world.lilypads.get(`${x},${y}`);
+    if (index !== undefined && (lilyMask & (1 << index))) return false;
+  }
+
+  if (char === '~') {
+    const turtle = world.turtles.find(candidate => candidate.x === x && candidate.y === y);
+    if (!turtle) return false;
+    if (world.turtlesControllable) return true;
+    return ((stepCount + (turtle.phase || 0)) % 4) < 2;
+  }
+
+  if (char === '#') return false;
+  if (char === 'G' && !hasKeys) return false;
+  return true;
+}
+
+// Breadth-first over (position, facing, collected banana set, collected key
+// set, sunk lilypad set, dive phase) — so the first solution found uses the
+// fewest commands.
+export function planShortestRoute(world) {
+  if (!world.start || !world.goal) return null;
+
+  const bananaAt = new Map();
+  world.bananas.forEach((banana, index) => bananaAt.set(`${banana.x},${banana.y}`, index));
+  const keyAt = new Map();
+  world.keys.forEach((key, index) => keyAt.set(`${key.x},${key.y}`, index));
+
+  const targetBananaMask = (1 << world.bananas.length) - 1;
+  const targetKeyMask = (1 << world.keys.length) - 1;
+  const hasTurtles = world.turtles.length > 0;
+
+  const start = {
+    x: world.start.x,
+    y: world.start.y,
+    dir: world.startDir,
+    mask: bananaAt.has(`${world.start.x},${world.start.y}`)
+      ? (1 << bananaAt.get(`${world.start.x},${world.start.y}`))
+      : 0,
+    keyMask: keyAt.has(`${world.start.x},${world.start.y}`)
+      ? (1 << keyAt.get(`${world.start.x},${world.start.y}`))
+      : 0,
+    lilyMask: 0,
+    stepCount: 0
+  };
+
+  const stateKey = state =>
+    `${state.x},${state.y},${state.dir},${state.mask},${state.keyMask},${state.lilyMask},${state.stepCount % 4}`;
+
+  const queue = [start];
+  const startKey = stateKey(start);
+  const visited = new Set([startKey]);
+  const previous = new Map();
+  let cursor = 0;
+  let goalKey = null;
+
+  while (cursor < queue.length) {
+    const state = queue[cursor++];
+    const currentKey = stateKey(state);
+
+    if (state.x === world.goal.x && state.y === world.goal.y &&
+        state.mask === targetBananaMask && state.keyMask === targetKeyMask) {
+      goalKey = currentKey;
+      break;
+    }
+
+    const hasKeys = state.keyMask === targetKeyMask;
+    const candidates = [];
+
+    const { dx, dy } = directionOffset(state.dir);
+    const nextX = state.x + dx;
+    const nextY = state.y + dy;
+    // Runtime checks a timed tile both before and after the step clock ticks,
+    // so a plan must never rely on a turtle that dives mid-step.
+    if (isWorldCellWalkable(world, nextX, nextY, hasKeys, state.stepCount, state.lilyMask) &&
+        isWorldCellWalkable(world, nextX, nextY, hasKeys, state.stepCount + 1, state.lilyMask)) {
+      let mask = state.mask;
+      const bananaIndex = bananaAt.get(`${nextX},${nextY}`);
+      if (bananaIndex !== undefined) mask |= (1 << bananaIndex);
+
+      let keyMask = state.keyMask;
+      const keyIndex = keyAt.get(`${nextX},${nextY}`);
+      if (keyIndex !== undefined) keyMask |= (1 << keyIndex);
+
+      let lilyMask = state.lilyMask;
+      const leavingLily = world.lilypads.get(`${state.x},${state.y}`);
+      if (leavingLily !== undefined) lilyMask |= (1 << leavingLily);
+
+      candidates.push({
+        action: 'ilerle',
+        next: { x: nextX, y: nextY, dir: state.dir, mask, keyMask, lilyMask, stepCount: state.stepCount + 1 }
+      });
+    }
+
+    // Turning or waiting also burns a step, so Mojo must still be on solid
+    // ground once the clock advances.
+    if (isWorldCellWalkable(world, state.x, state.y, hasKeys, state.stepCount + 1, state.lilyMask)) {
+      for (const turn of ['LEFT', 'RIGHT']) {
+        candidates.push({
+          action: turn === 'LEFT' ? 'solaDon' : 'sagaDon',
+          next: { ...state, dir: turnDirection(state.dir, turn), stepCount: state.stepCount + 1 }
+        });
+      }
+      if (hasTurtles && world.allowWait) {
+        candidates.push({ action: 'bekle', next: { ...state, stepCount: state.stepCount + 1 } });
+      }
+    }
+
+    for (const candidate of candidates) {
+      const nextKey = stateKey(candidate.next);
+      if (visited.has(nextKey)) continue;
+      visited.add(nextKey);
+      previous.set(nextKey, { key: currentKey, action: candidate.action });
+      queue.push(candidate.next);
+    }
+  }
+
+  if (!goalKey) return null;
+
+  const actions = [];
+  let key = goalKey;
+  while (key !== startKey) {
+    const link = previous.get(key);
+    actions.push(link.action);
+    key = link.key;
+  }
+  return actions.reverse();
+}
+
+// Convenience wrapper for level data: plan straight from a level's grid rows.
+export function planLevelRoute(level) {
+  const allowed = level.allowedCommands || [];
+  const world = buildRouteWorld(level.grid.map(row => [...row]), level.startDir, {
+    allowWait: allowed.includes('bekle'),
+    turtlesControllable: levelPilotsTurtles(level)
+  });
+  return planShortestRoute(world);
+}
+
 // Game State Class
 export class Game {
   constructor(canvasId) {
@@ -527,12 +1512,12 @@ export class Game {
     this.ctx = this.canvas.getContext('2d');
     this.currentLevelIdx = 0;
     this.level = null;
-    
+
     // Grid sizing
     this.tileSize = 64;
     this.gridWidth = 0;
     this.gridHeight = 0;
-    
+
     // Player state
     this.player = {
       x: 0,
@@ -548,6 +1533,11 @@ export class Game {
     this.bananas = []; // List of {x, y, collected}
     this.starTile = { x: 0, y: 0 };
     this.gridData = []; // 2D grid array of characters
+    this.playArea = null; // Designed (non-padding) region of the board
+    this.trail = []; // Cells Mojo has walked during this attempt
+    this.baseGridData = null; // Pristine copy used by the route planner
+    this.baseTurtles = [];
+    this.baseStart = { x: 0, y: 0 };
 
     // Execution state
     this.executionQueue = [];
@@ -556,6 +1546,9 @@ export class Game {
     this.animationTimer = null;
     this.animationProgress = 1; // 0 to 1 for current transition
     this.executionSpeed = 500; // ms per step
+    this.executionOperationCount = 0;
+    this.maxExecutionOperations = 5000;
+    this.executionGeneration = 0;
     this.lastSourceCode = '';
     this.loopCounters = {}; // VM loop counters (nested loop support)
     this.historyStack = []; // Step-by-step history for Step Back (Undo) support
@@ -566,25 +1559,39 @@ export class Game {
     this.hoveredCell = null;
     this.isDebugMode = false;
     this.isWaitingForStep = false;
+    this.executionStepCount = 0;
 
     // Syntax Mode (indent or bracket)
-    const savedSyntaxMode = localStorage.getItem('kodmaymunu_syntax_mode');
+    let savedSyntaxMode = null;
+    try {
+      savedSyntaxMode = localStorage.getItem('kodmaymunu_syntax_mode');
+    } catch (_) {
+      savedSyntaxMode = null;
+    }
     this.syntaxMode = savedSyntaxMode === 'bracket' ? 'bracket' : 'indent';
-    
+
     // Particles and special animations state
     this.particles = []; // Visual particle effects (banana pick, victory fanfare)
     this.flyingKey = null; // Key-to-gate animation trajectory
     this.showVictoryFanfare = false; // continuous fireworks toggle
     this.crashType = null; // 'water', 'rock', 'gate', or 'outOfBounds'
-    
-    // Load and process banana illustration image
+    this.crashAnimationFrame = null;
+    this.crashAnimationGeneration = 0;
+    this.effectsAnimationFrame = null;
+    this.effectsAnimationGeneration = 0;
+
+    // Fail counter and hint system
+    this.failCountPerLevel = {}; // { levelId: count }
+    this.hintShownForLevel = {}; // { levelId: true }
+
+    // Load the pre-processed transparent sprite (small enough for mobile GPUs).
     this.bananaImg = new Image();
     this.bananaImgProcessed = null;
     this.bananaImg.onload = () => {
-      this.bananaImgProcessed = this.makeTransparent(this.bananaImg);
+      this.bananaImgProcessed = this.bananaImg;
       this.draw();
     };
-    this.bananaImg.src = 'banana.png';
+    this.bananaImg.src = 'banana-sprite.png';
 
     // UI Callbacks
     this.onLevelComplete = null;
@@ -593,36 +1600,40 @@ export class Game {
     this.onDebugStepComplete = null; // Callback for debug step finish
     this.onLogMessage = null;
     this.onBananaChange = null;
+    this.onHint = null; // Callback for contextual hints
 
     // Assets loaded/setup
     this.loadState();
   }
 
   loadState() {
-    const saved = localStorage.getItem('kodmaymunu_level');
-    if (saved) {
-      this.currentLevelIdx = Math.min(LEVELS.length - 1, Math.max(0, parseInt(saved, 10)));
+    try {
+      const saved = localStorage.getItem('kodmaymunu_level');
+      const parsed = Number.parseInt(saved, 10);
+      if (Number.isInteger(parsed)) {
+        this.currentLevelIdx = Math.min(LEVELS.length - 1, Math.max(0, parsed));
+      }
+    } catch (_) {
+      this.currentLevelIdx = 0;
     }
   }
 
   saveState() {
-    localStorage.setItem('kodmaymunu_level', this.currentLevelIdx);
+    try {
+      localStorage.setItem('kodmaymunu_level', this.currentLevelIdx);
+    } catch (_) {
+      // The game remains fully playable when storage is blocked or full.
+    }
   }
 
   loadLevel(idx) {
-    this.currentLevelIdx = idx;
+    this.executionGeneration++;
+    this.cancelCrashAnimation();
+    this.cancelEffectsAnimation();
+    const safeIndex = Number.isInteger(idx) ? idx : 0;
+    this.currentLevelIdx = Math.min(LEVELS.length - 1, Math.max(0, safeIndex));
     this.saveState();
     this.level = LEVELS[this.currentLevelIdx];
-
-    // Automatically allow 'ise' if 'tekrarla' is allowed in the level
-    if (this.level.allowedCommands.includes("tekrarla") && !this.level.allowedCommands.includes("ise")) {
-      this.level.allowedCommands.push("ise");
-    }
-
-    // Automatically allow 'adimla' if 'ilerle' is allowed in the level
-    if (this.level.allowedCommands.includes("ilerle") && !this.level.allowedCommands.includes("adimla")) {
-      this.level.allowedCommands.push("adimla");
-    }
 
     this.isRunning = false;
     this.currentQueueIdx = -1;
@@ -632,25 +1643,28 @@ export class Game {
     this.flyingKey = null;
     this.showVictoryFanfare = false;
     this.crashType = null;
+    this.executionStepCount = 0;
+    this.executionOperationCount = 0;
     if (this.animationTimer) {
       clearTimeout(this.animationTimer);
       this.animationTimer = null;
     }
-
-    // Target grid dimensions matching the original widescreen proportions
-    this.gridWidth = 20;
-    this.gridHeight = 12;
 
     // Parse original grid
     const origGrid = this.level.grid.map(row => row.split(''));
     const origH = origGrid.length;
     const origW = Math.max(...origGrid.map(r => r.length));
 
+    // Keep compact handcrafted missions legible instead of shrinking them into
+    // a mostly empty 20x12 board. Procedural/full-size missions retain 20x12.
+    this.gridWidth = Math.min(20, Math.max(9, origW + 4));
+    this.gridHeight = Math.min(12, Math.max(7, origH + 4));
+
     // Calculate centering offsets
     const padX = Math.floor((this.gridWidth - origW) / 2);
     const padY = Math.floor((this.gridHeight - origH) / 2);
 
-    // Initialize 20x12 grid with grass ('.')
+    // Initialize the responsive camera area with grass ('.').
     this.gridData = [];
     for (let y = 0; y < this.gridHeight; y++) {
       this.gridData.push(new Array(this.gridWidth).fill('.'));
@@ -672,9 +1686,10 @@ export class Game {
     this.canvas.width = this.gridWidth * this.tileSize;
     this.canvas.height = this.gridHeight * this.tileSize;
 
-    // Scan for start points, bananas, stars, keys
+    // Scan for start points, bananas, stars, keys, turtles
     this.bananas = [];
     this.keys = [];
+    this.turtles = [];
     for (let y = 0; y < this.gridHeight; y++) {
       for (let x = 0; x < this.gridWidth; x++) {
         const char = this.gridData[y][x];
@@ -692,9 +1707,58 @@ export class Game {
           this.keys.push({ x, y, collected: false });
         } else if (char === 'S') {
           this.starTile = { x, y };
+        } else if (char === 'T') {
+          this.gridData[y][x] = '~'; // Turtles live in water
+          // Determine initial direction based on river orientation
+          let dir = 'UP';
+          const upIsWater = (y > 0 && this.gridData[y-1][x] === '~');
+          const downIsWater = (y < this.gridHeight - 1 && this.gridData[y+1][x] === '~');
+          const leftIsWater = (x > 0 && this.gridData[y][x-1] === '~');
+          const rightIsWater = (x < this.gridWidth - 1 && this.gridData[y][x+1] === '~');
+
+          if (leftIsWater || rightIsWater) {
+             dir = leftIsWater ? 'LEFT' : 'RIGHT'; // horizontal river
+          }
+          if (upIsWater || downIsWater) {
+             dir = upIsWater ? 'UP' : 'DOWN'; // vertical river overrides horizontal
+          }
+
+          let targetRotation = 0;
+          if (dir === 'UP') targetRotation = 0;
+          if (dir === 'RIGHT') targetRotation = Math.PI / 2;
+          if (dir === 'DOWN') targetRotation = Math.PI;
+          if (dir === 'LEFT') targetRotation = -Math.PI / 2;
+
+          this.turtles.push({
+            x, y,
+            dir,
+            phase: (this.turtles.length % 2) * 2,
+            animX: x,
+            animY: y,
+            animRotation: targetRotation,
+            targetRotation: targetRotation
+          });
         }
       }
     }
+
+    // The board is padded with scenery so a compact mission is not squeezed
+    // into a mostly empty 20x12 canvas. Remember the designed area so the
+    // padding can be rendered as a border rather than as playable ground.
+    this.playArea = { x: padX, y: padY, width: origW, height: origH };
+    this.trail = [{ x: this.player.x, y: this.player.y }];
+
+    // Planning must always run against the untouched board: lilypads sink and
+    // bananas disappear as a program executes, and the reference solution is
+    // often requested mid-attempt.
+    this.baseGridData = this.gridData.map(row => [...row]);
+    this.baseTurtles = this.turtles.map(turtle => ({
+      x: turtle.x,
+      y: turtle.y,
+      dir: turtle.dir,
+      phase: turtle.phase
+    }));
+    this.baseStart = { x: this.player.x, y: this.player.y };
 
     this.animationProgress = 1;
     this.draw();
@@ -709,38 +1773,47 @@ export class Game {
     }
   }
 
+  // Facing maths lives with the planner so a planned turn and a played turn can
+  // never disagree.
   getDirectionOffset(dir) {
-    switch (dir) {
-      case 'RIGHT': return { dx: 1, dy: 0 };
-      case 'LEFT': return { dx: -1, dy: 0 };
-      case 'UP': return { dx: 0, dy: -1 };
-      case 'DOWN': return { dx: 0, dy: 1 };
-      default: return { dx: 0, dy: 0 };
-    }
+    return directionOffset(dir);
   }
 
   getNextDirection(currentDir, turn) {
-    const dirs = ['UP', 'RIGHT', 'DOWN', 'LEFT'];
-    let idx = dirs.indexOf(currentDir);
-    if (turn === 'LEFT') {
-      idx = (idx + 3) % 4;
-    } else {
-      idx = (idx + 1) % 4;
-    }
-    return dirs[idx];
+    return turnDirection(currentDir, turn);
   }
 
-  isWalkableCell(x, y, hasKey = this.hasKeyCollected()) {
-    if (x < 0 || x >= this.gridWidth || y < 0 || y >= this.gridHeight) {
-      return false;
+  isWalkableCell(x, y, hasKey = this.hasKeyCollected(), stepCount = (this.isRunning ? this.executionStepCount : 0), lilyMask = 0, lilypadIndex = null) {
+    if (x < 0 || x >= this.gridWidth || y < 0 || y >= this.gridHeight) return false;
+    const char = this.gridData[y][x];
+
+    // Lilypad check
+    if (char === 'L') {
+      if (lilypadIndex) {
+        const idx = lilypadIndex.get(`${x},${y}`);
+        if (idx !== undefined && (lilyMask & (1 << idx))) {
+          return false; // Lilypad has sunk!
+        }
+      }
     }
 
-    const row = this.gridData[y];
-    const cell = row && row[x] ? row[x] : '#';
-    if (cell === '#') return false;
-    if (cell === '~') return false;
-    if (cell === 'G' && !hasKey) return false;
-    return true;
+    // Water check (needs surfaced turtle)
+    if (char === '~') {
+      const turtle = this.turtles && this.turtles.find(t => t.x === x && t.y === y);
+      if (turtle) {
+        // Evaluate if surfaced
+        // If the level allows turtle control, they never dive automatically
+        const isEmerged = levelPilotsTurtles(this.level)
+          ? true
+          : ((stepCount + (turtle.phase || 0)) % 4 < 2);
+        return isEmerged;
+      }
+      return false; // Water without a surfaced turtle is not walkable
+    }
+
+    if (char === '#') return false;
+    if (char === 'G' && !hasKey) return false;
+    return true; // . M S B K L =
   }
 
   hasKeyCollected() {
@@ -749,107 +1822,25 @@ export class Game {
   }
 
   createSmartRouteCode() {
-    const plan = this.findSmartRoutePlan();
-    if (!plan || plan.length === 0) {
+    const reference = this.getReferenceSolution();
+    if (!reference || reference.blocks.length === 0) {
       return null;
     }
 
-    return this.formatRoutePlan(plan);
+    return this.formatRoutePlan(reference.blocks);
   }
 
   findSmartRoutePlan() {
-    const startTile = this.findStartTile();
-    const start = {
-      x: startTile.x,
-      y: startTile.y,
-      dir: this.level.startDir,
-      mask: 0,
-      keyMask: 0
-    };
-    const bananaIndex = new Map();
-    this.bananas.forEach((banana, idx) => {
-      bananaIndex.set(`${banana.x},${banana.y}`, idx);
-      if (banana.x === start.x && banana.y === start.y) {
-        start.mask |= (1 << idx);
-      }
+    if (!this.level || !this.baseGridData) return null;
+    const allowed = this.level.allowedCommands || [];
+    const world = buildRouteWorld(this.baseGridData, this.level.startDir, {
+      allowWait: allowed.includes('bekle'),
+      turtlesControllable: levelPilotsTurtles(this.level),
+      turtles: this.baseTurtles
     });
-
-    const keyIndex = new Map();
-    this.keys.forEach((key, idx) => {
-      keyIndex.set(`${key.x},${key.y}`, idx);
-      if (key.x === start.x && key.y === start.y) {
-        start.keyMask |= (1 << idx);
-      }
-    });
-
-    const targetMask = (1 << this.bananas.length) - 1;
-    const targetKeyMask = (1 << this.keys.length) - 1;
-
-    const queue = [start];
-    const startKey = this.getRouteStateKey(start);
-    const visited = new Set([startKey]);
-    const previous = new Map();
-    let cursor = 0;
-    let goalKey = null;
-
-    while (cursor < queue.length) {
-      const state = queue[cursor++];
-      const stateKey = this.getRouteStateKey(state);
-
-      if (state.x === this.starTile.x && state.y === this.starTile.y && state.mask === targetMask && state.keyMask === targetKeyMask) {
-        goalKey = stateKey;
-        break;
-      }
-
-      const candidates = [
-        {
-          action: 'ilerle',
-          next: this.getForwardRouteState(state, bananaIndex, keyIndex, targetKeyMask)
-        },
-        {
-          action: 'solaDon',
-          next: {
-            ...state,
-            dir: this.getNextDirection(state.dir, 'LEFT')
-          }
-        },
-        {
-          action: 'sagaDon',
-          next: {
-            ...state,
-            dir: this.getNextDirection(state.dir, 'RIGHT')
-          }
-        }
-      ];
-
-      for (const candidate of candidates) {
-        if (!candidate.next) continue;
-
-        const nextKey = this.getRouteStateKey(candidate.next);
-        if (visited.has(nextKey)) continue;
-
-        visited.add(nextKey);
-        previous.set(nextKey, {
-          key: stateKey,
-          action: candidate.action
-        });
-        queue.push(candidate.next);
-      }
-    }
-
-    if (!goalKey) {
-      return null;
-    }
-
-    const actions = [];
-    let key = goalKey;
-    while (key !== startKey) {
-      const link = previous.get(key);
-      actions.push(link.action);
-      key = link.key;
-    }
-
-    return actions.reverse();
+    world.start = { ...this.baseStart };
+    world.goal = { ...this.starTile };
+    return planShortestRoute(world);
   }
 
   findStartTile() {
@@ -864,79 +1855,128 @@ export class Game {
     return { x: this.player.x, y: this.player.y };
   }
 
-  getRouteStateKey(state) {
-    return `${state.x},${state.y},${state.dir},${state.mask},${state.keyMask || 0}`;
-  }
+  // The reference solution is the single source of truth for a level's star
+  // targets, for the "örnek çözüm" button and for the tests. Authored levels
+  // may ship their own idiomatic `solution` blocks; everything else is encoded
+  // optimally from the shortest route the planner finds.
+  getReferenceSolution() {
+    if (!this.level) return null;
 
-  getForwardRouteState(state, bananaIndex, keyIndex, targetKeyMask) {
-    const { dx, dy } = this.getDirectionOffset(state.dir);
-    const nextX = state.x + dx;
-    const nextY = state.y + dy;
+    const cached = REFERENCE_CACHE.get(this.level.id);
+    if (cached !== undefined) return cached;
 
-    const hasKeys = (state.keyMask || 0) === targetKeyMask;
-    if (!this.isWalkableCell(nextX, nextY, hasKeys)) {
-      return null;
-    }
+    let reference = null;
 
-    let nextMask = state.mask;
-    const bananaIdx = bananaIndex.get(`${nextX},${nextY}`);
-    if (bananaIdx !== undefined) {
-      nextMask |= (1 << bananaIdx);
-    }
-
-    let nextKeyMask = state.keyMask || 0;
-    const keyIdx = keyIndex.get(`${nextX},${nextY}`);
-    if (keyIdx !== undefined) {
-      nextKeyMask |= (1 << keyIdx);
-    }
-
-    return {
-      x: nextX,
-      y: nextY,
-      dir: state.dir,
-      mask: nextMask,
-      keyMask: nextKeyMask
-    };
-  }
-
-  formatRoutePlan(actions) {
-    const isIndent = this.syntaxMode === 'indent';
-    const comment = isIndent ? '#' : '//';
-    const lines = [
-      `${comment} Akilli rota ornegi`,
-      `${comment} Once en kisa hedef sirasi bulundu, sonra tekrarlayan hareketler donguye cevrildi.`
-    ];
-
-    const blocks = compressSequence(actions);
-
-    const renderBlocks = (blockArray, depth = 0) => {
-      const indent = '    '.repeat(depth);
-      const subLines = [];
-      for (const block of blockArray) {
-        if (block.type === 'simple') {
-          const actionName = block.action === 'ilerle' ? 'adimla' : block.action;
-          subLines.push(`${indent}${actionName}()`);
-        } else if (block.type === 'loop') {
-          if (isIndent) {
-            subLines.push(`${indent}tekrarla(${block.count}):`);
-            subLines.push(...renderBlocks(block.body, depth + 1));
-          } else {
-            subLines.push(`${indent}tekrarla(${block.count}) {`);
-            subLines.push(...renderBlocks(block.body, depth + 1));
-            subLines.push(`${indent}}`);
-          }
-        }
+    if (Array.isArray(this.level.solution) && this.level.solution.length > 0) {
+      const blocks = normalizeBlocks(this.level.solution);
+      reference = { blocks, lines: countBlockLines(blocks), authored: true };
+    } else {
+      const plan = this.findSmartRoutePlan();
+      if (plan && plan.length > 0) {
+        const allowed = this.level.allowedCommands || [];
+        const encoded = encodeActions(plan, {
+          allowLoops: allowed.includes('tekrarla'),
+          allowCompact: allowed.includes('adimla')
+        });
+        reference = { blocks: encoded.blocks, lines: encoded.lines, authored: false };
       }
-      return subLines;
-    };
+    }
 
-    lines.push(...renderBlocks(blocks, 0));
+    REFERENCE_CACHE.set(this.level.id, reference);
+    return reference;
+  }
+
+  // 3 stars means "as tight as the reference solution", so the target can
+  // never be unreachable. Beating the reference is tracked separately as a
+  // mastery record instead of being folded into an impossible threshold.
+  getStarTargets() {
+    const reference = this.getReferenceSolution();
+    const par = reference ? reference.lines : 0;
+    if (!par) return { three: 1, two: 2, par: 0 };
+    return {
+      par,
+      three: par,
+      two: par + Math.max(2, Math.round(par * 0.35))
+    };
+  }
+
+  formatRoutePlan(blocks) {
+    const reference = this.getReferenceSolution();
+    const comment = this.syntaxMode === 'indent' ? '#' : '//';
+    const how = reference && reference.authored
+      ? 'Bu görevin mekaniğini gösteren örnek program.'
+      : 'En kısa rota bulundu, sonra tekrar eden hareketler döngüye çevrildi.';
+    const lines = [
+      `${comment} Örnek çözüm — ${countBlockLines(blocks)} satır (3 yıldız)`,
+      `${comment} ${how}`,
+      `${comment} Daha kısasını bulursan rekor kırarsın.`,
+      ...renderBlocks(blocks, this.syntaxMode)
+    ];
     return `${lines.join('\n')}\n`;
   }
 
   log(msg, type = 'info') {
     if (this.onLogMessage) {
       this.onLogMessage(msg, type);
+    }
+  }
+
+  validateInstructionsForLevel(instructions, level) {
+    if (!level) {
+      throw new Error('Aktif seviye yüklenemedi. Lütfen sayfayı yenileyip tekrar deneyin.');
+    }
+
+    const allowed = new Set(level.allowedCommands || []);
+    const movementAllowed = allowed.has('ilerle') || allowed.has('adimla');
+
+    const reject = (instruction, command) => {
+      throw new Error(`Satır ${instruction.line}: "${command}" komutu bu seviyede henüz kullanılamaz.`);
+    };
+
+    const rejectRetired = instruction => {
+      throw new Error(`Satır ${instruction.line}: "muzAl()" komutu kaldırıldı. Mojo muzun üzerinden geçtiğinde muz otomatik toplanır.`);
+    };
+
+    for (const instruction of instructions) {
+      if (instruction.type === 'loop_init') {
+        if (!allowed.has('tekrarla')) reject(instruction, 'tekrarla');
+        continue;
+      }
+
+      if (instruction.type === 'jump_if_false') {
+        if (!allowed.has('ise')) reject(instruction, 'ise');
+        continue;
+      }
+
+      if (instruction.type !== 'command') continue;
+
+      const sourceName = instruction.sourceName || instruction.name;
+      if (sourceName === 'muzAl') rejectRetired(instruction);
+      const isMovement = sourceName === 'ilerle' || sourceName === 'adimla' || instruction.name === 'geriGit';
+
+      if (instruction.target === 'kaplumbaga') {
+        if (!allowed.has('kaplumbaga.adimla')) {
+          reject(instruction, `kaplumbaga.${sourceName}`);
+        }
+        if (sourceName === 'muzAl') {
+          reject(instruction, `kaplumbaga.${sourceName}`);
+        }
+      }
+
+      if (isMovement) {
+        if (!movementAllowed) reject(instruction, sourceName);
+        // `adimla` is its own unlock: before the mission that teaches it, a
+        // single step must be written as `ilerle()`.
+        if (sourceName === 'adimla' && !allowed.has('adimla')) {
+          reject(instruction, 'adimla');
+        }
+        const compactMove = Math.abs(instruction.sourceCount || 1) > 1 || (instruction.sourceCount || 1) < 0;
+        if (compactMove && !allowed.has('adimla')) {
+          reject(instruction, `${sourceName}(${instruction.sourceCount})`);
+        }
+      } else if (!allowed.has(sourceName)) {
+        reject(instruction, sourceName);
+      }
     }
   }
 
@@ -955,6 +1995,9 @@ export class Game {
         return;
       }
 
+      const activeLevel = this.level || LEVELS[this.currentLevelIdx];
+      this.validateInstructionsForLevel(this.executionQueue, activeLevel);
+
       this.log("Algoritma başlatılıyor...", "info");
       this.loadLevel(this.currentLevelIdx); // Reset state before running
       this.isRunning = true;
@@ -970,6 +2013,8 @@ export class Game {
   }
 
   stop() {
+    this.cancelCrashAnimation();
+    this.cancelEffectsAnimation();
     this.isRunning = false;
     this.currentQueueIdx = -1;
     this.loopCounters = {};
@@ -994,8 +2039,16 @@ export class Game {
 
     // Run control flow instructions instantly, pausing only on move commands
     while (this.currentQueueIdx < this.executionQueue.length) {
+      this.executionOperationCount++;
+      if (this.executionOperationCount > this.maxExecutionOperations) {
+        this.isRunning = false;
+        this.log('Program güvenli çalışma sınırını aştı. Döngü sayılarını küçültüp tekrar dene.', 'error');
+        soundEngine.playFail();
+        if (this.onExecutionFinished) this.onExecutionFinished();
+        return;
+      }
       const currentStep = this.executionQueue[this.currentQueueIdx];
-      
+
       if (currentStep.type === 'command') {
         // Highlight UI line
         if (this.onExecutionStep) {
@@ -1008,13 +2061,20 @@ export class Game {
             player: { x: this.player.x, y: this.player.y, dir: this.player.dir },
             keys: this.keys.map(k => ({ ...k })),
             bananas: this.bananas.map(b => ({ ...b })),
+            turtles: (this.turtles || []).map(t => ({ ...t })),
+            gridData: this.gridData.map(row => [...row]),
+            executionStepCount: this.executionStepCount,
+            executionOperationCount: this.executionOperationCount,
+            particles: this.particles.map(p => ({ ...p })),
+            flyingKey: this.flyingKey ? { ...this.flyingKey } : null,
             loopCounters: { ...this.loopCounters },
+            trail: this.trail.map(cell => ({ ...cell })),
             queueIdx: this.currentQueueIdx
           });
         }
 
         // Execute command action
-        const success = this.applyAction(currentStep.name);
+        const success = this.applyAction(currentStep.name, currentStep.target);
         if (!success) {
           this.isRunning = false;
           if (this.onExecutionFinished) {
@@ -1071,7 +2131,14 @@ export class Game {
 
     this.keys = prevState.keys;
     this.bananas = prevState.bananas;
+    this.turtles = prevState.turtles || [];
+    this.gridData = prevState.gridData || this.gridData;
+    this.executionStepCount = prevState.executionStepCount || 0;
+    this.executionOperationCount = prevState.executionOperationCount || 0;
+    this.particles = prevState.particles || [];
+    this.flyingKey = prevState.flyingKey || null;
     this.loopCounters = prevState.loopCounters;
+    this.trail = prevState.trail || this.trail;
     this.currentQueueIdx = prevState.queueIdx; // Point IP back to this instruction
 
     this.animationProgress = 1;
@@ -1103,13 +2170,13 @@ export class Game {
 
     switch (condition) {
       case 'onumdeEngelVar':
-        return isOutOfBounds || cell === '#' || cell === '~' || (cell === 'G' && !this.hasKeyCollected());
+        return !this.isWalkableCell(frontX, frontY);
       case 'onumdeMuzVar':
         return cell === 'B' && this.bananas.some(b => b.x === frontX && b.y === frontY && !b.collected);
       case 'onumdeKayaVar':
         return cell === '#';
       case 'onumdeSuVar':
-        return cell === '~';
+        return cell === '~' && !this.isWalkableCell(frontX, frontY);
       case 'onumdeKilitVar':
         return cell === 'G' && !this.hasKeyCollected();
       default:
@@ -1117,9 +2184,187 @@ export class Game {
     }
   }
 
-  applyAction(action) {
+  // ── Encouraging Message Pools ──
+  getRandomMessage(pool) {
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  getWaterFailMessage() {
+    return this.getRandomMessage([
+      "Mojo suya düştü ama sorun değil! 🏊 Cetvelle mesafeyi kontrol edip tekrar dene.",
+      "Çıldırma! 💧 Mojo yüzme bilmiyor ama sen algoritma biliyorsun. Bir daha dene!",
+      "Su engeli seni durdurdu. 🌊 Rotanı gözden geçir, doğru yol yakınlarda!",
+      "Mojo ıslandı! 💦 Suya basmamak için hangi yönde kaç adım gideceğini hesapla.",
+      "Splash! 🐟 Mojo suya düştü. Ama her hata seni çözüme bir adım daha yaklaştırıyor!"
+    ]);
+  }
+
+  getRockFailMessage() {
+    return this.getRandomMessage([
+      "Mojo kayaya çarptı! 🪨 Dönüş komutlarını kontrol et, doğru yöne mi bakıyor?",
+      "Kayalar sert ama sen daha sertsin! 💪 Rotanı düzelt ve tekrar dene.",
+      "Oops, kaya engeli! ⛰️ Cetvel ile mesafeyi ölç ve doğru adım sayısını bul.",
+      "Mojo kafasını kayaya çarptı! 😵 Hangi yönde ilerlemen gerektiğini düşün.",
+      "Taş gibi bir engel! 🧱 Ama algoritmacılar her engelin üstesinden gelir."
+    ]);
+  }
+
+  getGateFailMessage() {
+    return this.getRandomMessage([
+      "Kapı kilitli! 🔒 Önce altın anahtarı bulmalısın. Haritada K harfini ara!",
+      "Mojo kapıdan geçemedi. 🗝️ Anahtarı almadan kapıyı açamazsın, rotanı değiştir!",
+      "Kilitli kapı seni durdurdu! 🚪 Önce anahtarın olduğu yere git.",
+      "Anahtar olmadan kapı açılmaz! 🔐 Rotanı yeniden planla, önce K karesine uğra."
+    ]);
+  }
+
+  getOutOfBoundsMessage() {
+    return this.getRandomMessage([
+      "Mojo haritanın dışına çıktı! 🗺️ Sınırları aşmadan hedefe ulaşmalısın.",
+      "Harita sınırı! 🚧 Mojo daha fazla ilerleyemez. Dönüş komutlarını kontrol et.",
+      "Mojo maceraya fazla kapıldı ve haritadan çıktı! 🧭 Yönünü düzelt."
+    ]);
+  }
+
+  getTurtleDrownMessage() {
+    return this.getRandomMessage([
+      "Mojo altındaki kaplumbağa suya dalınca boğuldu! 🐢💦 bekle() ile zamanlamayı ayarla.",
+      "Kaplumbağa dalınca Mojo suya düştü! 🐢 Zamanlama her şey, bekle() kullanmayı dene.",
+      "Kaplumbağa batarken Mojo da battı! ⏱️ 2 adım üstte, 2 adım altta. Sayarak ilerle!",
+      "Kaplumbağanın dalış zamanı geldi! 🌊 Bir sonraki seferde daha hızlı geç veya bekle."
+    ]);
+  }
+
+  getBananaCollectMessage() {
+    const collected = this.bananas.filter(b => b.collected).length;
+    const total = this.bananas.length;
+    return this.getRandomMessage([
+      `Lezzetli! 🍌 Mojo bu muzu bayıldı. (${collected}/${total})`,
+      `Harika yakalama! 🍌✨ ${total - collected} muz daha kaldı!`,
+      `Muz toplandı! 🎯 Devam et, Mojo'nun karnı doymuyor! (${collected}/${total})`,
+      `Yummy! 🍌 ${collected}. muz cebimizde. ${total - collected > 0 ? `Sıradaki hedef nerede acaba? 🤔` : `Hepsi tamam!`}`,
+      `Nefis! 🍌 Mojo mutlu. ${total - collected > 0 ? `${total - collected} tane daha var!` : `Tüm muzlar toplandı! 🎉`}`
+    ]);
+  }
+
+  getKeyCollectMessage() {
+    return this.getRandomMessage([
+      "Harika! 🔑 Anahtarı aldın, kilitli kapılar artık açık! Yoluna devam et.",
+      "Altın anahtar cebinde! 🗝️✨ Kapılar seni bekliyor, ilerle!",
+      "Mükemmel keşif! 🔑 Anahtar toplandı. Şimdi kapıyı aç ve hedefe koş!",
+      "Anahtar senin! 🗝️ Artık kilitli geçitler engel değil. Devam!"
+    ]);
+  }
+
+  getVictoryMessage() {
+    return this.getRandomMessage([
+      "🎉 Tebrikler! Mojo hedefe ulaştı ve tüm muzları topladı! Muhteşem algoritma!",
+      "🏆 Bravo! Mükemmel bir çözüm! Mojo sana teşekkür ediyor!",
+      "🌟 Harika iş! Algoritman kusursuz çalıştı! Mojo çok mutlu!",
+      "🎊 Fantastik! Tüm muzlar toplandı, hedef bulundu! Sen bir algoritma ustasısın!",
+      "🥳 Muhteşem! Mojo sandığa ulaştı! Kodlama yeteneklerin gelişiyor!"
+    ]);
+  }
+
+  // Record a failure and maybe show hint
+  recordFailure() {
+    const levelId = this.level.id;
+    this.failCountPerLevel[levelId] = (this.failCountPerLevel[levelId] || 0) + 1;
+
+    // Show contextual hint after 3 failures
+    if (this.failCountPerLevel[levelId] >= 3 && !this.hintShownForLevel[levelId]) {
+      this.hintShownForLevel[levelId] = true;
+      this.showContextualHint();
+    }
+  }
+
+  showContextualHint() {
+    const allowed = this.level.allowedCommands || [];
+    let hint = '';
+
+    if (this.level.tip) {
+      // Strip HTML tags from the tip for console display
+      hint = '💡 İpucu: ' + this.level.tip.replace(/<[^>]*>/g, '');
+    } else if (allowed.includes('tekrarla')) {
+      hint = '💡 İpucu: tekrarla() döngüsünü kullanmayı denedin mi? Tekrarlayan kalıpları otomatikleştir!';
+    } else if (allowed.includes('bekle')) {
+      hint = '💡 İpucu: bekle() komutuyla kaplumbağanın su üstüne çıkmasını bekleyebilirsin!';
+    } else {
+      hint = '💡 İpucu: Cetvel aracını kullanarak mesafeleri ölç. Kaç adım gideceğini hesapla!';
+    }
+
+    this.log(hint, 'hint');
+    if (this.onHint) {
+      this.onHint(hint);
+    }
+  }
+
+  setTurtleRotation(turtle) {
+    switch (turtle.dir) {
+      case 'UP': turtle.targetRotation = 0; break;
+      case 'RIGHT': turtle.targetRotation = Math.PI / 2; break;
+      case 'DOWN': turtle.targetRotation = Math.PI; break;
+      case 'LEFT': turtle.targetRotation = -Math.PI / 2; break;
+    }
+  }
+
+  applyAction(action, target = 'mojo') {
+    if (target === 'kaplumbaga') {
+      if (!this.turtles || this.turtles.length === 0) {
+        this.log("Haritada kaplumbaga yok!", "error");
+        soundEngine.playFail();
+        this.recordFailure();
+        return false;
+      }
+
+      let allSuccess = true;
+      for (const turtle of this.turtles) {
+        if (action === 'ilerle' || action === 'geriGit') {
+          const { dx, dy } = this.getDirectionOffset(turtle.dir);
+          const offsetFactor = action === 'geriGit' ? -1 : 1;
+          const nextX = Math.round(turtle.x + dx * offsetFactor);
+          const nextY = Math.round(turtle.y + dy * offsetFactor);
+
+          if (nextX < 0 || nextX >= this.gridWidth || nextY < 0 || nextY >= this.gridHeight || this.gridData[nextY][nextX] !== '~') {
+            this.log("Kaplumbağa karaya oturdu veya sınırı aştı!", "error");
+            allSuccess = false;
+            break;
+          }
+
+          turtle.x = nextX;
+          turtle.y = nextY;
+        } else if (action === 'sagaDon') {
+          turtle.dir = this.getNextDirection(turtle.dir, 'RIGHT');
+          this.setTurtleRotation(turtle);
+        } else if (action === 'solaDon') {
+          turtle.dir = this.getNextDirection(turtle.dir, 'LEFT');
+          this.setTurtleRotation(turtle);
+        } else if (action === 'bekle') {
+          // just delay
+        }
+      }
+
+      if (!allSuccess) {
+        soundEngine.playFail();
+        this.recordFailure();
+        return false;
+      }
+
+      this.executionStepCount++;
+      // Check if Mojo drowned because turtle moved away
+      if (!this.isWalkableCell(this.player.x, this.player.y)) {
+         this.log(this.getTurtleDrownMessage(), "error");
+         soundEngine.playFail();
+         this.recordFailure();
+         this.triggerCrashAnimation('water');
+         return false;
+      }
+      soundEngine.playStep();
+      return true;
+    }
+
     const { dx, dy } = this.getDirectionOffset(this.player.dir);
-    
+
     if (action === 'ilerle' || action === 'geriGit') {
       const isBackward = action === 'geriGit';
       const offsetFactor = isBackward ? -1 : 1;
@@ -1129,26 +2374,49 @@ export class Game {
       if (!this.isWalkableCell(nextX, nextY)) {
         const cell = nextX >= 0 && nextX < this.gridWidth && nextY >= 0 && nextY < this.gridHeight ? this.gridData[nextY][nextX] : '#';
         let obstacleType = 'outOfBounds';
-        const crashDir = isBackward ? "geri giderken" : "giderken";
         if (cell === 'G') {
-          this.log(`Mojo ${crashDir} kilitli kapıya çarptı! Önce anahtarı almalısın.`, "error");
+          this.log(this.getGateFailMessage(), "error");
           obstacleType = 'gate';
         } else if (cell === '#') {
-          this.log(`Mojo ${crashDir} kayaya çarptı! Algoritma başarısız.`, "error");
+          this.log(this.getRockFailMessage(), "error");
           obstacleType = 'rock';
         } else if (cell === '~') {
-          this.log(`Mojo ${crashDir} suya düştü! Algoritma başarısız.`, "error");
+          this.log(this.getWaterFailMessage(), "error");
           obstacleType = 'water';
         } else {
-          this.log(`Mojo ${crashDir} harita dışına çıktı! Algoritma başarısız.`, "error");
+          this.log(this.getOutOfBoundsMessage(), "error");
         }
         soundEngine.playFail();
+        this.recordFailure();
         this.triggerCrashAnimation(obstacleType);
         return false;
       }
 
+      const oldX = this.player.x;
+      const oldY = this.player.y;
       this.player.x = nextX;
       this.player.y = nextY;
+
+      // Sinking Lilypad check:
+      if (this.gridData[oldY][oldX] === 'L') {
+        this.gridData[oldY][oldX] = '~';
+        this.spawnLeafParticles(oldX, oldY);
+      }
+
+      this.executionStepCount++;
+
+      // Check if Mojo drowned at the new step count (e.g. stepped on a turtle that just submerged)
+      if (!this.isWalkableCell(nextX, nextY)) {
+        this.log(this.getWaterFailMessage(), "error");
+        soundEngine.playFail();
+        this.recordFailure();
+        this.triggerCrashAnimation('water');
+        return false;
+      }
+
+      this.trail.push({ x: nextX, y: nextY });
+      if (this.trail.length > 400) this.trail.shift();
+
       this.collectBananaAtPlayer();
       this.collectKeyAtPlayer();
       soundEngine.playStep();
@@ -1157,17 +2425,55 @@ export class Game {
     } else if (action === 'sagaDon') {
       this.player.dir = this.getNextDirection(this.player.dir, 'RIGHT');
       this.setRotationByDir(this.player.dir);
+
+      this.executionStepCount++;
+      // Check if turtle under Mojo submerged
+      if (!this.isWalkableCell(this.player.x, this.player.y)) {
+        this.log(this.getTurtleDrownMessage(), "error");
+        soundEngine.playFail();
+        this.recordFailure();
+        this.triggerCrashAnimation('water');
+        return false;
+      }
+
       soundEngine.playStep();
       return true;
 
     } else if (action === 'solaDon') {
       this.player.dir = this.getNextDirection(this.player.dir, 'LEFT');
       this.setRotationByDir(this.player.dir);
+
+      this.executionStepCount++;
+      // Check if turtle under Mojo submerged
+      if (!this.isWalkableCell(this.player.x, this.player.y)) {
+        this.log(this.getTurtleDrownMessage(), "error");
+        soundEngine.playFail();
+        this.recordFailure();
+        this.triggerCrashAnimation('water');
+        return false;
+      }
+
+      soundEngine.playStep();
+      return true;
+
+    } else if (action === 'bekle') {
+      this.executionStepCount++;
+      // Check if turtle under Mojo submerged
+      if (!this.isWalkableCell(this.player.x, this.player.y)) {
+        this.log(this.getTurtleDrownMessage(), "error");
+        soundEngine.playFail();
+        this.recordFailure();
+        this.triggerCrashAnimation('water');
+        return false;
+      }
+
       soundEngine.playStep();
       return true;
 
     } else if (action === 'muzAl') {
-      this.log("muzAl() artık gerekli değil; Mojo muzlara değince otomatik toplar.", "info");
+      // Retired command: the validator rejects it before execution, so this is
+      // only a safety net for programs compiled elsewhere.
+      this.log("muzAl() kaldırıldı; Mojo muzlara değince otomatik toplar.", "info");
       this.collectBananaAtPlayer();
       return true;
     }
@@ -1180,7 +2486,7 @@ export class Game {
     if (!key) return false;
 
     key.collected = true;
-    this.log("Harika! Anahtarı aldın, kilitli kapı artık açıldı.", "success");
+    this.log(this.getKeyCollectMessage(), "success");
     soundEngine.playCoin();
 
     // Trigger sliding key flying animation to the gate!
@@ -1211,12 +2517,12 @@ export class Game {
     if (!banana) return false;
 
     banana.collected = true;
-    this.log("Nefis! Muz otomatik toplandı.", "success");
+    this.log(this.getBananaCollectMessage(), "success");
     soundEngine.playCoin();
-    
+
     // Spawn pick particles
     this.spawnBananaParticles(this.player.x, this.player.y);
-    
+
     if (this.onBananaChange) {
       this.onBananaChange(this.bananas.filter(b => b.collected).length, this.bananas.length);
     }
@@ -1244,6 +2550,27 @@ export class Game {
     }
   }
 
+  spawnLeafParticles(cellX, cellY) {
+    const center = this.tileSize / 2;
+    const px = cellX * this.tileSize + center;
+    const py = cellY * this.tileSize + center;
+    for (let i = 0; i < 12; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.5 + Math.random() * 2;
+      this.particles.push({
+        x: px,
+        y: py,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 0.5,
+        color: '#10b981', // green leaf color
+        size: 2.5 + Math.random() * 3,
+        alpha: 1,
+        life: 0,
+        maxLife: 15 + Math.random() * 15
+      });
+    }
+  }
+
   spawnVictoryParticles() {
     const px = this.starTile.x * this.tileSize + this.tileSize / 2;
     const py = this.starTile.y * this.tileSize + this.tileSize / 2;
@@ -1265,23 +2592,66 @@ export class Game {
     }
   }
 
+  cancelEffectsAnimation() {
+    this.effectsAnimationGeneration++;
+    if (this.effectsAnimationFrame !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.effectsAnimationFrame);
+    }
+    this.effectsAnimationFrame = null;
+    this.showVictoryFanfare = false;
+  }
+
+  startVictoryEffects() {
+    this.cancelEffectsAnimation();
+    this.showVictoryFanfare = true;
+    const generation = this.effectsAnimationGeneration;
+    const startedAt = performance.now();
+
+    const renderEffects = now => {
+      if (generation !== this.effectsAnimationGeneration) return;
+      if (now - startedAt > 1500) this.showVictoryFanfare = false;
+      this.draw();
+      if (this.showVictoryFanfare || this.particles.length > 0 || this.flyingKey) {
+        this.effectsAnimationFrame = requestAnimationFrame(renderEffects);
+      } else {
+        this.effectsAnimationFrame = null;
+      }
+    };
+
+    this.spawnVictoryParticles();
+    this.effectsAnimationFrame = requestAnimationFrame(renderEffects);
+  }
+
+  cancelCrashAnimation() {
+    this.crashAnimationGeneration++;
+    if (this.crashAnimationFrame !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.crashAnimationFrame);
+    }
+    this.crashAnimationFrame = null;
+    this.crashType = null;
+  }
+
   triggerCrashAnimation(obstacleType) {
+    this.cancelCrashAnimation();
     this.animationProgress = 0;
     this.crashType = obstacleType; // 'water', 'rock', 'gate', or 'outOfBounds'
     const self = this;
+    const generation = this.crashAnimationGeneration;
     let frames = 0;
-    
+
     function crashLoop() {
+      if (generation !== self.crashAnimationGeneration) return;
       if (frames < 30) {
         frames++;
         self.drawCrash(frames);
-        requestAnimationFrame(crashLoop);
+        self.crashAnimationFrame = requestAnimationFrame(crashLoop);
       } else {
+        self.crashAnimationFrame = null;
         self.crashType = null;
         self.loadLevel(self.currentLevelIdx);
       }
     }
-    crashLoop();
+    this.crashAnimationFrame = requestAnimationFrame(crashLoop);
   }
 
   drawCrash(frames) {
@@ -1290,7 +2660,7 @@ export class Game {
     const py = this.player.y * this.tileSize + center;
 
     this.ctx.save();
-    
+
     if (this.crashType === 'water') {
       // Drowning animation: spin and scale down
       this.draw(); // draw normal scene first
@@ -1321,6 +2691,7 @@ export class Game {
     const speed = this.executionSpeed;
     const start = performance.now();
     const self = this;
+    const generation = this.executionGeneration;
     const startX = this.player.animX;
     const startY = this.player.animY;
     const startRot = this.player.animRotation;
@@ -1332,8 +2703,22 @@ export class Game {
     while (diff > Math.PI) diff -= Math.PI * 2;
     targetRot = startRot + diff;
 
+    // Capture turtle animation start states
+    const turtleAnimStates = (this.turtles || []).map(t => {
+      let tTargetRot = t.targetRotation;
+      let tDiff = tTargetRot - t.animRotation;
+      while (tDiff < -Math.PI) tDiff += Math.PI * 2;
+      while (tDiff > Math.PI) tDiff -= Math.PI * 2;
+      return {
+        startX: t.animX,
+        startY: t.animY,
+        startRot: t.animRotation,
+        targetRot: t.animRotation + tDiff
+      };
+    });
+
     function animLoop(time) {
-      if (!self.isRunning) return;
+      if (!self.isRunning || generation !== self.executionGeneration) return;
       const elapsed = time - start;
       const progress = Math.min(1, elapsed / (speed * 0.8)); // Leave 20% buffer
 
@@ -1341,6 +2726,17 @@ export class Game {
       self.player.animX = startX + (self.player.x - startX) * progress;
       self.player.animY = startY + (self.player.y - startY) * progress;
       self.player.animRotation = startRot + (targetRot - startRot) * progress;
+
+      // Animate turtles
+      if (self.turtles) {
+        for (let i = 0; i < self.turtles.length; i++) {
+          const t = self.turtles[i];
+          const state = turtleAnimStates[i];
+          t.animX = state.startX + (t.x - state.startX) * progress;
+          t.animY = state.startY + (t.y - state.startY) * progress;
+          t.animRotation = state.startRot + (state.targetRot - state.startRot) * progress;
+        }
+      }
 
       self.draw();
 
@@ -1351,6 +2747,16 @@ export class Game {
         self.player.animX = self.player.x;
         self.player.animY = self.player.y;
         self.player.animRotation = self.player.targetRotation;
+
+        if (self.turtles) {
+          for (let i = 0; i < self.turtles.length; i++) {
+            const t = self.turtles[i];
+            t.animX = t.x;
+            t.animY = t.y;
+            t.animRotation = t.targetRotation;
+          }
+        }
+
         self.draw();
 
         self.currentQueueIdx++;
@@ -1361,7 +2767,7 @@ export class Game {
           }
         } else {
           self.animationTimer = setTimeout(() => {
-            self.step();
+            if (generation === self.executionGeneration) self.step();
           }, speed * 0.2);
         }
       }
@@ -1370,35 +2776,69 @@ export class Game {
   }
 
   checkWinCondition() {
+    // Check if player is on a water cell with a submerged turtle
+    const currentCell = this.gridData[this.player.y][this.player.x];
+    if (currentCell === '~' && !this.isWalkableCell(this.player.x, this.player.y)) {
+      this.log(this.getTurtleDrownMessage(), "error");
+      soundEngine.playFail();
+      this.isRunning = false;
+      this.recordFailure();
+      this.triggerCrashAnimation('water');
+      if (this.onExecutionFinished) {
+        this.onExecutionFinished();
+      }
+      return;
+    }
+
     // Check if at star and all bananas collected
     const uncollected = this.bananas.filter(b => !b.collected);
     const atStar = this.player.x === this.starTile.x && this.player.y === this.starTile.y;
 
     if (atStar && uncollected.length === 0) {
-      this.log("Tebrikler! Mojo hedefe ulaştı ve tüm muzları topladı!", "success");
+      this.log(this.getVictoryMessage(), "success");
       soundEngine.playVictory();
       this.isRunning = false;
-      this.showVictoryFanfare = true; // Turn on confettis/fireworks particle generation
-      
-      // Calculate code efficiency stars
+      this.startVictoryEffects();
+
+      // Reset fail counter on success
+      if (this.level) {
+        this.failCountPerLevel[this.level.id] = 0;
+      }
+
+      // Star targets come from the level's verified reference solution, so a
+      // three-star run is always something the player can actually write.
       const lineCount = this.getUniqueCodeLineCount();
+      const targets = this.getStarTargets();
       let stars = 1;
-      if (lineCount <= this.level.starRating.three) {
+      if (lineCount <= targets.three) {
         stars = 3;
-      } else if (lineCount <= this.level.starRating.two) {
+      } else if (lineCount <= targets.two) {
         stars = 2;
       }
 
       if (this.onLevelComplete) {
-        this.onLevelComplete(stars, lineCount);
+        this.onLevelComplete(stars, lineCount, {
+          par: targets.par,
+          twoStarLimit: targets.two,
+          beatPar: targets.par > 0 && lineCount < targets.par
+        });
       }
     } else {
       if (!atStar) {
-        this.log("Mojo yıldıza ulaşamadı! Lütfen kodu gözden geçirin.", "error");
+        this.log(this.getRandomMessage([
+          "Mojo sandığa ulaşamadı! 📦 Rotanı gözden geçir, hedefe doğru yönlendir.",
+          "Hedefe ulaşılamadı! 🎯 Mojo'nun son konumunu kontrol et, birkaç adım eksik olabilir.",
+          "Sandık hâlâ uzakta! 🗺️ Kodu gözden geçirip doğru yöne dönmeyi dene."
+        ]), "error");
       } else if (uncollected.length > 0) {
-        this.log(`Tüm muzları toplamadın! Kalan muz sayısı: ${uncollected.length}`, "error");
+        this.log(this.getRandomMessage([
+          `Hedefe vardın ama ${uncollected.length} muz yolda kaldı! 🍌 Rotanı değiştir.`,
+          `Sandığa ulaştın ama ${uncollected.length} muz toplanmadı! 🍌 Tüm muzlardan geç.`,
+          `Neredeyse! Sadece ${uncollected.length} muz eksik. 🍌 Muzların üzerinden geçerek topla!`
+        ]), "error");
       }
       soundEngine.playFail();
+      this.recordFailure();
       this.isRunning = false;
       if (this.onExecutionFinished) {
         this.onExecutionFinished();
@@ -1409,10 +2849,7 @@ export class Game {
   getUniqueCodeLineCount() {
     // Score the written program, not the expanded execution queue.
     // Closing braces and comments do not count as algorithm steps.
-    let cleanCode = this.lastSourceCode.replace(/\/\/.*$/gm, '');
-    cleanCode = cleanCode.replace(/\/\*[\s\S]*?\*\//g, '');
-    const lines = cleanCode
-      .split('\n')
+    const lines = stripCommentsPreservingLines(this.lastSourceCode)
       .map(line => line.trim())
       .filter(line => line && line !== '}');
     return lines.length;
@@ -1449,7 +2886,26 @@ export class Game {
           this.drawWater(px, py);
         } else if (cell === 'G') {
           this.drawGate(px, py, this.hasKeyCollected());
+        } else if (cell === '=') {
+          this.drawWater(px, py);
+          this.drawBridge(px, py);
+        } else if (cell === 'L') {
+          this.drawWater(px, py);
+          this.drawLilypad(px, py);
         }
+      }
+    }
+
+    // 1.4 Shade the padding so the designed board reads as an island
+    this.drawBoardFrame(isLight);
+
+    // 1.45 Draw the trail Mojo has actually walked this attempt
+    this.drawTrail(isLight);
+
+    // 1.5 Draw dynamic turtles
+    if (this.turtles) {
+      for (const t of this.turtles) {
+        this.drawTurtle(t.animX * this.tileSize, t.animY * this.tileSize, t.animRotation, t.phase || 0);
       }
     }
 
@@ -1494,7 +2950,7 @@ export class Game {
       p.y += p.vy;
       p.vy += 0.06; // gravity
       p.alpha = Math.max(0, 1 - p.life / p.maxLife);
-      
+
       this.ctx.save();
       this.ctx.globalAlpha = p.alpha;
       this.ctx.fillStyle = p.color;
@@ -1522,12 +2978,63 @@ export class Game {
     }
   }
 
+  // Padding cells exist only to frame a compact mission; a soft wash keeps
+  // them from looking like ground the player forgot to use.
+  drawBoardFrame(isLight) {
+    if (!this.playArea) return;
+    const { x, y, width, height } = this.playArea;
+    if (width >= this.gridWidth && height >= this.gridHeight) return;
+
+    const size = this.tileSize;
+    this.ctx.save();
+    this.ctx.fillStyle = isLight ? 'rgba(15, 60, 40, 0.10)' : 'rgba(0, 0, 0, 0.42)';
+    this.ctx.beginPath();
+    this.ctx.rect(0, 0, this.canvas.width, this.canvas.height);
+    this.ctx.rect(x * size, y * size, width * size, height * size);
+    this.ctx.fill('evenodd');
+
+    this.ctx.strokeStyle = isLight ? 'rgba(5, 150, 105, 0.30)' : 'rgba(16, 185, 129, 0.28)';
+    this.ctx.lineWidth = 2;
+    this.ctx.setLineDash([6, 6]);
+    this.ctx.strokeRect(x * size, y * size, width * size, height * size);
+    this.ctx.restore();
+  }
+
+  // A fading ribbon of the route just executed. Seeing the actual path is the
+  // fastest way to spot where an algorithm went wrong.
+  drawTrail(isLight) {
+    if (!this.trail || this.trail.length < 2) return;
+    const size = this.tileSize;
+    const half = size / 2;
+
+    this.ctx.save();
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+
+    for (let i = 1; i < this.trail.length; i++) {
+      const from = this.trail[i - 1];
+      const to = this.trail[i];
+      // Newer segments are brighter, so direction of travel is readable.
+      const freshness = i / this.trail.length;
+      this.ctx.strokeStyle = isLight
+        ? `rgba(5, 150, 105, ${0.10 + freshness * 0.30})`
+        : `rgba(52, 211, 153, ${0.10 + freshness * 0.35})`;
+      this.ctx.lineWidth = 3 + freshness * 3;
+      this.ctx.beginPath();
+      this.ctx.moveTo(from.x * size + half, from.y * size + half);
+      this.ctx.lineTo(to.x * size + half, to.y * size + half);
+      this.ctx.stroke();
+    }
+
+    this.ctx.restore();
+  }
+
   drawCoordinatesHUD() {
     const isLight = document.body.classList.contains('light-theme');
     this.ctx.save();
     this.ctx.font = 'bold 9px monospace';
     this.ctx.fillStyle = isLight ? 'rgba(5, 150, 105, 0.45)' : 'rgba(16, 185, 129, 0.35)';
-    
+
     // Draw column numbers (1 to 20) at top border
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'top';
@@ -1576,18 +3083,290 @@ export class Game {
     this.ctx.fillStyle = isLight ? '#bae6fd' : '#0f766e';
     this.ctx.fillRect(x + padding, y + padding, size, size);
 
+    // Only animate water waves if level.id > 20
+    const shouldAnimate = this.level && this.level.id > 20;
+    const time = shouldAnimate ? performance.now() * 0.003 : 0;
+    const waveOffset = Math.sin(time + x + y) * 2.5;
+
     // Draw wavy lines
     this.ctx.strokeStyle = isLight ? '#38bdf8' : '#14b8a6';
     this.ctx.lineWidth = 2;
+    this.ctx.lineCap = 'round';
+
     this.ctx.beginPath();
-    this.ctx.moveTo(x + 10, y + 25);
-    this.ctx.bezierCurveTo(x + 20, y + 20, x + 30, y + 30, x + 40, y + 25);
+    this.ctx.moveTo(x + 10 + waveOffset, y + 25);
+    this.ctx.bezierCurveTo(x + 20 + waveOffset, y + 20, x + 30 + waveOffset, y + 30, x + 40 + waveOffset, y + 25);
     this.ctx.stroke();
 
     this.ctx.beginPath();
-    this.ctx.moveTo(x + 20, y + 45);
-    this.ctx.bezierCurveTo(x + 30, y + 40, x + 40, y + 50, x + 50, y + 45);
+    this.ctx.moveTo(x + 20 - waveOffset, y + 45);
+    this.ctx.bezierCurveTo(x + 30 - waveOffset, y + 40, x + 40 - waveOffset, y + 50, x + 50 - waveOffset, y + 45);
     this.ctx.stroke();
+  }
+
+  drawBridge(x, y) {
+    const isLight = document.body.classList.contains('light-theme');
+    this.ctx.save();
+
+    // Convert pixel coordinates to grid indexes
+    const gridX = Math.round(x / this.tileSize);
+    const gridY = Math.round(y / this.tileSize);
+
+    // Check neighbors to determine direction
+    let isVertical = false;
+    const upCell = gridY > 0 ? this.gridData[gridY - 1][gridX] : '#';
+    const downCell = gridY < this.gridHeight - 1 ? this.gridData[gridY + 1][gridX] : '#';
+    const leftCell = gridX > 0 ? this.gridData[gridY][gridX - 1] : '#';
+    const rightCell = gridX < this.gridWidth - 1 ? this.gridData[gridY][gridX + 1] : '#';
+
+    // If there is water left and right, it's likely a vertical bridge spanning north-south
+    if ((leftCell === '~' || leftCell === '#') && (rightCell === '~' || rightCell === '#') && upCell !== '~' && downCell !== '~') {
+      isVertical = true;
+    }
+
+    const plankColor = isLight ? '#b45309' : '#78350f'; // Warm brown wood
+    const darkWood = isLight ? '#78350f' : '#451a03';
+    const ropeColor = isLight ? '#d97706' : '#92400e';
+
+    if (isVertical) {
+      // Draw handrail ropes on left and right
+      this.ctx.strokeStyle = ropeColor;
+      this.ctx.lineWidth = 3;
+      this.ctx.beginPath();
+      this.ctx.moveTo(x + 6, y);
+      this.ctx.lineTo(x + 6, y + this.tileSize);
+      this.ctx.moveTo(x + this.tileSize - 6, y);
+      this.ctx.lineTo(x + this.tileSize - 6, y + this.tileSize);
+      this.ctx.stroke();
+
+      // Draw horizontal wooden planks
+      this.ctx.fillStyle = plankColor;
+      this.ctx.strokeStyle = darkWood;
+      this.ctx.lineWidth = 1;
+
+      const plankCount = 4;
+      const plankHeight = (this.tileSize - 8) / plankCount;
+      for (let i = 0; i < plankCount; i++) {
+        const py = y + 4 + i * plankHeight;
+        this.ctx.fillRect(x + 8, py + 1, this.tileSize - 16, plankHeight - 2);
+        this.ctx.strokeRect(x + 8, py + 1, this.tileSize - 16, plankHeight - 2);
+      }
+    } else {
+      // Horizontal bridge (default)
+      // Draw handrail ropes on top and bottom
+      this.ctx.strokeStyle = ropeColor;
+      this.ctx.lineWidth = 3;
+      this.ctx.beginPath();
+      this.ctx.moveTo(x, y + 6);
+      this.ctx.lineTo(x + this.tileSize, y + 6);
+      this.ctx.moveTo(x, y + this.tileSize - 6);
+      this.ctx.lineTo(x + this.tileSize, y + this.tileSize - 6);
+      this.ctx.stroke();
+
+      // Draw vertical wooden planks
+      this.ctx.fillStyle = plankColor;
+      this.ctx.strokeStyle = darkWood;
+      this.ctx.lineWidth = 1;
+
+      const plankCount = 4;
+      const plankWidth = (this.tileSize - 8) / plankCount;
+      for (let i = 0; i < plankCount; i++) {
+        const px = x + 4 + i * plankWidth;
+        this.ctx.fillRect(px + 1, y + 8, plankWidth - 2, this.tileSize - 16);
+        this.ctx.strokeRect(px + 1, y + 8, plankWidth - 2, this.tileSize - 16);
+      }
+    }
+    this.ctx.restore();
+  }
+
+  drawTurtle(x, y, rotation = 0, phase = 0) {
+    const center = this.tileSize / 2;
+    const tx = x + center;
+    const ty = y + center;
+
+    // Check if emerged based on step count
+    // If the level allows turtle control, they are always surfaced
+    const isControllable = levelPilotsTurtles(this.level);
+    const step = this.isRunning ? this.executionStepCount : 0;
+    const isEmerged = isControllable ? true : ((step + phase) % 4 < 2);
+
+    this.ctx.save();
+
+    // Apply turtle transformations
+    this.ctx.translate(tx, ty);
+
+    if (!isEmerged) {
+      this.ctx.globalAlpha = 0.3;
+      this.ctx.scale(0.8, 0.8);
+    }
+
+    // Apply direction rotation
+    this.ctx.rotate(rotation);
+
+    // Move back to draw relative to 0,0
+    this.ctx.translate(-tx, -ty);
+
+    const time = performance.now() * 0.005;
+    // Flippers paddling animation
+    const paddleOffset = Math.sin(time) * 0.2;
+
+    // Draw flippers
+    this.ctx.fillStyle = '#10b981'; // Green flippers
+    this.ctx.strokeStyle = '#047857';
+    this.ctx.lineWidth = 1.5;
+
+    // Front Left Flipper
+    this.ctx.save();
+    this.ctx.translate(tx - 12, ty - 12);
+    this.ctx.rotate(-Math.PI / 4 + paddleOffset);
+    this.ctx.beginPath();
+    this.ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.stroke();
+    this.ctx.restore();
+
+    // Front Right Flipper
+    this.ctx.save();
+    this.ctx.translate(tx + 12, ty - 12);
+    this.ctx.rotate(Math.PI / 4 - paddleOffset);
+    this.ctx.beginPath();
+    this.ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.stroke();
+    this.ctx.restore();
+
+    // Back Left Flipper
+    this.ctx.save();
+    this.ctx.translate(tx - 10, ty + 12);
+    this.ctx.rotate(-Math.PI * 3 / 4 - paddleOffset * 0.5);
+    this.ctx.beginPath();
+    this.ctx.ellipse(0, 0, 8, 4, 0, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.stroke();
+    this.ctx.restore();
+
+    // Back Right Flipper
+    this.ctx.save();
+    this.ctx.translate(tx + 10, ty + 12);
+    this.ctx.rotate(Math.PI * 3 / 4 + paddleOffset * 0.5);
+    this.ctx.beginPath();
+    this.ctx.ellipse(0, 0, 8, 4, 0, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.stroke();
+    this.ctx.restore();
+
+    // Draw Tail
+    this.ctx.fillStyle = '#10b981';
+    this.ctx.beginPath();
+    this.ctx.moveTo(tx - 3, ty + 16);
+    this.ctx.lineTo(tx, ty + 22);
+    this.ctx.lineTo(tx + 3, ty + 16);
+    this.ctx.closePath();
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    // Draw Head
+    const headWiggle = Math.sin(time * 0.5) * 1.5;
+    this.ctx.save();
+    this.ctx.translate(tx + headWiggle, ty - 18);
+    this.ctx.beginPath();
+    this.ctx.arc(0, 0, 6, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.stroke();
+    // Eyes
+    this.ctx.fillStyle = '#000';
+    this.ctx.beginPath();
+    this.ctx.arc(-2, -2, 1, 0, Math.PI * 2);
+    this.ctx.arc(2, -2, 1, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.restore();
+
+    // Draw Shell (Carapace)
+    this.ctx.fillStyle = '#047857'; // Dark green shell
+    this.ctx.strokeStyle = '#064e3b';
+    this.ctx.lineWidth = 2;
+    this.ctx.beginPath();
+    this.ctx.arc(tx, ty, 15, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    // Shell details / Hex patterns
+    this.ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
+    this.ctx.lineWidth = 1;
+    this.ctx.beginPath();
+    // Central hexagon
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * Math.PI) / 3;
+      const hx = tx + Math.cos(angle) * 6;
+      const hy = ty + Math.sin(angle) * 6;
+      if (i === 0) this.ctx.moveTo(hx, hy);
+      else this.ctx.lineTo(hx, hy);
+    }
+    this.ctx.closePath();
+    this.ctx.stroke();
+
+    // Radials from center hex to outer border
+    this.ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * Math.PI) / 3;
+      this.ctx.moveTo(tx + Math.cos(angle) * 6, ty + Math.sin(angle) * 6);
+      this.ctx.lineTo(tx + Math.cos(angle) * 15, ty + Math.sin(angle) * 15);
+    }
+    this.ctx.stroke();
+
+    this.ctx.restore();
+  }
+
+  drawLilypad(x, y) {
+    const center = this.tileSize / 2;
+    const lx = x + center;
+    const ly = y + center;
+
+    this.ctx.save();
+    this.ctx.fillStyle = '#10b981'; // vibrant green leaf
+    this.ctx.strokeStyle = '#047857';
+    this.ctx.lineWidth = 1.5;
+
+    // Draw circle with a pie slice missing (typical lilypad shape)
+    this.ctx.beginPath();
+    this.ctx.arc(lx, ly, 18, 0.3, Math.PI * 2 - 0.3);
+    this.ctx.lineTo(lx, ly);
+    this.ctx.closePath();
+    this.ctx.fill();
+    this.ctx.stroke();
+
+    // Leaf veins
+    this.ctx.strokeStyle = '#34d399';
+    this.ctx.lineWidth = 1;
+    this.ctx.beginPath();
+    this.ctx.moveTo(lx, ly);
+    this.ctx.lineTo(lx + Math.cos(0.8) * 16, ly + Math.sin(0.8) * 16);
+    this.ctx.moveTo(lx, ly);
+    this.ctx.lineTo(lx + Math.cos(2.2) * 16, ly + Math.sin(2.2) * 16);
+    this.ctx.moveTo(lx, ly);
+    this.ctx.lineTo(lx + Math.cos(3.8) * 16, ly + Math.sin(3.8) * 16);
+    this.ctx.moveTo(lx, ly);
+    this.ctx.lineTo(lx + Math.cos(5.2) * 16, ly + Math.sin(5.2) * 16);
+    this.ctx.stroke();
+
+    // Draw a small pink flower on top of the leaf to make it look extra premium!
+    this.ctx.fillStyle = '#f472b6'; // pink petal
+    this.ctx.strokeStyle = '#db2777';
+    const flowerX = lx + 4;
+    const flowerY = ly - 4;
+    for (let i = 0; i < 5; i++) {
+      const angle = (i * Math.PI * 2) / 5;
+      this.ctx.beginPath();
+      this.ctx.arc(flowerX + Math.cos(angle) * 4, flowerY + Math.sin(angle) * 4, 3, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.stroke();
+    }
+    this.ctx.fillStyle = '#fef08a'; // yellow center
+    this.ctx.beginPath();
+    this.ctx.arc(flowerX, flowerY, 2.5, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.restore();
   }
 
   drawBanana(x, y) {
@@ -1728,7 +3507,7 @@ export class Game {
     this.ctx.strokeStyle = '#fff';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
-    
+
     // Draw simple treasure chest
     const w = 24;
     const h = 20;
@@ -1769,7 +3548,7 @@ export class Game {
     this.ctx.stroke();
 
     // Inner hole in ring (draw peach circle inside gold ring to create loop)
-    this.ctx.fillStyle = document.body.classList.contains('light-theme') ? '#edf7f1' : '#112217'; 
+    this.ctx.fillStyle = document.body.classList.contains('light-theme') ? '#edf7f1' : '#112217';
     this.ctx.beginPath();
     this.ctx.arc(kx - 6, ky, 2, 0, Math.PI * 2);
     this.ctx.fill();
@@ -1791,7 +3570,7 @@ export class Game {
     const gy = y + padding;
 
     // Base post / gate frame (Brown wood fence)
-    this.ctx.fillStyle = isUnlocked ? 'rgba(120, 53, 15, 0.3)' : '#78350f'; 
+    this.ctx.fillStyle = isUnlocked ? 'rgba(120, 53, 15, 0.3)' : '#78350f';
     this.ctx.strokeStyle = isUnlocked ? 'rgba(67, 20, 7, 0.3)' : '#451a03';
     this.ctx.lineWidth = 2;
 
@@ -2015,500 +3794,99 @@ export class Game {
 
 // LEVEL GENERATOR UTILITIES
 
-function getLevelGroup(id) {
-  if (id <= 20) return 1;
-  if (id <= 40) return 2;
-  if (id <= 60) return 3;
-  if (id <= 80) return 4;
-  return 5;
+// ── Chapter model ───────────────────────────────────────────────────────────
+// Five chapters of twenty missions. Handcrafted missions open each chapter and
+// teach its mechanic; the remainder are generated against the same theme so a
+// chapter never mixes lessons.
+export const CHAPTER_SIZE = 20;
+export const CHAPTER_COUNT = 5;
+export const LEVEL_COUNT = CHAPTER_SIZE * CHAPTER_COUNT;
+
+export const CHAPTERS = [
+  {
+    id: 1,
+    name: 'Temel hareketler',
+    eyebrow: 'BÖLÜM 1 · TEMEL HAREKETLER',
+    summary: 'İlerle, dön, engelden kaçın ve ilk döngünü yaz.',
+    teaches: ['ilerle', 'solaDon', 'sagaDon', 'tekrarla']
+  },
+  {
+    id: 2,
+    name: 'Döngü & köprü',
+    eyebrow: 'BÖLÜM 2 · DÖNGÜLER & KÖPRÜLER',
+    summary: 'Nehirleri köprüyle aş, tekrar eden kalıpları döngüye çevir.',
+    teaches: ['adimla', 'tekrarla']
+  },
+  {
+    id: 3,
+    name: 'Anahtar & nilüfer',
+    eyebrow: 'BÖLÜM 3 · ANAHTAR & NİLÜFER',
+    summary: 'Kilitli kapıları anahtarla aç, batan yapraklarda tek şansın var.',
+    teaches: ['anahtar', 'nilufer']
+  },
+  {
+    id: 4,
+    name: 'Zamanlama',
+    eyebrow: 'BÖLÜM 4 · ZAMANLAMA',
+    summary: 'Dalan kaplumbağaları say, bekle ve doğru anda geç.',
+    teaches: ['bekle', 'kaplumbaga.adimla']
+  },
+  {
+    id: 5,
+    name: 'Koşullar & ustalık',
+    eyebrow: 'BÖLÜM 5 · KOŞULLAR & USTALIK',
+    summary: 'Kararlarını koda gömün: ise / degilse ve tüm mekanikler bir arada.',
+    teaches: ['ise', 'degilse']
+  }
+];
+
+export function getLevelGroup(id) {
+  const chapter = Math.ceil(id / CHAPTER_SIZE);
+  return Math.min(CHAPTER_COUNT, Math.max(1, chapter));
 }
 
-function makeRandom(seed) {
-  let s = seed;
-  return function() {
-    s = (s * 9301 + 49297) % 233280;
-    return s / 233280;
-  };
+export function getChapter(id) {
+  return CHAPTERS[getLevelGroup(id) - 1];
 }
 
-function findOptimalPath(grid, startDir) {
-  const height = grid.length;
-  const width = grid[0].length;
-  
-  let startX = -1, startY = -1;
-  let starX = -1, starY = -1;
-  const bananas = [];
-  const keys = [];
-  
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const char = grid[y][x];
-      if (char === 'M') {
-        startX = x;
-        startY = y;
-      } else if (char === 'S') {
-        starX = x;
-        starY = y;
-      } else if (char === 'B') {
-        bananas.push({ x, y });
-      } else if (char === 'K') {
-        keys.push({ x, y });
-      }
-    }
-  }
-  
-  if (startX === -1 || starX === -1) return null;
-  
-  const targetBananaMask = (1 << bananas.length) - 1;
-  const targetKeyMask = (1 << keys.length) - 1;
-  
-  const startState = {
-    x: startX,
-    y: startY,
-    dir: startDir,
-    bananaMask: 0,
-    keyMask: 0,
-    parentKey: null,
-    action: null
-  };
-  
-  const startKey = `${startX},${startY},${startDir},0,0`;
-  const queue = [startState];
-  const visited = new Map();
-  visited.set(startKey, startState);
-  
-  const getDirOffset = (dir) => {
-    if (dir === 'RIGHT') return { dx: 1, dy: 0 };
-    if (dir === 'LEFT') return { dx: -1, dy: 0 };
-    if (dir === 'UP') return { dx: 0, dy: -1 };
-    if (dir === 'DOWN') return { dx: 0, dy: 1 };
-    return { dx: 0, dy: 0 };
-  };
-  
-  const getNextDir = (currentDir, turn) => {
-    const dirs = ['UP', 'RIGHT', 'DOWN', 'LEFT'];
-    let idx = dirs.indexOf(currentDir);
-    if (turn === 'LEFT') {
-      idx = (idx + 3) % 4;
-    } else {
-      idx = (idx + 1) % 4;
-    }
-    return dirs[idx];
-  };
-  
-  let cursor = 0;
-  const maxIterations = 30000;
-  let goalState = null;
-  
-  while (cursor < queue.length && cursor < maxIterations) {
-    const state = queue[cursor++];
-    
-    // Check goal
-    if (state.x === starX && state.y === starY &&
-        state.bananaMask === targetBananaMask &&
-        state.keyMask === targetKeyMask) {
-      goalState = state;
-      break;
-    }
-    
-    const stateKey = `${state.x},${state.y},${state.dir},${state.bananaMask},${state.keyMask}`;
-    
-    const candidates = [
-      {
-        action: 'solaDon',
-        x: state.x,
-        y: state.y,
-        dir: getNextDir(state.dir, 'LEFT'),
-        bananaMask: state.bananaMask,
-        keyMask: state.keyMask
-      },
-      {
-        action: 'sagaDon',
-        x: state.x,
-        y: state.y,
-        dir: getNextDir(state.dir, 'RIGHT'),
-        bananaMask: state.bananaMask,
-        keyMask: state.keyMask
-      }
-    ];
-    
-    // Check ilerle candidate
-    const { dx, dy } = getDirOffset(state.dir);
-    const nx = state.x + dx;
-    const ny = state.y + dy;
-    if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-      const cell = grid[ny][nx];
-      let walkable = true;
-      if (cell === '#') walkable = false;
-      if (cell === '~') walkable = false;
-      if (cell === 'G' && state.keyMask !== targetKeyMask) walkable = false;
-      
-      if (walkable) {
-        let nBananaMask = state.bananaMask;
-        let nKeyMask = state.keyMask;
-        
-        const bananaIdx = bananas.findIndex(b => b.x === nx && b.y === ny);
-        if (bananaIdx !== -1) {
-          nBananaMask |= (1 << bananaIdx);
-        }
-        
-        const keyIdx = keys.findIndex(k => k.x === nx && k.y === ny);
-        if (keyIdx !== -1) {
-          nKeyMask |= (1 << keyIdx);
-        }
-        
-        candidates.push({
-          action: 'ilerle',
-          x: nx,
-          y: ny,
-          dir: state.dir,
-          bananaMask: nBananaMask,
-          keyMask: nKeyMask
-        });
-      }
-    }
-    
-    for (const cand of candidates) {
-      const candKey = `${cand.x},${cand.y},${cand.dir},${cand.bananaMask},${cand.keyMask}`;
-      if (!visited.has(candKey)) {
-        const nextState = {
-          x: cand.x,
-          y: cand.y,
-          dir: cand.dir,
-          bananaMask: cand.bananaMask,
-          keyMask: cand.keyMask,
-          parentKey: stateKey,
-          action: cand.action
-        };
-        visited.set(candKey, nextState);
-        queue.push(nextState);
-      }
-    }
-  }
-  
-  if (!goalState) return null;
-  
-  const path = [];
-  let curr = goalState;
-  while (curr && curr.parentKey) {
-    path.push(curr.action);
-    curr = visited.get(curr.parentKey);
-  }
-  return path.reverse();
+export const COMMAND_UNLOCKS = [
+  { command: 'ilerle', from: 1, label: 'İlerleme' },
+  { command: 'sagaDon', from: 3, label: 'Sağa dönüş' },
+  { command: 'solaDon', from: 4, label: 'Sola dönüş' },
+  { command: 'tekrarla', from: 6, label: 'Döngü' },
+  { command: 'adimla', from: 29, label: 'Toplu adım' },
+  { command: 'bekle', from: 61, label: 'Bekleme' },
+  { command: 'ise', from: 81, label: 'Koşul' }
+];
+
+// Turtle piloting is a per-mission mechanic rather than a permanent unlock:
+// a mission either hands Mojo the helm (and the turtles stop diving on their
+// own) or it is a timing puzzle. Mixing the two silently disabled the dive
+// rhythm, so it is opt-in level data now.
+export function commandsForLevel(id, level = null) {
+  const commands = COMMAND_UNLOCKS
+    .filter(unlock => id >= unlock.from)
+    .map(unlock => unlock.command);
+  if (level && level.pilotTurtles) commands.push('kaplumbaga.adimla');
+  return commands;
 }
 
-function calculatePathLineCount(actions) {
-  let count = 0;
-  for (let i = 0; i < actions.length;) {
-    const action = actions[i];
-    let runLength = 1;
-    while (actions[i + runLength] === action) {
-      runLength++;
-    }
-    if (action === 'ilerle' && runLength >= 3) {
-      count += 2; // loop start and body line (excluding closing brace)
-    } else {
-      count += runLength;
-    }
-    i += runLength;
-  }
-  return count;
+export function levelPilotsTurtles(level) {
+  return Boolean(level && level.pilotTurtles);
 }
 
-function tryGenerateLevel(id, group, rand) {
-  const grid = [];
-  for (let r = 0; r < 12; r++) {
-    grid.push(new Array(20).fill('.'));
+// Fill every chapter slot that no handcrafted mission claims. These boards are
+// baked at build time by tools/generate-levels.mjs rather than generated on
+// load, which used to cost seconds of blocking work before the first frame.
+for (const level of GENERATED_LEVELS) {
+  if (!LEVELS.some(existing => existing.id === level.id)) {
+    LEVELS.push({ ...level, grid: [...level.grid] });
   }
-  // Make outer boundary walls
-  for (let c = 0; c < 20; c++) {
-    grid[0][c] = '#';
-    grid[11][c] = '#';
-  }
-  for (let r = 0; r < 12; r++) {
-    grid[r][0] = '#';
-    grid[r][19] = '#';
-  }
-
-  // Randomize start direction
-  const dirs = ["RIGHT", "DOWN", "LEFT", "UP"];
-  const startDir = dirs[Math.floor(rand() * 4)];
-
-  // Define sectors for M (left side) and S (right side)
-  const startX = 2 + Math.floor(rand() * 4); // 2 to 5
-  const startY = 2 + Math.floor(rand() * 8); // 2 to 9
-  grid[startY][startX] = 'M';
-
-  const starX = 14 + Math.floor(rand() * 4); // 14 to 17
-  const starY = 2 + Math.floor(rand() * 8); // 2 to 9
-  grid[starY][starX] = 'S';
-
-  // Generate primary path
-  let cx = startX, cy = startY;
-  const pathCells = [{ x: cx, y: cy }];
-  const visitedPath = new Set([`${cx},${cy}`]);
-
-  let steps = 0;
-  while ((cx !== starX || cy !== starY) && steps < 120) {
-    steps++;
-    const neighbors = [];
-    const dirsList = [{dx:1, dy:0}, {dx:-1, dy:0}, {dx:0, dy:1}, {dx:0, dy:-1}];
-    for (const d of dirsList) {
-      const nx = cx + d.dx;
-      const ny = cy + d.dy;
-      if (nx >= 2 && nx <= 17 && ny >= 2 && ny <= 9) {
-        let weight = 1;
-        if (Math.sign(starX - cx) === d.dx) weight += 3;
-        if (Math.sign(starY - cy) === d.dy) weight += 3;
-        neighbors.push({ x: nx, y: ny, weight });
-      }
-    }
-    
-    const totalWeight = neighbors.reduce((acc, n) => acc + n.weight, 0);
-    let rVal = rand() * totalWeight;
-    let selected = neighbors[0];
-    for (const n of neighbors) {
-      rVal -= n.weight;
-      if (rVal <= 0) {
-        selected = n;
-        break;
-      }
-    }
-    
-    cx = selected.x;
-    cy = selected.y;
-    if (!visitedPath.has(`${cx},${cy}`)) {
-      pathCells.push({ x: cx, y: cy });
-      visitedPath.add(`${cx},${cy}`);
-    }
-  }
-
-  // Determine configuration based on group
-  let numBananas = 1;
-  let hasKeyGate = false;
-  let obstacleDensity = 0.1;
-  let waterDensity = 0.0;
-
-  switch (group) {
-    case 1: // Sequential Commands
-      numBananas = rand() < 0.5 ? 1 : 2;
-      hasKeyGate = false;
-      obstacleDensity = 0.08;
-      waterDensity = 0.0;
-      break;
-    case 2: // Loops
-      numBananas = 2 + Math.floor(rand() * 2); // 2 or 3
-      hasKeyGate = false;
-      obstacleDensity = 0.12;
-      waterDensity = 0.02;
-      break;
-    case 3: // Keys & Gates
-      numBananas = 1 + Math.floor(rand() * 2); // 1 or 2
-      hasKeyGate = true;
-      obstacleDensity = 0.15;
-      waterDensity = 0.03;
-      break;
-    case 4: // Mazes & Obstacles
-      numBananas = 2 + Math.floor(rand() * 3); // 2 to 4
-      hasKeyGate = false;
-      obstacleDensity = 0.22;
-      waterDensity = 0.08;
-      break;
-    case 5: // Master Challenges
-      numBananas = 2 + Math.floor(rand() * 3); // 2 to 4
-      hasKeyGate = true;
-      obstacleDensity = 0.22;
-      waterDensity = 0.12;
-      break;
-  }
-
-  // Key and Gate placement
-  const keyCells = [];
-  if (hasKeyGate) {
-    // Put a gate in the pathCells (towards the middle or end)
-    const gateIdx = Math.floor(pathCells.length * 0.5) + Math.floor(rand() * (pathCells.length * 0.3));
-    if (gateIdx > 1 && gateIdx < pathCells.length - 1) {
-      const gateCell = pathCells[gateIdx];
-      grid[gateCell.y][gateCell.x] = 'G';
-    } else {
-      const gateCell = pathCells[pathCells.length - 2];
-      grid[gateCell.y][gateCell.x] = 'G';
-    }
-
-    // Put a key off the path or at a branch (retry until empty cell found)
-    let placedKey = false;
-    let keyAttempts = 0;
-    while (!placedKey && keyAttempts < 200) {
-      keyAttempts++;
-      const keyX = 2 + Math.floor(rand() * 16); // 2 to 17
-      const keyY = 2 + Math.floor(rand() * 8);  // 2 to 9
-      if (grid[keyY][keyX] === '.') {
-        grid[keyY][keyX] = 'K';
-        keyCells.push({ x: keyX, y: keyY });
-        placedKey = true;
-        
-        // Open path from start to key
-        let kcx = startX, kcy = startY;
-        let ksteps = 0;
-        while ((kcx !== keyX || kcy !== keyY) && ksteps < 100) {
-          ksteps++;
-          const dx = Math.sign(keyX - kcx);
-          const dy = Math.sign(keyY - kcy);
-          if (dx !== 0 && (dy === 0 || rand() < 0.5)) {
-            kcx += dx;
-          } else {
-            kcy += dy;
-          }
-          if (grid[kcy][kcx] === '.') {
-            pathCells.push({ x: kcx, y: kcy });
-            visitedPath.add(`${kcx},${kcy}`);
-          }
-        }
-      }
-    }
-  }
-
-  // Place Bananas on the path
-  const availablePathCells = pathCells.filter(cell => {
-    return grid[cell.y][cell.x] === '.';
-  });
-  
-  // Shuffle available path cells
-  for (let i = availablePathCells.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    const temp = availablePathCells[i];
-    availablePathCells[i] = availablePathCells[j];
-    availablePathCells[j] = temp;
-  }
-
-  const bananaCount = Math.min(numBananas, availablePathCells.length);
-  for (let i = 0; i < bananaCount; i++) {
-    const cell = availablePathCells[i];
-    grid[cell.y][cell.x] = 'B';
-  }
-
-  // Fill obstacles in remaining empty cells
-  for (let y = 1; y < 11; y++) {
-    for (let x = 1; x < 19; x++) {
-      if (grid[y][x] === '.' && !visitedPath.has(`${x},${y}`)) {
-        const val = rand();
-        if (val < waterDensity) {
-          grid[y][x] = '~'; // Water
-        } else if (val < waterDensity + obstacleDensity) {
-          grid[y][x] = '#'; // Rock
-        }
-      }
-    }
-  }
-
-  const stringGrid = grid.map(row => row.join(''));
-
-  const GROUP_TITLES = {
-    1: ["Düz Rota", "Sıralı Adımlar", "Uzak Mesafe", "Mojo'nun Dönüşü", "Hızlı Kararlar", "Doğru Açı", "Zirveye Doğru"],
-    2: ["Kısır Döngü", "Merdiven Çıkış", "Zikzak Çizgisi", "Döngülü Yol", "Tekrarlı Rota", "Sonsuz Adımlar"],
-    3: ["Altın Anahtar", "Kilitli Geçit", "Gizli Bölge", "Mojo'nun Kapısı", "Çifte Kilit", "Büyük Anahtar"],
-    4: ["Labirent Koşusu", "Kaya Ormanı", "Su Çukurları", "Zorlu Geçit", "Sıkışık Rota", "Dolambaçlı Vadi"],
-    5: ["Büyük Sınav", "Karışık Zemin", "Mojo'nun Zaferi", "Usta İşi Rota", "Final Kapısı", "Algoritma Şampiyonu"]
-  };
-
-  const titleIndex = Math.floor(rand() * GROUP_TITLES[group].length);
-  const title = `${id}. ${GROUP_TITLES[group][titleIndex]}`;
-
-  let instructions = "";
-  let tip = "";
-  let allowedCommands = ["ilerle", "solaDon", "sagaDon"];
-
-  switch (group) {
-    case 1:
-      instructions = "Mojo'yu hedefe ulaştırmak için sıralı komutları kullanın. Suya veya kayalara basmamaya dikkat edin.";
-      tip = "Mesafe ölçmek için <code>Cetvel</code> butonunu kullanabilirsiniz.";
-      break;
-    case 2:
-      instructions = "Tekrar eden yolları kısaltmak için <code>tekrarla(N) { ... }</code> döngüsünü kullanın.";
-      tip = "Zikzak veya merdiven benzeri örüntüleri bularak döngünün içine yerleştirin.";
-      allowedCommands.push("tekrarla");
-      break;
-    case 3:
-      instructions = "Bu bölümde kilitli bir kapı var. Mojo'nun kapıdan geçebilmesi için önce yerdeki anahtarı alması gerekir.";
-      tip = "Anahtara (<code>K</code>) giden rotayı çizdikten sonra kapıdan (<code>G</code>) geçip sandığa (<code>S</code>) ilerleyin.";
-      allowedCommands.push("tekrarla");
-      break;
-    case 4:
-      instructions = "Dar geçitlerden ve su birikintilerinden oluşan bu karmaşık labirenti çözmek için en güvenli rotayı yazın.";
-      tip = "Kayalar (<code>#</code>) ve su (<code>~</code>) geçilemez. Etraflarından dolaşın.";
-      allowedCommands.push("tekrarla");
-      break;
-    case 5:
-      instructions = "Tüm öğrendiğiniz kavramları bir araya getirme zamanı! Anahtarları toplayın, kapılardan geçin ve tüm muzları yiyerek hedefe varın.";
-      tip = "Optimum satır sayısını aşmamak için tekrarlayan tüm hareketlerinizi mutlaka döngülere dönüştürün.";
-      allowedCommands.push("tekrarla");
-      break;
-  }
-
-  return {
-    id,
-    title,
-    instructions,
-    tip,
-    grid: stringGrid,
-    startDir,
-    allowedCommands,
-    starRating: { three: 999, two: 999 }
-  };
 }
+LEVELS.sort((a, b) => a.id - b.id);
 
-function generateFallbackLevel(id, group) {
-  const grid = [];
-  for (let r = 0; r < 12; r++) {
-    grid.push(new Array(20).fill('#'));
-  }
-  for (let c = 2; c <= 17; c++) {
-    grid[5][c] = '.';
-  }
-  grid[5][2] = 'M';
-  grid[5][17] = 'S';
-  grid[5][8] = 'B';
-  
-  let allowedCommands = ["ilerle", "solaDon", "sagaDon"];
-  if (group > 1) {
-    allowedCommands.push("tekrarla");
-  }
-  
-  const stringGrid = grid.map(row => row.join(''));
-  return {
-    id,
-    title: `${id}. Kolay Rota`,
-    instructions: "Doğrusal bir çizgide ilerleyerek sandığa ulaşın.",
-    tip: "Sadece hedefe doğru ilerleyin.",
-    grid: stringGrid,
-    startDir: "RIGHT",
-    allowedCommands,
-    starRating: { three: 15, two: 18 }
-  };
-}
-
-function generateProceduralLevel(id) {
-  const group = getLevelGroup(id);
-  let seed = id * 12345;
-  let rand = makeRandom(seed);
-  
-  for (let attempt = 0; attempt < 500; attempt++) {
-    const level = tryGenerateLevel(id, group, rand);
-    const actions = findOptimalPath(level.grid, level.startDir);
-    if (actions && actions.length > 0) {
-      const minLines = calculatePathLineCount(actions);
-      level.starRating.three = minLines;
-      level.starRating.two = Math.max(minLines + 2, Math.floor(minLines * 1.3));
-      return level;
-    }
-    seed = (seed + 98765) % 1000000;
-    rand = makeRandom(seed);
-  }
-  
-  return generateFallbackLevel(id, group);
-}
-
-// Generate levels 15 to 100 on import
-for (let id = 15; id <= 100; id++) {
-  LEVELS.push(generateProceduralLevel(id));
+// Single normalization pass: a mission's command palette is always derived,
+// never hand-maintained alongside the grid.
+for (const level of LEVELS) {
+  level.allowedCommands = commandsForLevel(level.id, level);
 }

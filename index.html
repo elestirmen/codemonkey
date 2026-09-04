@@ -3,194 +3,280 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KodMaymunu - Algoritma Adası</title>
+  <meta name="description" content="Kod yazarak Mojo'yu yönlendir, algoritma kur ve 100 görevlik adayı keşfet.">
+  <meta name="theme-color" content="#07110e">
+  <title>KodMaymunu · Algoritma Adası</title>
+  <link rel="preload" href="banana-sprite.png" as="image" type="image/png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <svg class="svg-sprite" aria-hidden="true">
+    <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="icon-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="icon-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></symbol>
+    <symbol id="icon-step" viewBox="0 0 24 24"><path d="m6 5 9 7-9 7V5Zm11 0v14"/></symbol>
+    <symbol id="icon-back" viewBox="0 0 24 24"><path d="M9 5v14m9-14-8 7 8 7V5Z"/></symbol>
+    <symbol id="icon-stop" viewBox="0 0 24 24"><path d="M7 7h10v10H7z"/></symbol>
+    <symbol id="icon-sparkle" viewBox="0 0 24 24"><path d="m12 3 1.4 4.1L17.5 8.5l-4.1 1.4L12 14l-1.4-4.1-4.1-1.4 4.1-1.4L12 3Zm6 11 .8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14Z"/></symbol>
+    <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M12 15.25A3.25 3.25 0 1 0 12 8.75a3.25 3.25 0 0 0 0 6.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.86 2.86-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.55v-.1A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.86-2.86.06-.06A1.7 1.7 0 0 0 4.1 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H2.3V9.55h.1A1.7 1.7 0 0 0 4.1 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06L6.56 3.7l.06.06A1.7 1.7 0 0 0 8.5 4.1a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1v-.1h4.05v.1A1.7 1.7 0 0 0 15 4.1a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.86 2.86-.06.06A1.7 1.7 0 0 0 19.4 8.5a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 0 1.1.4h.1v4.05h-.1A1.7 1.7 0 0 0 19.4 15Z"/></symbol>
+    <symbol id="icon-ruler" viewBox="0 0 24 24"><path d="m4 15 11-11 5 5-11 11H4v-5Z"/><path d="m13 6 2 2m-5 1 2 2m-5 1 2 2m-3 1 3 3"/></symbol>
+    <symbol id="icon-terminal" viewBox="0 0 24 24"><path d="m5 7 4 4-4 4m6 0h8"/></symbol>
+    <symbol id="icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  </svg>
 
-  <!-- Sidebar: Level Map & Progress -->
-  <aside>
+  <div class="ambient-orb ambient-orb-one" aria-hidden="true"></div>
+  <div class="ambient-orb ambient-orb-two" aria-hidden="true"></div>
+  <button class="sidebar-backdrop" id="sidebar-backdrop" aria-label="Seviye menüsünü kapat" tabindex="-1"></button>
+
+  <aside id="level-sidebar" aria-label="Seviye haritası">
     <div class="sidebar-container">
       <div class="sidebar-header">
-        <h2>KodMaymunu</h2>
-        <p>Algoritma Adası Macerası</p>
-        <div class="stars-summary" id="stars-summary">
-          🏆 <span>0 / 42</span> Yıldız
+        <div class="brand-row">
+          <div class="brand-mark" aria-hidden="true"><span>🐒</span></div>
+          <div class="brand-copy">
+            <h2>KodMaymunu</h2>
+            <p>Algoritma Adası</p>
+          </div>
+          <button id="btn-sidebar-close" class="btn-icon sidebar-close" type="button" aria-label="Seviye menüsünü kapat">
+            <svg><use href="#icon-close"></use></svg>
+          </button>
         </div>
+
+        <div class="profile-card">
+          <div class="profile-card-top">
+            <span class="profile-label">Ada ilerlemesi</span>
+            <div class="stars-summary" id="stars-summary" aria-label="Toplam yıldız">
+              <span aria-hidden="true">★</span>
+              <span class="stars-summary-value">0 / 300</span>
+            </div>
+          </div>
+          <div class="progress-track" aria-hidden="true"><span id="overall-progress-fill"></span></div>
+          <div class="profile-meta">
+            <span id="overall-progress-text">0 / 100 görev</span>
+            <span id="overall-progress-percent">%0</span>
+          </div>
+        </div>
+
+        <label class="level-search-wrap" for="level-search">
+          <span aria-hidden="true">⌕</span>
+          <input id="level-search" type="search" placeholder="Seviye ara..." autocomplete="off">
+          <kbd>/</kbd>
+        </label>
       </div>
-      <div class="level-list" id="level-list">
-        <!-- Dynamically populated level items -->
+      <div class="level-list" id="level-list" aria-live="polite"></div>
+      <div class="sidebar-footer">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span>İlerleme otomatik kaydedilir</span>
       </div>
     </div>
   </aside>
 
-  <!-- Main Workspace -->
   <main>
-    <header>
-      <div class="level-nav">
-        <button id="btn-prev-level" class="btn-icon" title="Önceki Seviye" aria-label="Önceki Seviye">◀</button>
-        <h1 id="active-level-title" class="active-level-title">Seviye 1</h1>
-        <button id="btn-next-level" class="btn-icon" title="Sonraki Seviye" aria-label="Sonraki Seviye">▶</button>
+    <header class="topbar">
+      <div class="topbar-primary">
+        <button id="btn-sidebar-open" class="btn-icon mobile-menu-button" type="button" aria-label="Seviye menüsünü aç" aria-controls="level-sidebar" aria-expanded="false">
+          <svg><use href="#icon-menu"></use></svg>
+        </button>
+        <div class="level-heading">
+          <span class="eyebrow" id="active-level-group">BÖLÜM 1 · TEMELLER</span>
+          <div class="level-nav">
+            <button id="btn-prev-level" class="btn-icon" title="Önceki seviye" aria-label="Önceki seviye">
+              <svg><use href="#icon-chevron-left"></use></svg>
+            </button>
+            <h1 id="active-level-title" class="active-level-title">1. İlk Adım</h1>
+            <button id="btn-next-level" class="btn-icon" title="Sonraki seviye" aria-label="Sonraki seviye">
+              <svg><use href="#icon-chevron-right"></use></svg>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="header-controls">
-        <div style="display: flex; align-items: center; gap: 6px; margin-right: 8px;">
-          <span style="font-size: 0.85rem; font-weight: 500; color: var(--text-secondary);">Yazım:</span>
-          <select id="syntax-mode" class="btn-secondary" style="font-family: var(--font-main); font-size: 0.85rem; padding: 6px 12px; border-radius: 8px; cursor: pointer; border: 1px solid var(--border-color); background: var(--btn-sec-bg); color: var(--text-primary); outline: none;">
-            <option value="indent" style="background: var(--bg-darker); color: var(--text-primary);">Python (Girinti)</option>
-            <option value="bracket" style="background: var(--bg-darker); color: var(--text-primary);">JavaScript ({})</option>
-          </select>
+        <div class="level-position" aria-label="Seviye ilerlemesi">
+          <span id="level-position-label">01 / 100</span>
+          <div class="level-position-track"><span id="level-position-fill"></span></div>
         </div>
-        <button id="btn-theme-toggle" class="btn-secondary" title="Temayı Değiştir (Açık/Koyu)">
-          <span id="theme-icon">☀️</span> <span id="theme-text">Açık</span>
-        </button>
-        <button id="btn-sound-toggle" class="btn-secondary" title="Sesi Aç/Kapat">
-          <span id="sound-icon">🔊</span> Ses
-        </button>
-        <button id="btn-reset-code" class="btn-secondary" title="Kodu Sıfırla">
-          <span>🔄</span> Sıfırla
-        </button>
-        <a href="https://oyunlar.perinet.org" class="btn-secondary" style="text-decoration: none;">
-          <span>🏠</span> Portala Dön
-        </a>
+        <details class="settings-menu" id="settings-menu">
+          <summary class="btn-icon" aria-label="Oyun ayarları" title="Oyun ayarları">
+            <svg><use href="#icon-settings"></use></svg>
+          </summary>
+          <div class="settings-popover">
+            <div class="settings-popover-header">
+              <div><span class="eyebrow">KONTROL MERKEZİ</span><strong>Oyun ayarları</strong></div>
+            </div>
+            <label class="settings-field" for="syntax-mode">
+              <span>Yazım biçimi</span>
+              <select id="syntax-mode">
+                <option value="indent">Python · Girinti</option>
+                <option value="bracket">JavaScript · { }</option>
+              </select>
+            </label>
+            <div class="settings-grid">
+              <button id="btn-theme-toggle" class="btn-secondary" type="button" title="Temayı değiştir">
+                <span id="theme-icon">☀️</span> <span id="theme-text">Açık</span>
+              </button>
+              <button id="btn-sound-toggle" class="btn-secondary" type="button" title="Sesi aç veya kapat" aria-pressed="true">
+                <span id="sound-icon">🔊</span> <span id="sound-text">Ses açık</span>
+              </button>
+            </div>
+            <button id="btn-reset-code" class="settings-action" type="button"><span>↻</span><span><strong>Kodu sıfırla</strong><small>Bu seviyedeki editörü temizler</small></span></button>
+            <button id="btn-dev-toggle" class="settings-action" type="button" title="Tüm seviyeleri aç veya kapat"><span>⌘</span><span><strong id="dev-text">Geliştirici modu</strong><small>Tüm görevleri test için açar</small></span></button>
+            <a href="https://oyunlar.perinet.org" class="settings-action"><span>⌂</span><span><strong>Oyun portalı</strong><small>Diğer oyunlara geri dön</small></span></a>
+          </div>
+        </details>
       </div>
     </header>
 
     <div class="workspace">
-      <!-- Left side: Game Arena -->
-      <div class="arena-panel">
+      <section class="arena-panel panel-shell" aria-labelledby="arena-title">
         <div class="panel-header">
-          <div class="panel-title">
-            <span style="font-size: 1.2rem;">🌴</span> Algoritma Dünyası
+          <div>
+            <span class="panel-kicker">CANLI SAHNE</span>
+            <h2 class="panel-title" id="arena-title">Algoritma Dünyası</h2>
           </div>
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <button id="btn-ruler" class="btn-secondary" style="padding: 4px 10px; font-size: 0.85rem;" title="Mesafe Ölçer Cetvel">
-              📏 Cetvel
+          <div class="panel-actions">
+            <button id="btn-ruler" class="btn-secondary btn-compact" type="button" title="Mesafe ölçer" aria-pressed="false">
+              <svg><use href="#icon-ruler"></use></svg><span>Cetvel</span>
             </button>
-            <div id="banana-counter" style="font-size: 0.9rem; font-weight: 600; color: var(--accent);">
-              🍌 Muzlar: 0 / 0
-            </div>
+            <div id="banana-counter" class="banana-counter" aria-live="polite"><span>🍌</span><strong>0 / 0</strong></div>
           </div>
         </div>
-        <div id="instructions-card" class="instructions-card">
-          <!-- Dynamically populated level instruction text -->
-        </div>
+
+        <div id="instructions-card" class="instructions-card"></div>
         <div class="canvas-container">
-          <canvas id="game-canvas"></canvas>
-        </div>
-      </div>
-
-      <!-- Right side: IDE / Editor Panel -->
-      <div class="ide-panel">
-        <div class="panel-header">
-          <div class="panel-title">
-            <span style="font-size: 1.2rem;">💻</span> Kod Düzenleyici
-          </div>
-          <div id="code-length-display" style="font-size: 0.85rem; color: var(--text-secondary);">
-            Karakter: 0
+          <div class="canvas-stage">
+            <canvas id="game-canvas" aria-label="Mojo'nun algoritma oyun alanı">Tarayıcın oyun alanını göstermek için gereken Canvas özelliğini desteklemiyor.</canvas>
+            <div class="stage-chip stage-chip-left"><span class="status-dot"></span><span id="runtime-status">Planlamaya hazır</span></div>
+            <div class="stage-chip stage-chip-right" id="direction-chip">MOJO · DOĞU</div>
           </div>
         </div>
+      </section>
 
-        <!-- Editor Container -->
+      <section class="ide-panel panel-shell" aria-labelledby="editor-title">
+        <div class="panel-header editor-panel-header">
+          <div>
+            <span class="panel-kicker">KOD LABORATUVARI</span>
+            <h2 class="panel-title" id="editor-title">Rota Editörü</h2>
+          </div>
+          <div class="editor-meta">
+            <span class="autosave-state"><span class="status-dot"></span>Kaydedildi</span>
+            <span id="code-length-display">0 satır</span>
+          </div>
+        </div>
+
+        <div class="editor-tabbar" aria-hidden="true">
+          <div class="editor-tab active"><span class="file-dot"></span>rota.kod</div>
+          <div class="editor-shortcut">Çalıştır <kbd>⌘</kbd><kbd>↵</kbd></div>
+        </div>
         <div class="editor-container">
-          <div id="line-gutter">
-            <!-- Line numbers dynamically added here -->
-          </div>
+          <div id="line-gutter" aria-hidden="true"></div>
           <div class="editor-inputs">
-            <textarea id="code-editor" spellcheck="false" placeholder="// Algoritmanızı buraya yazın veya butonları kullanın..."></textarea>
-            <!-- Overlay element highlighting lines during execution -->
-            <div id="code-display-preview"></div>
+            <textarea id="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Algoritma kodu" placeholder="# Komutlarını buraya yaz..."></textarea>
+            <div id="code-display-preview" aria-hidden="true"></div>
           </div>
         </div>
 
-        <!-- Quick Code Buttons -->
         <div class="quick-commands" id="quick-commands">
-          <span>Hızlı Ekle:</span>
-          <!-- Dynamically displayed based on allowed commands of the level -->
-          <button class="btn-command" data-cmd="ilerle()" id="cmd-ilerle">ilerle()</button>
-          <button class="btn-command" data-cmd="adimla(1)" id="cmd-adimla">adimla()</button>
-          <button class="btn-command" data-cmd="solaDon()" id="cmd-solaDon">solaDon()</button>
-          <button class="btn-command" data-cmd="sagaDon()" id="cmd-sagaDon">sagaDon()</button>
-          <button class="btn-command" data-cmd="tekrarla(3) {\n  ilerle()\n}" id="cmd-tekrarla">tekrarla() {}</button>
-          <button class="btn-command" data-cmd="ise(onumdeEngelVar()) {\n  solaDon()\n}" id="cmd-ise">ise() {}</button>
+          <span class="quick-command-label">KOMUT PALETİ</span>
+          <button class="btn-command" data-cmd="ilerle()" id="cmd-ilerle" type="button">ilerle()</button>
+          <button class="btn-command" data-cmd="adimla(3)" id="cmd-adimla" type="button">adimla(N)</button>
+          <button class="btn-command" data-cmd="solaDon()" id="cmd-solaDon" type="button">solaDon()</button>
+          <button class="btn-command" data-cmd="sagaDon()" id="cmd-sagaDon" type="button">sagaDon()</button>
+          <button class="btn-command" data-cmd="bekle()" id="cmd-bekle" type="button">bekle()</button>
+          <button class="btn-command turtle-command" data-cmd="kaplumbaga.adimla()" id="cmd-kaplumbaga" type="button">kaplumbaga.adimla()</button>
+          <button class="btn-command" data-cmd="tekrarla(3) {\n  ilerle()\n}" id="cmd-tekrarla" type="button">tekrarla() {}</button>
+          <button class="btn-command" data-cmd="ise(onumdeEngelVar()) {\n  solaDon()\n}" id="cmd-ise" type="button">ise() {}</button>
         </div>
 
-        <!-- Code Run Controls -->
         <div class="controls-bar">
           <div class="action-buttons">
-            <button id="btn-run" class="btn-primary">
-              <span style="font-size: 1.1rem;">▶</span> Çalıştır
+            <button id="btn-run" class="btn-primary" type="button">
+              <svg><use href="#icon-play"></use></svg><span>Çalıştır</span><kbd>⌘↵</kbd>
             </button>
-            <button id="btn-step" class="btn-secondary" title="Kodu adım adım çalıştır">
-              <span style="font-size: 1.1rem;">⏯</span> Adım Adım
+            <button id="btn-step" class="btn-secondary btn-control" type="button" title="Kodu adım adım çalıştır">
+              <svg><use href="#icon-step"></use></svg><span>Adımla</span>
             </button>
-            <button id="btn-step-back" class="btn-secondary" title="Bir adım geri al" disabled>
-              <span style="font-size: 1.1rem;">⏮</span> Geri Al
+            <button id="btn-step-back" class="btn-secondary btn-control" type="button" title="Bir adım geri al" disabled>
+              <svg><use href="#icon-back"></use></svg><span>Geri</span>
             </button>
-            <button id="btn-smart-route" class="btn-secondary" title="Akıllı rota örneği oluştur">
-              <span style="font-size: 1.1rem;">✦</span> Akıllı Rota
+            <button id="btn-smart-route" class="btn-secondary btn-control smart-route-button" type="button" title="Bu seviyenin doğrulanmış referans çözümünü editöre yaz">
+              <svg><use href="#icon-sparkle"></use></svg><span>Örnek çözüm</span>
             </button>
-            <button id="btn-stop" class="btn-danger" disabled>
-              <span style="font-size: 1.1rem;">⏹</span> Durdur
+            <button id="btn-stop" class="btn-danger btn-control" type="button" disabled>
+              <svg><use href="#icon-stop"></use></svg><span>Durdur</span>
             </button>
           </div>
-
-          <div class="speed-control">
-            <span>Hız:</span>
-            <input type="range" id="speed-slider" min="150" max="1000" step="50" value="500" title="Animasyon Hızı">
-          </div>
+          <label class="speed-control" for="speed-slider">
+            <span>Hız</span>
+            <input type="range" id="speed-slider" min="1" max="5" step="1" value="3" title="Animasyon hızı">
+            <span id="speed-value">Orta</span>
+          </label>
         </div>
-      </div>
+      </section>
     </div>
 
-    <!-- Bottom console output -->
-    <div class="console-panel">
+    <section class="console-panel" id="console-panel" aria-label="Konsol çıktısı">
       <div class="console-header">
-        <span>KONSOL ÇIKTISI</span>
-        <button id="btn-clear-console" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.75rem;">Temizle</button>
+        <button id="btn-console-toggle" class="console-toggle" type="button" aria-expanded="true" aria-controls="console-output">
+          <svg><use href="#icon-terminal"></use></svg><span>Konsol</span><span id="console-status-badge" class="console-status-badge">Hazır</span>
+        </button>
+        <button id="btn-clear-console" class="text-button" type="button">Temizle</button>
       </div>
-      <div class="console-output" id="console-output">
-        <!-- Log messages -->
-      </div>
-    </div>
+      <div class="console-output" id="console-output" role="log" aria-live="polite"></div>
+    </section>
   </main>
 
-  <!-- Level Success Popup Modal -->
-  <div class="modal-overlay" id="success-modal">
+  <div class="modal-overlay" id="success-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true">
     <div class="modal-content">
+      <div class="modal-glow" aria-hidden="true"></div>
+      <span class="modal-eyebrow">GÖREV TAMAMLANDI</span>
       <div class="modal-icon">🏆</div>
-      <h2 class="modal-title" id="modal-title">Seviye Tamamlandı!</h2>
-      <div class="modal-stars" id="modal-stars">
-        <span class="star-big">★</span>
-        <span class="star-big">★</span>
-        <span class="star-big">★</span>
+      <h2 class="modal-title" id="modal-title">Seviye tamamlandı!</h2>
+      <div class="modal-stars" id="modal-stars" aria-label="Kazanılan yıldızlar">
+        <span class="star-big">★</span><span class="star-big">★</span><span class="star-big">★</span>
       </div>
-      <p class="modal-desc" id="modal-desc">Harika bir iş çıkardın Mojo hedefine ulaştı.</p>
+      <p class="modal-desc" id="modal-desc">Harika bir iş çıkardın; Mojo hedefine ulaştı.</p>
+      <div class="star-details" id="star-details"></div>
       <div class="modal-buttons">
-        <button id="modal-btn-retry" class="btn-secondary">Tekrar Oyna</button>
-        <button id="modal-btn-next" class="btn-primary">Sonraki Seviye</button>
+        <button id="modal-btn-retry" class="btn-secondary" type="button">Tekrar oyna</button>
+        <button id="modal-btn-next" class="btn-primary" type="button">Sonraki seviye <svg><use href="#icon-chevron-right"></use></svg></button>
       </div>
     </div>
   </div>
 
+  <div class="welcome-overlay" id="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title" aria-hidden="true">
+    <div class="welcome-card">
+      <button id="btn-welcome-close" class="btn-icon welcome-close" type="button" aria-label="Tanıtımı kapat"><svg><use href="#icon-close"></use></svg></button>
+      <div class="welcome-visual"><span>🐒</span><i></i><i></i><i></i></div>
+      <span class="modal-eyebrow">ALGORİTMA ADASI'NA HOŞ GELDİN</span>
+      <h2 id="welcome-title">Mojo'nun rotasını kodla.</h2>
+      <p>Komutları sırala, kodunu çalıştır ve tüm muzları toplayarak sandığa ulaş. Üçüncü yıldız kısa kod içindir: her görevin doğrulanmış bir referans çözümü var, onu yakala — hatta kır.</p>
+      <div class="welcome-steps">
+        <div><strong>01</strong><span>Rotayı incele</span></div>
+        <div><strong>02</strong><span>Algoritmayı yaz</span></div>
+        <div><strong>03</strong><span>Satır sayısını düşür</span></div>
+      </div>
+      <button id="btn-welcome-start" class="btn-primary welcome-start" type="button"><svg><use href="#icon-play"></use></svg>Maceraya başla</button>
+    </div>
+  </div>
+
+  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+
   <!-- Script Modules setup -->
   <script type="module">
-    import { LEVELS, Game } from './game.js?v=20260623-banana-illustration-v6';
-    import { soundEngine } from './audio.js?v=20260623-banana-illustration-v6';
+    import { LEVELS, Game, CHAPTERS, CHAPTER_SIZE, getLevelGroup, getChapter, COMMAND_UNLOCKS } from './game.js?v=20260904-v3';
+    import { soundEngine } from './audio.js';
 
     let game;
     let unlockedLevels = [0]; // default unlocked level 0 (Level 1)
     let completedStars = {}; // Map of level index -> star count
 
+    let bestLines = {}; // Map of level id -> fewest scored lines ever submitted
     let expandedGroups = new Set([1]); // default group 1 expanded
-
-    function getLevelGroup(id) {
-      if (id <= 20) return 1;
-      if (id <= 40) return 2;
-      if (id <= 60) return 3;
-      if (id <= 80) return 4;
-      return 5;
-    }
+    let devMode = false;
+    let autosaveTimer = null;
+    let lastFocusedBeforeModal = null;
 
     // DOM References
     const editor = document.getElementById('code-editor');
@@ -206,17 +292,31 @@
     const resetBtn = document.getElementById('btn-reset-code');
     const clearConsoleBtn = document.getElementById('btn-clear-console');
     const consoleOutput = document.getElementById('console-output');
-    
+
     const prevLvlBtn = document.getElementById('btn-prev-level');
     const nextLvlBtn = document.getElementById('btn-next-level');
     const levelTitle = document.getElementById('active-level-title');
     const bananaCounter = document.getElementById('banana-counter');
     const instructionsCard = document.getElementById('instructions-card');
-    
+
     const themeBtn = document.getElementById('btn-theme-toggle');
     const rulerBtn = document.getElementById('btn-ruler');
     const syntaxModeSelect = document.getElementById('syntax-mode');
-    
+    const devBtn = document.getElementById('btn-dev-toggle');
+    const sidebar = document.getElementById('level-sidebar');
+    const sidebarOpenBtn = document.getElementById('btn-sidebar-open');
+    const sidebarCloseBtn = document.getElementById('btn-sidebar-close');
+    const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+    const levelSearch = document.getElementById('level-search');
+    const consolePanel = document.getElementById('console-panel');
+    const consoleToggleBtn = document.getElementById('btn-console-toggle');
+    const runtimeStatus = document.getElementById('runtime-status');
+    const directionChip = document.getElementById('direction-chip');
+    const settingsMenu = document.getElementById('settings-menu');
+    const welcomeOverlay = document.getElementById('welcome-overlay');
+    const welcomeStartBtn = document.getElementById('btn-welcome-start');
+    const welcomeCloseBtn = document.getElementById('btn-welcome-close');
+
     // Modal References
     const modal = document.getElementById('success-modal');
     const modalTitle = document.getElementById('modal-title');
@@ -228,7 +328,7 @@
     // Initialize Page
     window.addEventListener('DOMContentLoaded', () => {
       // Initialize Theme
-      const savedTheme = localStorage.getItem('kodmaymunu_theme') || 'light';
+      const savedTheme = safeStorageGet('kodmaymunu_theme') || 'dark';
       if (savedTheme === 'light') {
         document.body.classList.add('light-theme');
       } else {
@@ -239,7 +339,7 @@
       updateThemeUI(savedTheme);
 
       // Initialize Syntax Mode
-      const savedSyntaxMode = localStorage.getItem('kodmaymunu_syntax_mode') || 'indent';
+      const savedSyntaxMode = safeStorageGet('kodmaymunu_syntax_mode') || 'indent';
       if (syntaxModeSelect) {
         syntaxModeSelect.value = savedSyntaxMode;
       }
@@ -247,309 +347,562 @@
       game.syntaxMode = savedSyntaxMode;
 
       // Load progress
-      const savedUnlocked = localStorage.getItem('kodmaymunu_unlocked');
-      if (savedUnlocked) {
-        unlockedLevels = JSON.parse(savedUnlocked);
+      const savedUnlocked = safelyParseJSON(safeStorageGet('kodmaymunu_unlocked'), null);
+      if (Array.isArray(savedUnlocked)) {
+        unlockedLevels = [...new Set([0, ...savedUnlocked.filter(idx => Number.isInteger(idx) && idx >= 0 && idx < LEVELS.length)])];
       }
-      const savedStars = localStorage.getItem('kodmaymunu_stars');
-      if (savedStars) {
-        completedStars = JSON.parse(savedStars);
+      const savedBest = safelyParseJSON(safeStorageGet('kodmaymunu_best_lines'), null);
+      if (savedBest && typeof savedBest === 'object' && !Array.isArray(savedBest)) {
+        bestLines = Object.fromEntries(
+          Object.entries(savedBest)
+            .filter(([idx, lines]) => Number.isInteger(Number(idx)) && Number(idx) >= 0 && Number(idx) < LEVELS.length && Number.isFinite(Number(lines)) && Number(lines) > 0)
+            .map(([idx, lines]) => [idx, Number(lines)])
+        );
       }
 
+      const savedStars = safelyParseJSON(safeStorageGet('kodmaymunu_stars'), null);
+      if (savedStars && typeof savedStars === 'object' && !Array.isArray(savedStars)) {
+        completedStars = Object.fromEntries(
+          Object.entries(savedStars)
+            .filter(([idx, stars]) => Number.isInteger(Number(idx)) && Number(idx) >= 0 && Number(idx) < LEVELS.length && Number.isFinite(Number(stars)))
+            .map(([idx, stars]) => [idx, Math.max(0, Math.min(3, Number(stars)))])
+        );
+      }
+
+      // Initialize Dev Mode
+      const savedDev = safeStorageGet('kodmaymunu_dev_mode') || 'false';
+      devMode = (savedDev === 'true');
+      updateDevUI(devMode);
+
       setupEventListeners();
+      if (!devMode && !unlockedLevels.includes(game.currentLevelIdx)) {
+        game.currentLevelIdx = Math.max(...unlockedLevels);
+      }
+      game.loadLevel(game.currentLevelIdx);
+      game.executionSpeed = getExecutionSpeed(Number(speedSlider.value));
       loadActiveLevel();
+
+      const savedSound = safeStorageGet('kodmaymunu_sound');
+      if (savedSound === 'false' && soundEngine.isSoundEnabled()) {
+        soundEngine.toggleSound();
+      }
+      updateSoundUI(soundEngine.isSoundEnabled());
+      updateSpeedUI();
+
+      if (!safeStorageGet('kodmaymunu_welcome_seen')) {
+        window.setTimeout(() => setOverlayVisibility(welcomeOverlay, true, welcomeStartBtn), 180);
+      }
     });
+
+    function safeStorageGet(key) {
+      try {
+        return localStorage.getItem(key);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function safeStorageSet(key, value) {
+      try {
+        localStorage.setItem(key, value);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function safelyParseJSON(value, fallback) {
+      if (!value) return fallback;
+      try {
+        return JSON.parse(value);
+      } catch (_) {
+        return fallback;
+      }
+    }
 
     function setSafeHTML(element, htmlString) {
       element.replaceChildren();
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlString, 'text/html');
+      doc.body.querySelectorAll('script, style, iframe, object, embed, link, meta').forEach(node => node.remove());
+      doc.body.querySelectorAll('*').forEach(node => {
+        [...node.attributes].forEach(attribute => {
+          const name = attribute.name.toLowerCase();
+          const value = attribute.value.trim().toLowerCase();
+          if (name.startsWith('on') || ((name === 'href' || name === 'src') && value.startsWith('javascript:'))) {
+            node.removeAttribute(attribute.name);
+          }
+        });
+      });
       while (doc.body.firstChild) {
         element.appendChild(doc.body.firstChild);
       }
     }
 
     function setupEventListeners() {
-      // Sync Gutter & Textarea line heights on input
       editor.addEventListener('input', () => {
-        updateLineNumbers();
-        updateCharCounter();
+        markEditorChanged();
+        clearErrorLine();
       });
 
-      // Synchronize editor scrolling with line numbers
       editor.addEventListener('scroll', () => {
         gutter.scrollTop = editor.scrollTop;
+        preview.scrollTop = editor.scrollTop;
+        preview.scrollLeft = editor.scrollLeft;
       });
 
-      // Command click listeners
       document.querySelectorAll('.btn-command').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const cmd = btn.getAttribute('data-cmd');
-          insertCommand(cmd);
-        });
+        btn.addEventListener('click', () => insertCommand(btn.getAttribute('data-cmd')));
       });
 
-      // Syntax Mode Event Listener
-      if (syntaxModeSelect) {
-        syntaxModeSelect.addEventListener('change', () => {
-          const mode = syntaxModeSelect.value;
-          localStorage.setItem('kodmaymunu_syntax_mode', mode);
-          if (game) {
-            game.syntaxMode = mode;
-          }
-          updateSyntaxModeUI(mode);
-          
-          // Reload code template if empty
-          const idx = game.currentLevelIdx;
-          const savedCode = localStorage.getItem(`kodmaymunu_code_lvl_${idx}`);
-          if (!savedCode || savedCode.startsWith('// Seviye') || savedCode.startsWith('# Seviye')) {
-            const comment = mode === 'indent' ? '#' : '//';
-            editor.value = `${comment} Seviye ${idx + 1}\n${comment} Muzlar temas edince otomatik toplanır.\n`;
-            updateLineNumbers();
-            updateCharCounter();
-          }
-        });
-      }
+      syntaxModeSelect.addEventListener('change', () => {
+        const previousMode = game.syntaxMode;
+        const mode = syntaxModeSelect.value;
+        saveCurrentCode(previousMode);
+        safeStorageSet('kodmaymunu_syntax_mode', mode);
+        game.syntaxMode = mode;
+        updateSyntaxModeUI(mode);
 
-      // Theme Toggle Event Listener
-      if (themeBtn) {
-        themeBtn.addEventListener('click', () => {
-          const isLight = document.body.classList.toggle('light-theme');
-          const theme = isLight ? 'light' : 'dark';
-          localStorage.setItem('kodmaymunu_theme', theme);
-          updateThemeUI(theme);
-          if (game) {
-            game.draw();
-          }
-        });
-      }
+        const idx = game.currentLevelIdx;
+        const modeDraft = safeStorageGet(getCodeStorageKey(idx, mode));
+        editor.value = modeDraft ?? createStarterCode(idx, mode);
+        markEditorChanged(true);
+        showToast(`${mode === 'indent' ? 'Python' : 'JavaScript'} taslağı açıldı. Önceki taslağın korundu.`);
+      });
 
-      // Ruler Toggle Event Listener
-      if (rulerBtn) {
-        rulerBtn.addEventListener('click', () => {
-          if (!game) return;
-          game.rulerActive = !game.rulerActive;
-          rulerBtn.classList.toggle('btn-active', game.rulerActive);
-          if (!game.rulerActive) {
-            game.hoveredCell = null;
-          }
-          game.draw();
-        });
-      }
+      themeBtn.addEventListener('click', () => {
+        const isLight = document.body.classList.toggle('light-theme');
+        const theme = isLight ? 'light' : 'dark';
+        safeStorageSet('kodmaymunu_theme', theme);
+        updateThemeUI(theme);
+        game.draw();
+      });
 
-      // Canvas Ruler Mouse interaction
+      rulerBtn.addEventListener('click', () => {
+        game.rulerActive = !game.rulerActive;
+        rulerBtn.classList.toggle('btn-active', game.rulerActive);
+        rulerBtn.setAttribute('aria-pressed', String(game.rulerActive));
+        if (!game.rulerActive) game.hoveredCell = null;
+        game.draw();
+      });
+
       const canvasEl = document.getElementById('game-canvas');
-      if (canvasEl) {
-        canvasEl.addEventListener('mousemove', (e) => {
-          if (!game || !game.rulerActive) return;
-          const rect = canvasEl.getBoundingClientRect();
-          const scaleX = canvasEl.width / rect.width;
-          const scaleY = canvasEl.height / rect.height;
-          const clickX = (e.clientX - rect.left) * scaleX;
-          const clickY = (e.clientY - rect.top) * scaleY;
-          
-          const cellX = Math.floor(clickX / game.tileSize);
-          const cellY = Math.floor(clickY / game.tileSize);
-          
-          if (cellX >= 0 && cellX < game.gridWidth && cellY >= 0 && cellY < game.gridHeight) {
-            if (!game.hoveredCell || game.hoveredCell.x !== cellX || game.hoveredCell.y !== cellY) {
-              game.hoveredCell = { x: cellX, y: cellY };
-              game.draw();
-            }
-          }
-        });
-
-        canvasEl.addEventListener('mouseleave', () => {
-          if (game && game.rulerActive) {
-            game.hoveredCell = null;
+      const updateRulerCell = event => {
+        if (!game || !game.rulerActive) return;
+        const rect = canvasEl.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const clickX = (event.clientX - rect.left) * (canvasEl.width / rect.width);
+        const clickY = (event.clientY - rect.top) * (canvasEl.height / rect.height);
+        const cellX = Math.floor(clickX / game.tileSize);
+        const cellY = Math.floor(clickY / game.tileSize);
+        if (cellX >= 0 && cellX < game.gridWidth && cellY >= 0 && cellY < game.gridHeight) {
+          if (!game.hoveredCell || game.hoveredCell.x !== cellX || game.hoveredCell.y !== cellY) {
+            game.hoveredCell = { x: cellX, y: cellY };
             game.draw();
           }
-        });
-      }
+        }
+      };
+      canvasEl.addEventListener('pointermove', updateRulerCell);
+      canvasEl.addEventListener('pointerdown', updateRulerCell);
+      canvasEl.addEventListener('pointerleave', () => {
+        if (game && game.rulerActive) {
+          game.hoveredCell = null;
+          game.draw();
+        }
+      });
 
-      // Smart Editor Assistants (Auto-indent and Auto-close brackets)
-      editor.addEventListener('keydown', (e) => {
+      editor.addEventListener('keydown', event => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') return;
+
         const start = editor.selectionStart;
         const end = editor.selectionEnd;
         const text = editor.value;
 
-        if (e.key === 'Enter') {
+        if (event.key === 'Tab') {
+          event.preventDefault();
+          const insertion = event.shiftKey ? '' : '    ';
+          if (event.shiftKey) {
+            const lineStart = text.lastIndexOf('\n', start - 1) + 1;
+            const removable = Math.min(4, (text.slice(lineStart).match(/^ +/) || [''])[0].length);
+            editor.value = text.slice(0, lineStart) + text.slice(lineStart + removable);
+            editor.selectionStart = editor.selectionEnd = Math.max(lineStart, start - removable);
+          } else {
+            editor.value = text.slice(0, start) + insertion + text.slice(end);
+            editor.selectionStart = editor.selectionEnd = start + insertion.length;
+          }
+          markEditorChanged();
+        } else if (event.key === 'Enter' && !event.altKey && !event.shiftKey) {
           const lineStart = text.lastIndexOf('\n', start - 1) + 1;
           const currentLine = text.substring(lineStart, start);
-          const indentMatch = currentLine.match(/^(\s*)/);
-          const indent = indentMatch ? indentMatch[1] : '';
-          const extraIndent = (currentLine.trim().endsWith('{') || currentLine.trim().endsWith(':')) ? '  ' : '';
-          
-          e.preventDefault();
+          const indent = (currentLine.match(/^(\s*)/) || ['', ''])[1];
+          const extraIndent = (currentLine.trim().endsWith('{') || currentLine.trim().endsWith(':')) ? '    ' : '';
+          event.preventDefault();
           const insertion = '\n' + indent + extraIndent;
           editor.value = text.substring(0, start) + insertion + text.substring(end);
           editor.selectionStart = editor.selectionEnd = start + insertion.length;
-          
-          updateLineNumbers();
-          updateCharCounter();
-        } else if (e.key === '{') {
-          e.preventDefault();
-          editor.value = text.substring(0, start) + '{}' + text.substring(end);
+          markEditorChanged();
+        } else if (event.key === '{' && game.syntaxMode === 'bracket') {
+          event.preventDefault();
+          const selected = text.slice(start, end);
+          editor.value = text.slice(0, start) + '{' + selected + '}' + text.slice(end);
+          editor.selectionStart = start + 1;
+          editor.selectionEnd = start + 1 + selected.length;
+          markEditorChanged();
+        } else if (event.key === '(') {
+          event.preventDefault();
+          const selected = text.slice(start, end);
+          editor.value = text.slice(0, start) + '(' + selected + ')' + text.slice(end);
+          editor.selectionStart = start + 1;
+          editor.selectionEnd = start + 1 + selected.length;
+          markEditorChanged();
+        } else if ((event.key === ')' || event.key === '}') && text[start] === event.key && start === end) {
+          event.preventDefault();
           editor.selectionStart = editor.selectionEnd = start + 1;
-          
-          updateLineNumbers();
-          updateCharCounter();
-        } else if (e.key === '(') {
-          e.preventDefault();
-          editor.value = text.substring(0, start) + '()' + text.substring(end);
-          editor.selectionStart = editor.selectionEnd = start + 1;
-          
-          updateLineNumbers();
-          updateCharCounter();
         }
       });
 
-      // Execution action events
       runBtn.addEventListener('click', () => {
-        const code = editor.value;
-        setupExecutionPreview(code);
-        
-        runBtn.disabled = true;
-        stepBtn.disabled = true;
-        smartRouteBtn.disabled = true;
-        stopBtn.disabled = false;
-        disableQuickButtons(true);
-        
+        saveCurrentCode();
+        setupExecutionPreview(editor.value);
+        setExecutionUI(true);
+        runtimeStatus.textContent = 'Algoritma çalışıyor';
         game.isDebugMode = false;
-        game.runCodeText(code);
+        game.runCodeText(editor.value);
       });
 
       stepBtn.addEventListener('click', () => {
-        const code = editor.value;
         if (!game.isRunning) {
-          setupExecutionPreview(code);
-          runBtn.disabled = true;
-          stepBtn.disabled = false;
-          stepBackBtn.disabled = true;
-          smartRouteBtn.disabled = true;
-          stopBtn.disabled = false;
-          disableQuickButtons(true);
-          
+          saveCurrentCode();
+          setupExecutionPreview(editor.value);
+          setExecutionUI(true, true);
+          runtimeStatus.textContent = 'Adım modu etkin';
           game.isDebugMode = true;
           game.isWaitingForStep = false;
-          game.runCodeText(code);
+          game.runCodeText(editor.value);
         } else if (game.isWaitingForStep) {
           game.isWaitingForStep = false;
-          stepBtn.disabled = true; // disable while animating
+          stepBtn.disabled = true;
           stepBackBtn.disabled = true;
           game.step();
         }
       });
 
       stepBackBtn.addEventListener('click', () => {
-        if (game && game.isRunning && game.isDebugMode && game.isWaitingForStep) {
-          const success = game.stepBack();
-          if (success) {
-            stepBackBtn.disabled = game.historyStack.length === 0;
-            logToConsole("Bir adım geri alındı.", "info");
-          }
+        if (game && game.isRunning && game.isDebugMode && game.isWaitingForStep && game.stepBack()) {
+          stepBackBtn.disabled = game.historyStack.length === 0;
+          logToConsole('Bir adım geri alındı.', 'info');
+          updateRuntimeHUD();
         }
       });
 
       smartRouteBtn.addEventListener('click', () => {
+        const meaningfulCode = editor.value
+          .replace(/\/\/.*$/gm, '')
+          .replace(/#.*$/gm, '')
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .trim();
+        if (meaningfulCode && !confirm('Mevcut kodun rota önerisiyle değiştirilecek. Devam edilsin mi?')) return;
+
         const routeCode = game.createSmartRouteCode();
         if (!routeCode) {
-          logToConsole("Bu seviye için güvenli akıllı rota bulunamadı.", "error");
+          logToConsole('Bu seviye için referans çözüm oluşturulamadı.', 'error');
           return;
         }
-
         editor.value = routeCode;
-        updateLineNumbers();
-        updateCharCounter();
+        markEditorChanged(true);
         saveCurrentCode();
-        logToConsole("Akıllı rota örneği editöre eklendi.", "success");
+        const par = game.getStarTargets().par;
+        logToConsole(`Referans çözüm editöre yazıldı (${par} satır, 3 yıldız).`, 'success');
+        showToast(`Referans çözüm ${par} satır. Daha kısasını bulursan rekor kırarsın.`);
       });
 
-      stopBtn.addEventListener('click', () => {
-        game.stop();
-      });
+      stopBtn.addEventListener('click', () => game.stop());
 
       resetBtn.addEventListener('click', () => {
-        if (confirm("Yazdığınız tüm kodlar silinecek. Emin misiniz?")) {
-          editor.value = '';
-          updateLineNumbers();
-          updateCharCounter();
-          logToConsole("Kod düzenleyici sıfırlandı.", "info");
-        }
+        if (!confirm('Bu seviyedeki kod taslağın temizlensin mi?')) return;
+        editor.value = '';
+        markEditorChanged(true);
+        saveCurrentCode();
+        settingsMenu.open = false;
+        logToConsole('Bu seviyedeki kod taslağı temizlendi.', 'info');
       });
 
       clearConsoleBtn.addEventListener('click', () => {
         consoleOutput.replaceChildren();
+        updateConsoleStatus('Hazır', '');
       });
 
-      // Navigation
-      prevLvlBtn.addEventListener('click', () => {
-        if (game.currentLevelIdx > 0) {
-          game.loadLevel(game.currentLevelIdx - 1);
-          loadActiveLevel();
-        }
+      prevLvlBtn.addEventListener('click', () => navigateToLevel(game.currentLevelIdx - 1));
+      nextLvlBtn.addEventListener('click', () => navigateToLevel(game.currentLevelIdx + 1));
+
+      speedSlider.addEventListener('input', () => {
+        game.executionSpeed = getExecutionSpeed(Number(speedSlider.value));
+        updateSpeedUI();
       });
 
-      nextLvlBtn.addEventListener('click', () => {
-        if (game.currentLevelIdx < LEVELS.length - 1 && unlockedLevels.includes(game.currentLevelIdx + 1)) {
-          game.loadLevel(game.currentLevelIdx + 1);
-          loadActiveLevel();
-        }
-      });
-
-      // Speed Slider
-      speedSlider.addEventListener('input', (e) => {
-        game.executionSpeed = parseInt(e.target.value, 10);
-      });
-
-      // Sound Engine toggle
       soundBtn.addEventListener('click', () => {
         const enabled = soundEngine.toggleSound();
-        const icon = document.getElementById('sound-icon');
-        icon.textContent = enabled ? '🔊' : '🔇';
-        logToConsole(enabled ? "Sesler açıldı." : "Sesler kapatıldı.", "info");
+        safeStorageSet('kodmaymunu_sound', String(enabled));
+        updateSoundUI(enabled);
+        logToConsole(enabled ? 'Sesler açıldı.' : 'Sesler kapatıldı.', 'info');
       });
 
-      // Modal buttons
+      devBtn.addEventListener('click', () => {
+        saveCurrentCode();
+        devMode = !devMode;
+        safeStorageSet('kodmaymunu_dev_mode', String(devMode));
+        updateDevUI(devMode);
+        if (!devMode && !unlockedLevels.includes(game.currentLevelIdx)) {
+          navigateToLevel(Math.max(...unlockedLevels));
+        } else {
+          renderSidebarList();
+          loadActiveLevel();
+        }
+      });
+
       modalRetryBtn.addEventListener('click', () => {
-        modal.classList.remove('show');
+        setOverlayVisibility(modal, false);
         game.stop();
       });
 
       modalNextBtn.addEventListener('click', () => {
-        modal.classList.remove('show');
-        if (game.currentLevelIdx < LEVELS.length - 1) {
-          game.loadLevel(game.currentLevelIdx + 1);
-          loadActiveLevel();
-        }
+        setOverlayVisibility(modal, false);
+        navigateToLevel(game.currentLevelIdx + 1);
       });
 
-      // Game engine callbacks
+      const openSidebar = () => {
+        document.body.classList.add('sidebar-open');
+        sidebarOpenBtn.setAttribute('aria-expanded', 'true');
+        window.setTimeout(() => levelSearch.focus(), 220);
+      };
+      const closeSidebar = () => {
+        document.body.classList.remove('sidebar-open');
+        sidebarOpenBtn.setAttribute('aria-expanded', 'false');
+      };
+      sidebarOpenBtn.addEventListener('click', openSidebar);
+      sidebarCloseBtn.addEventListener('click', closeSidebar);
+      sidebarBackdrop.addEventListener('click', closeSidebar);
+
+      levelSearch.addEventListener('input', renderSidebarList);
+      consoleToggleBtn.addEventListener('click', () => {
+        const collapsed = consolePanel.classList.toggle('collapsed');
+        consoleToggleBtn.setAttribute('aria-expanded', String(!collapsed));
+        safeStorageSet('kodmaymunu_console_collapsed', String(collapsed));
+      });
+      if (safeStorageGet('kodmaymunu_console_collapsed') === 'true') {
+        consolePanel.classList.add('collapsed');
+        consoleToggleBtn.setAttribute('aria-expanded', 'false');
+      }
+
+      const finishWelcome = () => {
+        safeStorageSet('kodmaymunu_welcome_seen', 'true');
+        setOverlayVisibility(welcomeOverlay, false);
+        editor.focus();
+      };
+      welcomeStartBtn.addEventListener('click', finishWelcome);
+      welcomeCloseBtn.addEventListener('click', finishWelcome);
+
+      document.addEventListener('pointerdown', event => {
+        if (settingsMenu.open && !settingsMenu.contains(event.target)) settingsMenu.open = false;
+      });
+
+      document.addEventListener('keydown', event => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+          event.preventDefault();
+          if (!runBtn.disabled) runBtn.click();
+          return;
+        }
+        if (event.key === '/' && !event.ctrlKey && !event.metaKey && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+          event.preventDefault();
+          if (window.matchMedia('(max-width: 1180px)').matches) openSidebar();
+          levelSearch.focus();
+          return;
+        }
+        if (event.key === 'Escape') {
+          if (welcomeOverlay.classList.contains('show')) finishWelcome();
+          else if (modal.classList.contains('show')) setOverlayVisibility(modal, false);
+          else if (document.body.classList.contains('sidebar-open')) closeSidebar();
+          else if (settingsMenu.open) settingsMenu.open = false;
+          else if (game.isRunning) game.stop();
+        }
+        if (event.key === 'Tab') trapModalFocus(event);
+      });
+
+      window.addEventListener('pagehide', () => saveCurrentCode());
+
       game.onLogMessage = (msg, type) => {
         logToConsole(msg, type);
+        if (type === 'error') markErrorLine(msg);
       };
-
       game.onBananaChange = () => {
         updateBananaCounter();
+        updateRuntimeHUD();
       };
-
-      game.onExecutionStep = (lineNum) => {
+      game.onExecutionStep = lineNum => {
         highlightExecutingLine(lineNum);
+        window.setTimeout(updateRuntimeHUD, 0);
       };
-
-      game.onExecutionFinished = () => {
-        restoreEditorState();
+      game.onExecutionFinished = () => restoreEditorState();
+      game.onHint = () => {
+        const tipToggle = document.getElementById('tip-toggle');
+        if (tipToggle?.getAttribute('aria-expanded') === 'false') tipToggle.click();
+        showToast('Mojo yeni bir ipucu bıraktı.');
       };
-
       game.onDebugStepComplete = () => {
         stepBackBtn.disabled = game.historyStack.length === 0;
         stepBtn.disabled = false;
+        runtimeStatus.textContent = 'Sonraki adımı bekliyor';
+        updateRuntimeHUD();
       };
-
-      game.onLevelComplete = (stars, lineCount) => {
+      game.onLevelComplete = (stars, lineCount, meta) => {
         restoreEditorState();
-        showVictoryScreen(stars, lineCount);
+        showVictoryScreen(stars, lineCount, meta);
       };
+    }
+
+    function getCodeStorageKey(idx, mode = game?.syntaxMode || 'indent') {
+      return `kodmaymunu_code_lvl_${idx}_${mode}`;
+    }
+
+    function createStarterCode(idx, mode = game?.syntaxMode || 'indent') {
+      const comment = mode === 'indent' ? '#' : '//';
+      return `${comment} Seviye ${idx + 1} · Mojo'nun rotası\n${comment} Muzlar üzerinden geçince otomatik toplanır.\n`;
+    }
+
+    function saveCurrentCode(mode = game?.syntaxMode || 'indent') {
+      if (!game || !editor) return;
+      const idx = game.currentLevelIdx;
+      const stored = safeStorageSet(getCodeStorageKey(idx, mode), editor.value);
+      // Legacy key is kept in sync so existing installations remain compatible.
+      safeStorageSet(`kodmaymunu_code_lvl_${idx}`, editor.value);
+      const autosaveState = document.querySelector('.autosave-state');
+      if (autosaveState) autosaveState.lastChild.textContent = stored ? 'Kaydedildi' : 'Yerel kayıt kapalı';
+    }
+
+    function markEditorChanged(immediate = false) {
+      updateLineNumbers();
+      updateCharCounter();
+      const autosaveState = document.querySelector('.autosave-state');
+      if (autosaveState) autosaveState.lastChild.textContent = immediate ? 'Kaydediliyor' : 'Değişiklik var';
+      window.clearTimeout(autosaveTimer);
+      if (immediate) {
+        saveCurrentCode();
+      } else {
+        autosaveTimer = window.setTimeout(saveCurrentCode, 350);
+      }
+    }
+
+    function getExecutionSpeed(sliderValue) {
+      return ({ 1: 1000, 2: 720, 3: 500, 4: 300, 5: 150 })[sliderValue] || 500;
+    }
+
+    function updateSpeedUI() {
+      const value = Number(speedSlider.value);
+      const labels = { 1: 'Yavaş', 2: 'Rahat', 3: 'Orta', 4: 'Hızlı', 5: 'Turbo' };
+      const speedValue = document.getElementById('speed-value');
+      if (speedValue) speedValue.textContent = labels[value] || 'Orta';
+      speedSlider.setAttribute('aria-valuetext', labels[value] || 'Orta');
+    }
+
+    function updateSoundUI(enabled) {
+      const icon = document.getElementById('sound-icon');
+      const text = document.getElementById('sound-text');
+      if (icon) icon.textContent = enabled ? '🔊' : '🔇';
+      if (text) text.textContent = enabled ? 'Ses açık' : 'Ses kapalı';
+      soundBtn.setAttribute('aria-pressed', String(enabled));
+    }
+
+    function setExecutionUI(running, debugMode = false) {
+      document.body.classList.toggle('is-running', running);
+      runBtn.disabled = running;
+      stepBtn.disabled = running;
+      stepBackBtn.disabled = true;
+      smartRouteBtn.disabled = running;
+      stopBtn.disabled = !running;
+      syntaxModeSelect.disabled = running;
+      resetBtn.disabled = running;
+      devBtn.disabled = running;
+      disableQuickButtons(running);
+      editor.setAttribute('aria-readonly', String(running));
+      editor.readOnly = running;
+      prevLvlBtn.disabled = running || game.currentLevelIdx === 0;
+      nextLvlBtn.disabled = running || game.currentLevelIdx === LEVELS.length - 1 || (!devMode && !unlockedLevels.includes(game.currentLevelIdx + 1));
+      document.getElementById('level-list').toggleAttribute('inert', running);
+      if (running) updateConsoleStatus(debugMode ? 'Adım modu' : 'Çalışıyor', '');
+    }
+
+    function navigateToLevel(idx) {
+      if (!game || idx < 0 || idx >= LEVELS.length) return;
+      if (!devMode && idx > 0 && !unlockedLevels.includes(idx)) {
+        showToast('Bu görev henüz kilitli.', 'error');
+        return;
+      }
+      saveCurrentCode();
+      if (game.isRunning) game.stop();
+      game.loadLevel(idx);
+      loadActiveLevel();
+      document.body.classList.remove('sidebar-open');
+      sidebarOpenBtn.setAttribute('aria-expanded', 'false');
+      settingsMenu.open = false;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function updateConsoleStatus(label, type = '') {
+      const badge = document.getElementById('console-status-badge');
+      if (!badge) return;
+      badge.textContent = label;
+      badge.className = `console-status-badge${type ? ` ${type}` : ''}`;
+    }
+
+    function updateRuntimeHUD() {
+      if (!game || !game.player) return;
+      const directions = { UP: 'KUZEY', RIGHT: 'DOĞU', DOWN: 'GÜNEY', LEFT: 'BATI' };
+      directionChip.textContent = `MOJO · ${directions[game.player.dir] || game.player.dir}`;
+    }
+
+    function showToast(message, type = '') {
+      const region = document.getElementById('toast-region');
+      if (!region) return;
+      const toast = document.createElement('div');
+      toast.className = `toast${type ? ` ${type}` : ''}`;
+      toast.textContent = message;
+      region.appendChild(toast);
+      window.setTimeout(() => toast.remove(), 3200);
+    }
+
+    function setOverlayVisibility(overlay, visible, focusTarget = null) {
+      if (!overlay) return;
+      if (visible) {
+        lastFocusedBeforeModal = document.activeElement;
+        overlay.classList.add('show');
+        overlay.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('modal-open');
+        window.setTimeout(() => (focusTarget || overlay.querySelector('button:not([disabled])'))?.focus(), 40);
+      } else {
+        overlay.classList.remove('show');
+        overlay.setAttribute('aria-hidden', 'true');
+        if (!document.querySelector('.modal-overlay.show, .welcome-overlay.show')) {
+          document.body.classList.remove('modal-open');
+        }
+        if (lastFocusedBeforeModal && document.contains(lastFocusedBeforeModal)) lastFocusedBeforeModal.focus();
+      }
+    }
+
+    function trapModalFocus(event) {
+      const activeOverlay = document.querySelector('.welcome-overlay.show, .modal-overlay.show');
+      if (!activeOverlay) return;
+      const focusable = [...activeOverlay.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+        .filter(element => element.offsetParent !== null);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
 
     function loadActiveLevel() {
@@ -560,14 +913,37 @@
       const activeGroup = getLevelGroup(level.id);
       expandedGroups.add(activeGroup);
 
-      // Update titles/headers
       levelTitle.textContent = level.title;
-      
-      // Load instructions and tip box
-      let instructionHtml = `<div class="instruction-text">${level.instructions}</div>`;
+      document.getElementById('active-level-group').textContent = getChapter(level.id).eyebrow;
+      document.getElementById('level-position-label').textContent = `${String(level.id).padStart(2, '0')} / ${LEVELS.length}`;
+      document.getElementById('level-position-fill').style.width = `${((idx + 1) / LEVELS.length) * 100}%`;
+
+      const targets = game.getStarTargets();
+      const record = bestLines[idx];
+      const unlock = COMMAND_UNLOCKS.find(entry => entry.from === level.id);
+
+      let chipsHtml = `
+        <div class="mission-chips">
+          <span class="mission-chip mission-chip-target" title="Referans çözümün satır sayısı">
+            <span class="chip-key">⭐⭐⭐</span><span class="chip-value">≤ ${targets.three} satır</span>
+          </span>
+          <span class="mission-chip" title="İki yıldız sınırı">
+            <span class="chip-key">⭐⭐</span><span class="chip-value">≤ ${targets.two} satır</span>
+          </span>
+          ${record !== undefined ? `<span class="mission-chip mission-chip-record" title="Bu seviyedeki en iyi çözümün"><span class="chip-key">🏅</span><span class="chip-value">${record} satır</span></span>` : ''}
+          ${unlock ? `<span class="mission-chip mission-chip-unlock" title="Bu seviyede açılan komut"><span class="chip-key">✦ YENİ</span><span class="chip-value">${unlock.label}</span></span>` : ''}
+        </div>`;
+
+      let instructionHtml = `
+        <div class="mission-copy">
+          <span class="mission-icon" aria-hidden="true">◎</span>
+          <div class="instruction-text"><strong>Görev</strong><span>${level.instructions}</span></div>
+          ${level.tip ? '<button class="tip-toggle" id="tip-toggle" type="button" aria-expanded="false" aria-controls="level-tip">💡 İpucu</button>' : ''}
+        </div>
+        ${chipsHtml}`;
       if (level.tip) {
         instructionHtml += `
-          <div class="tip-box">
+          <div class="tip-box" id="level-tip" hidden>
             <span class="tip-icon">💡</span>
             <div class="tip-content">
               <strong>Mojo'nun İpucu:</strong> ${level.tip}
@@ -576,17 +952,26 @@
         `;
       }
       setSafeHTML(instructionsCard, instructionHtml);
+      const tipToggle = document.getElementById('tip-toggle');
+      const tipBox = document.getElementById('level-tip');
+      tipToggle?.addEventListener('click', () => {
+        const open = tipBox.hasAttribute('hidden');
+        tipBox.toggleAttribute('hidden', !open);
+        tipToggle.setAttribute('aria-expanded', String(open));
+        tipToggle.textContent = open ? '💡 İpucunu gizle' : '💡 İpucu';
+      });
 
       // Reset ruler state on level switch
       if (game) {
         game.rulerActive = false;
         game.hoveredCell = null;
-        if (rulerBtn) rulerBtn.classList.remove('btn-active');
+        rulerBtn.classList.remove('btn-active');
+        rulerBtn.setAttribute('aria-pressed', 'false');
       }
 
       // Level limits
       prevLvlBtn.disabled = idx === 0;
-      nextLvlBtn.disabled = idx === LEVELS.length - 1 || !unlockedLevels.includes(idx + 1);
+      nextLvlBtn.disabled = idx === LEVELS.length - 1 || (!devMode && !unlockedLevels.includes(idx + 1));
 
       updateBananaCounter();
       updateStarsSummary();
@@ -597,84 +982,102 @@
       // Configure quick buttons according to allowed level actions
       configureQuickButtons(level.allowedCommands);
 
-      // Restore code template or sample if empty
-      const savedCodeKey = `kodmaymunu_code_lvl_${idx}`;
-      const savedCode = localStorage.getItem(savedCodeKey);
-      if (savedCode) {
-        editor.value = savedCode;
-      } else {
-        // Build initial placeholder hint
-        const isIndent = game ? game.syntaxMode === 'indent' : true;
-        const comment = isIndent ? '#' : '//';
-        editor.value = `${comment} Seviye ${idx + 1}\n${comment} Muzlar temas edince otomatik toplanır.\n`;
-      }
+      const modeDraft = safeStorageGet(getCodeStorageKey(idx, game.syntaxMode));
+      const legacyDraft = safeStorageGet(`kodmaymunu_code_lvl_${idx}`);
+      editor.value = modeDraft ?? legacyDraft ?? createStarterCode(idx, game.syntaxMode);
 
       updateLineNumbers();
       updateCharCounter();
-      logToConsole(`${level.title} yüklendi. Mojonun talimatlarını izleyin.`, "info");
+      updateRuntimeHUD();
+      runtimeStatus.textContent = 'Planlamaya hazır';
+      setExecutionUI(false);
+      logToConsole(`${level.title} hazır. Rotayı incele ve algoritmanı kur.`, 'info');
     }
 
     function updateStarsSummary() {
       const summaryEl = document.getElementById('stars-summary');
       if (!summaryEl) return;
-      
+
       let totalEarned = 0;
       LEVELS.forEach((_, i) => {
         totalEarned += completedStars[i] || 0;
       });
       const maxPossible = LEVELS.length * 3;
-      summaryEl.querySelector('span').textContent = `${totalEarned} / ${maxPossible}`;
+      const completedCount = LEVELS.reduce((count, _, idx) => count + ((completedStars[idx] || 0) > 0 ? 1 : 0), 0);
+      const percent = Math.round((completedCount / LEVELS.length) * 100);
+      summaryEl.querySelector('.stars-summary-value').textContent = `${totalEarned} / ${maxPossible}`;
+      document.getElementById('overall-progress-fill').style.width = `${percent}%`;
+      document.getElementById('overall-progress-text').textContent = `${completedCount} / ${LEVELS.length} görev`;
+      document.getElementById('overall-progress-percent').textContent = `%${percent}`;
     }
 
     function updateThemeUI(theme) {
       const themeIcon = document.getElementById('theme-icon');
       const themeText = document.getElementById('theme-text');
+      const themeColor = document.querySelector('meta[name="theme-color"]');
       if (theme === 'light') {
         if (themeIcon) themeIcon.textContent = '☀️';
         if (themeText) themeText.textContent = 'Açık';
+        if (themeColor) themeColor.content = '#f0f6f2';
       } else {
         if (themeIcon) themeIcon.textContent = '🌙';
         if (themeText) themeText.textContent = 'Koyu';
+        if (themeColor) themeColor.content = '#07110e';
       }
+    }
+
+    function updateDevUI(enabled) {
+      const devText = document.getElementById('dev-text');
+      if (devText) {
+        devText.textContent = enabled ? 'Geliştirici modu açık' : 'Geliştirici modu';
+      }
+      devBtn.classList.toggle('btn-active', enabled);
+      devBtn.setAttribute('aria-pressed', String(enabled));
     }
 
     function renderSidebarList() {
       const listContainer = document.getElementById('level-list');
       listContainer.replaceChildren();
+      const searchTerm = (levelSearch?.value || '').trim().toLocaleLowerCase('tr-TR');
 
-      const groups = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+      const groups = {};
+      for (let g = 1; g <= CHAPTERS.length; g++) groups[g] = [];
       LEVELS.forEach((lvl, idx) => {
         const g = getLevelGroup(lvl.id);
         groups[g].push({ lvl, idx });
       });
 
-      const GROUP_NAMES = {
-        1: "1. Sıralı Komutlar (1-20)",
-        2: "2. Döngüler (21-40)",
-        3: "3. Anahtar & Kapı (41-60)",
-        4: "4. Labirent & Engel (61-80)",
-        5: "5. Usta Mücadeleler (81-100)"
-      };
+      for (let g = 1; g <= CHAPTERS.length; g++) {
+        const visibleItems = searchTerm
+          ? groups[g].filter(({ lvl }) => `${lvl.id} ${lvl.title}`.toLocaleLowerCase('tr-TR').includes(searchTerm))
+          : groups[g];
+        if (!visibleItems.length) continue;
 
-      for (let g = 1; g <= 5; g++) {
-        // Group Wrapper
+        const isExpanded = searchTerm ? true : expandedGroups.has(g);
         const groupWrapper = document.createElement('div');
-        groupWrapper.className = `level-group-wrapper ${expandedGroups.has(g) ? 'expanded' : 'collapsed'}`;
+        groupWrapper.className = `level-group-wrapper ${isExpanded ? 'expanded' : 'collapsed'}`;
 
-        // Group Header
-        const header = document.createElement('div');
+        const header = document.createElement('button');
+        header.type = 'button';
         header.className = 'level-group-header';
-        
+        header.setAttribute('aria-expanded', String(isExpanded));
+        header.setAttribute('aria-controls', `level-group-${g}`);
+
         const titleSpan = document.createElement('span');
         titleSpan.className = 'group-title';
-        titleSpan.textContent = (expandedGroups.has(g) ? "▼ " : "▶ ") + GROUP_NAMES[g];
-        
+        const chevron = document.createElement('span');
+        chevron.className = 'group-chevron';
+        chevron.textContent = '▶';
+        titleSpan.appendChild(chevron);
+        titleSpan.append(CHAPTERS[g - 1].name);
+        header.title = CHAPTERS[g - 1].summary;
+
         let groupStars = 0;
         groups[g].forEach(item => {
           groupStars += completedStars[item.idx] || 0;
         });
         const groupMaxStars = groups[g].length * 3;
-        
+
         const badge = document.createElement('span');
         badge.className = 'group-stars-badge';
         badge.textContent = `⭐ ${groupStars}/${groupMaxStars}`;
@@ -684,6 +1087,7 @@
         groupWrapper.appendChild(header);
 
         header.addEventListener('click', () => {
+          if (searchTerm) return;
           if (expandedGroups.has(g)) {
             expandedGroups.delete(g);
           } else {
@@ -692,34 +1096,44 @@
           renderSidebarList();
         });
 
-        // Group Items Container
         const levelsContainer = document.createElement('div');
         levelsContainer.className = 'level-group-items';
+        levelsContainer.id = `level-group-${g}`;
 
-        // We always append levelsContainer to DOM, but its height and opacity are handled by CSS based on expanded class
-        groups[g].forEach(({ lvl, idx }) => {
-          const item = document.createElement('div');
+        visibleItems.forEach(({ lvl, idx }) => {
+          const item = document.createElement('button');
+          item.type = 'button';
           item.className = 'level-item';
           if (idx === game.currentLevelIdx) {
             item.classList.add('active');
+            item.setAttribute('aria-current', 'step');
           }
 
-          const isLocked = idx > 0 && !unlockedLevels.includes(idx);
+          const isLocked = !devMode && idx > 0 && !unlockedLevels.includes(idx);
           if (isLocked) {
             item.classList.add('locked');
+            item.disabled = true;
+            item.title = 'Bu görevi açmak için bir önceki görevi tamamla.';
+          } else {
+            item.title = `${lvl.title} görevini aç`;
           }
+
+          const number = document.createElement('span');
+          number.className = 'level-number';
+          number.textContent = String(lvl.id).padStart(2, '0');
+          item.appendChild(number);
 
           const info = document.createElement('div');
           info.className = 'level-info';
 
           const nameSpan = document.createElement('span');
           nameSpan.className = 'level-name';
-          nameSpan.textContent = lvl.title;
+          nameSpan.textContent = lvl.title.replace(/^\d+\.\s*/, '');
           info.appendChild(nameSpan);
 
           const starsContainer = document.createElement('div');
           starsContainer.className = 'level-stars';
-          
+
           const earnedStarsCount = completedStars[idx] || 0;
           for (let s = 1; s <= 3; s++) {
             const starIcon = document.createElement('span');
@@ -730,6 +1144,15 @@
             starIcon.textContent = '★';
             starsContainer.appendChild(starIcon);
           }
+          const record = bestLines[idx];
+          if (record !== undefined) {
+            const recordBadge = document.createElement('span');
+            recordBadge.className = 'level-record';
+            recordBadge.textContent = `${record} satır`;
+            recordBadge.title = `En iyi çözümün: ${record} etkin satır`;
+            starsContainer.appendChild(recordBadge);
+          }
+
           info.appendChild(starsContainer);
           item.appendChild(info);
 
@@ -741,11 +1164,7 @@
           }
 
           if (!isLocked) {
-            item.addEventListener('click', () => {
-              saveCurrentCode();
-              game.loadLevel(idx);
-              loadActiveLevel();
-            });
+            item.addEventListener('click', () => navigateToLevel(idx));
           }
 
           levelsContainer.appendChild(item);
@@ -754,18 +1173,24 @@
         groupWrapper.appendChild(levelsContainer);
         listContainer.appendChild(groupWrapper);
       }
-    }
 
-    function saveCurrentCode() {
-      const idx = game.currentLevelIdx;
-      localStorage.setItem(`kodmaymunu_code_lvl_${idx}`, editor.value);
+      if (!listContainer.children.length) {
+        const empty = document.createElement('p');
+        empty.className = 'level-search-empty';
+        empty.textContent = 'Bu aramayla eşleşen seviye bulunamadı.';
+        listContainer.appendChild(empty);
+      } else if (!searchTerm) {
+        window.requestAnimationFrame(() => listContainer.querySelector('.level-item.active')?.scrollIntoView({ block: 'nearest' }));
+      }
     }
 
     function updateBananaCounter() {
       const activeLevel = LEVELS[game.currentLevelIdx];
       const totalBananas = activeLevel.grid.join('').split('B').length - 1;
       const collectedCount = game.bananas.filter(b => b.collected).length;
-      bananaCounter.textContent = `🍌 Muzlar: ${collectedCount} / ${totalBananas}`;
+      const value = bananaCounter.querySelector('strong');
+      if (value) value.textContent = `${collectedCount} / ${totalBananas}`;
+      bananaCounter.setAttribute('aria-label', `${totalBananas} muzdan ${collectedCount} tanesi toplandı`);
     }
 
     function configureQuickButtons(allowedCommands) {
@@ -775,6 +1200,8 @@
         "adimla": document.getElementById('cmd-adimla'),
         "solaDon": document.getElementById('cmd-solaDon'),
         "sagaDon": document.getElementById('cmd-sagaDon'),
+        "bekle": document.getElementById('cmd-bekle'),
+        "kaplumbaga.adimla": document.getElementById('cmd-kaplumbaga'),
         "tekrarla": document.getElementById('cmd-tekrarla'),
         "ise": document.getElementById('cmd-ise')
       };
@@ -796,24 +1223,26 @@
     function updateSyntaxModeUI(mode) {
       const cmdTekrarla = document.getElementById('cmd-tekrarla');
       const cmdIse = document.getElementById('cmd-ise');
-      
+
+      // Snippets only ever use `ilerle()`, which every mission allows; the
+      // palette used to paste `adimla()` into levels that had not unlocked it.
       if (mode === 'indent') {
         if (cmdTekrarla) {
-          cmdTekrarla.setAttribute('data-cmd', 'tekrarla(3):\n    adimla()');
+          cmdTekrarla.setAttribute('data-cmd', 'tekrarla(3):\n    ilerle()');
           cmdTekrarla.textContent = 'tekrarla:';
         }
         if (cmdIse) {
-          cmdIse.setAttribute('data-cmd', 'ise(onumdeEngelVar()):\n    solaDon()');
-          cmdIse.textContent = 'ise:';
+          cmdIse.setAttribute('data-cmd', 'ise(onumdeEngelVar()):\n    sagaDon()\ndegilse:\n    ilerle()');
+          cmdIse.textContent = 'ise / degilse:';
         }
       } else {
         if (cmdTekrarla) {
-          cmdTekrarla.setAttribute('data-cmd', 'tekrarla(3) {\n  adimla()\n}');
+          cmdTekrarla.setAttribute('data-cmd', 'tekrarla(3) {\n  ilerle()\n}');
           cmdTekrarla.textContent = 'tekrarla() {}';
         }
         if (cmdIse) {
-          cmdIse.setAttribute('data-cmd', 'ise(onumdeEngelVar()) {\n  solaDon()\n}');
-          cmdIse.textContent = 'ise() {}';
+          cmdIse.setAttribute('data-cmd', 'ise(onumdeEngelVar()) {\n  sagaDon()\n} degilse {\n  ilerle()\n}');
+          cmdIse.textContent = 'ise / degilse {}';
         }
       }
     }
@@ -822,20 +1251,20 @@
       const startPos = editor.selectionStart;
       const endPos = editor.selectionEnd;
       const text = editor.value;
-      
-      // Convert literal '\n' sequences in data-cmd attributes to real newlines
+      const lineStart = text.lastIndexOf('\n', startPos - 1) + 1;
+      const linePrefix = text.slice(lineStart, startPos);
+      const indent = (linePrefix.match(/^\s*/) || [''])[0];
+      const startsOnEmptyIndent = linePrefix.trim() === '';
       const formattedCmd = cmd.replace(/\\n/g, '\n');
-      const insertText = formattedCmd + '\n';
-      
+      const indentedCommand = formattedCmd.split('\n').map((line, index) => index === 0 ? line : indent + line).join('\n');
+      const insertText = (startsOnEmptyIndent ? '' : '\n' + indent) + indentedCommand + '\n' + indent;
+
       editor.value = text.substring(0, startPos) + insertText + text.substring(endPos);
       editor.focus();
-      
-      const newCursor = startPos + insertText.length;
+      const bodyToken = insertText.indexOf('adimla()');
+      const newCursor = bodyToken >= 0 ? startPos + bodyToken + 'adimla'.length : startPos + insertText.length;
       editor.setSelectionRange(newCursor, newCursor);
-      
-      updateLineNumbers();
-      updateCharCounter();
-      saveCurrentCode();
+      markEditorChanged(true);
     }
 
     function updateLineNumbers() {
@@ -853,34 +1282,59 @@
 
     function updateCharCounter() {
       const display = document.getElementById('code-length-display');
-      display.textContent = `Karakter: ${editor.value.length}`;
+      const cleanCode = editor.value
+        .replace(/\/\/.*$/gm, '')
+        .replace(/#.*$/gm, '')
+        .replace(/\/\*[\s\S]*?\*\//g, '');
+      const activeLines = cleanCode.split('\n').map(line => line.trim()).filter(line => line && line !== '}').length;
+      const target = game?.getStarTargets?.().three;
+      display.textContent = target ? `${activeLines} satır · hedef ≤ ${target}` : `${activeLines} satır`;
+      display.classList.toggle('over-target', Boolean(target && activeLines > target));
     }
 
     function logToConsole(text, type = 'info') {
       const line = document.createElement('div');
       line.className = `log-entry ${type}`;
-      
-      // Timestamp
+
       const timeSpan = document.createElement('span');
-      timeSpan.style.opacity = '0.4';
-      timeSpan.style.marginRight = '8px';
+      timeSpan.className = 'log-time';
       const now = new Date();
       timeSpan.textContent = `[${now.toTimeString().split(' ')[0]}]`;
-      
+
       const msgSpan = document.createElement('span');
       msgSpan.textContent = text;
-      
+
       line.appendChild(timeSpan);
       line.appendChild(msgSpan);
       consoleOutput.appendChild(line);
+      while (consoleOutput.children.length > 120) consoleOutput.firstElementChild.remove();
       consoleOutput.scrollTop = consoleOutput.scrollHeight;
+
+      if (type === 'error') {
+        updateConsoleStatus('Hata', 'error');
+        consolePanel.classList.remove('collapsed');
+        consoleToggleBtn.setAttribute('aria-expanded', 'true');
+        const sourceLine = text.match(/Satır\s+(\d+)/i)?.[1];
+        if (sourceLine) {
+          const lineMarker = document.getElementById(`line-num-${sourceLine}`);
+          lineMarker?.classList.add('error');
+          if (lineMarker) lineMarker.title = text;
+        }
+      } else if (type === 'success') {
+        updateConsoleStatus('Başarılı', 'success');
+      } else if (type === 'hint') {
+        updateConsoleStatus('İpucu', '');
+      } else {
+        updateConsoleStatus(game?.isRunning ? 'Çalışıyor' : 'Hazır', '');
+      }
     }
 
     // Overlay code execution runner preview
     function setupExecutionPreview(code) {
       preview.replaceChildren();
+      document.querySelectorAll('.line-num.error').forEach(element => element.classList.remove('error'));
       const lines = code.split('\n');
-      
+
       lines.forEach((lineText, idx) => {
         const lineDiv = document.createElement('div');
         lineDiv.className = 'run-line';
@@ -903,6 +1357,22 @@
       preview.style.display = 'block';
     }
 
+    // Engine errors are prefixed with "Satır N:", so the offending line can be
+    // flagged in the gutter instead of leaving the player to count lines.
+    function markErrorLine(message) {
+      clearErrorLine();
+      const match = /Satır (\d+)/.exec(message);
+      if (!match) return;
+      const lineNum = Number(match[1]);
+      document.getElementById(`line-num-${lineNum}`)?.classList.add('error');
+      document.getElementById(`run-line-${lineNum}`)?.classList.add('run-line-error');
+    }
+
+    function clearErrorLine() {
+      document.querySelectorAll('.line-num.error').forEach(el => el.classList.remove('error'));
+      document.querySelectorAll('.run-line-error').forEach(el => el.classList.remove('run-line-error'));
+    }
+
     function highlightExecutingLine(lineNum) {
       // Gutter highlighting
       document.querySelectorAll('.line-num').forEach(el => el.classList.remove('active'));
@@ -922,36 +1392,107 @@
     }
 
     function restoreEditorState() {
+      if (game?.crashType) {
+        runtimeStatus.textContent = 'Mojo toparlanıyor';
+        window.setTimeout(() => {
+          if (!game.isRunning && preview.style.display === 'block') restoreEditorState();
+        }, 620);
+        return;
+      }
       preview.style.display = 'none';
-      runBtn.disabled = false;
-      stepBtn.disabled = false;
-      stepBackBtn.disabled = true;
-      smartRouteBtn.disabled = false;
-      stopBtn.disabled = true;
-      disableQuickButtons(false);
+      setExecutionUI(false);
       document.querySelectorAll('.line-num').forEach(el => el.classList.remove('active'));
       updateBananaCounter();
+      updateRuntimeHUD();
       saveCurrentCode();
-      if (game) {
-        game.isDebugMode = false;
-        game.isWaitingForStep = false;
-      }
+      runtimeStatus.textContent = 'Planlamaya hazır';
+      game.isDebugMode = false;
+      game.isWaitingForStep = false;
     }
 
-    function showVictoryScreen(stars, lineCount) {
-      modalTitle.textContent = `Seviye ${game.currentLevelIdx + 1} Tamamlandı!`;
-      const descHtml = `Mojo hedefe başarıyla ulaştı! Yazdığın satır sayısı: <strong>${lineCount}</strong>.<br>` +
-                       `Bu seviye için ideal satır sayısı: <strong>${LEVELS[game.currentLevelIdx].starRating.three} satır</strong>.`;
+    // Finishing a chapter is the only milestone worth interrupting for, and it
+    // is announced once: the last mission of the chapter earning its stars.
+    function announceChapterProgress(level, stars) {
+      const chapter = getChapter(level.id);
+      const isChapterFinale = level.id % CHAPTER_SIZE === 0;
+      if (!isChapterFinale || stars < 1) return;
+
+      const chapterIndices = LEVELS
+        .map((candidate, index) => ({ candidate, index }))
+        .filter(entry => getLevelGroup(entry.candidate.id) === chapter.id);
+      const solved = chapterIndices.filter(entry => (completedStars[entry.index] || 0) > 0).length;
+      if (solved < chapterIndices.length) return;
+
+      const earned = chapterIndices.reduce((sum, entry) => sum + (completedStars[entry.index] || 0), 0);
+      showToast(`🎉 ${chapter.name} bölümü tamamlandı — ${earned}/${chapterIndices.length * 3} yıldız.`);
+    }
+
+    function showVictoryScreen(stars, lineCount, meta = {}) {
+      const level = LEVELS[game.currentLevelIdx];
+      const par = meta.par || game.getStarTargets().par;
+      const twoStarLimit = meta.twoStarLimit || game.getStarTargets().two;
+      const previousBest = bestLines[game.currentLevelIdx];
+      const isNewRecord = Number.isFinite(lineCount) && (previousBest === undefined || lineCount < previousBest);
+      const beatPar = Boolean(meta.beatPar);
+
+      modalTitle.textContent = `Seviye ${level.id} tamamlandı!`;
+
+      let descHtml = `Çözümün <strong>${lineCount} etkin satır</strong>, referans çözüm <strong>${par} satır</strong>.`;
+      if (beatPar) {
+        descHtml += ` Referansı <strong>${par - lineCount} satır</strong> geçtin — bu bir rekor.`;
+      } else if (lineCount === par) {
+        descHtml += ' Tam referans uzunluğunda çözdün.';
+      }
       setSafeHTML(modalDesc, descHtml);
 
-      // Draw stars state
       for (let i = 0; i < 3; i++) {
-        if (i < stars) {
-          modalStars[i].classList.add('earned');
-        } else {
-          modalStars[i].classList.remove('earned');
-        }
+        modalStars[i].classList.remove('earned');
+        void modalStars[i].offsetWidth;
+        if (i < stars) modalStars[i].classList.add('earned');
       }
+
+      const starDetails = document.getElementById('star-details');
+      const allowed = level.allowedCommands || [];
+      const hasLoops = allowed.includes('tekrarla');
+      const hasCompact = allowed.includes('adimla');
+
+      let detailsHtml = '<div class="star-detail-row earned">⭐ <strong>Görev tamamlandı:</strong> Mojo tüm muzları topladı ve sandığa ulaştı.</div>';
+
+      if (stars >= 2) {
+        detailsHtml += `<div class="star-detail-row earned">⭐ <strong>Verimli kod:</strong> ${lineCount} satır, ${twoStarLimit} satırlık sınırın altında.</div>`;
+      } else {
+        detailsHtml += `<div class="star-detail-row missed">☆ <strong>Verimli kod:</strong> ${lineCount} satır yazdın; hedef ${twoStarLimit} satır veya daha az.`;
+        detailsHtml += hasCompact
+          ? ' <em>Uzun düzlükleri <code>adimla(N)</code> ile tek satıra indir.</em>'
+          : (hasLoops ? ' <em>Tekrar eden komutları <code>tekrarla(N)</code> içine al.</em>' : '');
+        detailsHtml += '</div>';
+      }
+
+      if (stars >= 3) {
+        detailsHtml += `<div class="star-detail-row earned">⭐ <strong>Referans çözüm:</strong> ${par} satırlık hedefi tuttun.</div>`;
+      } else {
+        const gap = lineCount - par;
+        detailsHtml += `<div class="star-detail-row missed">☆ <strong>Referans çözüm:</strong> ${par} satır veya altında çöz — ${gap} satır fazlan var.`;
+        detailsHtml += hasLoops
+          ? ' <em>Örnek çözüm butonuyla referans programı görebilirsin.</em>'
+          : ' <em>Gereksiz adımları kaldırarak kısaltabilirsin.</em>';
+        detailsHtml += '</div>';
+      }
+
+      if (beatPar) {
+        detailsHtml += `<div class="star-detail-row record">🏅 <strong>Rekor:</strong> Referans çözümden kısa bir program yazdın (${lineCount} < ${par}).</div>`;
+      } else if (previousBest !== undefined) {
+        detailsHtml += `<div class="star-detail-row neutral">📈 <strong>En iyin:</strong> ${Math.min(previousBest, lineCount)} satır.</div>`;
+      }
+
+      setSafeHTML(starDetails, detailsHtml);
+
+      if (isNewRecord) {
+        bestLines[game.currentLevelIdx] = lineCount;
+        safeStorageSet('kodmaymunu_best_lines', JSON.stringify(bestLines));
+      }
+      if (beatPar) showToast(`🏅 Rekor! ${lineCount} satırla referansı geçtin.`);
+      announceChapterProgress(level, stars);
 
       // Update unlock progression
       const currentIdx = game.currentLevelIdx;
@@ -959,7 +1500,7 @@
         const nextIdx = currentIdx + 1;
         if (!unlockedLevels.includes(nextIdx)) {
           unlockedLevels.push(nextIdx);
-          localStorage.setItem('kodmaymunu_unlocked', JSON.stringify(unlockedLevels));
+          safeStorageSet('kodmaymunu_unlocked', JSON.stringify(unlockedLevels));
         }
       }
 
@@ -967,20 +1508,20 @@
       const currentStoredStars = completedStars[currentIdx] || 0;
       if (stars > currentStoredStars) {
         completedStars[currentIdx] = stars;
-        localStorage.setItem('kodmaymunu_stars', JSON.stringify(completedStars));
+        safeStorageSet('kodmaymunu_stars', JSON.stringify(completedStars));
       }
 
       // Toggle next button if last level
-      modalNextBtn.style.display = currentIdx === LEVELS.length - 1 ? 'none' : 'block';
+      modalNextBtn.hidden = currentIdx === LEVELS.length - 1;
 
       // Update UI state
       renderSidebarList();
       updateStarsSummary();
       prevLvlBtn.disabled = currentIdx === 0;
-      nextLvlBtn.disabled = currentIdx === LEVELS.length - 1 || !unlockedLevels.includes(currentIdx + 1);
+      nextLvlBtn.disabled = currentIdx === LEVELS.length - 1 || (!devMode && !unlockedLevels.includes(currentIdx + 1));
 
-      // Show modal
-      modal.classList.add('show');
+      runtimeStatus.textContent = 'Görev tamamlandı';
+      setOverlayVisibility(modal, true, currentIdx === LEVELS.length - 1 ? modalRetryBtn : modalNextBtn);
     }
   </script>
 </body>
