@@ -2,6 +2,7 @@ import { soundEngine } from './audio.js';
 // Version query busts the browser cache when `npm run levels` rewrites the
 // baked board data; keep it in step with the game.js query in index.html.
 import { GENERATED_LEVELS } from './generated-levels.js?v=20260904-v3';
+import { AUTHORED_LEVELS } from './authored-levels.js?v=20260905-v4';
 
 // Level definitions with increasing difficulty
 export const LEVELS = [
@@ -20,8 +21,8 @@ export const LEVELS = [
   {
     id: 2,
     title: "2. Temasla Topla",
-    instructions: "Yolda bir muz var. Artık ayrı bir <code>muzAl()</code> komutu yok; Mojo muzun olduğu kareye değince muz otomatik toplanır.",
-    tip: "Sadece hedefe doğru ilerle. Muz toplama işi oyun motorunun sorumluluğunda.",
+    instructions: "Yolda bir muz var. Muzun üzerinden geçerek onu topla, ardından sandığa ulaş.",
+    tip: "Muzun olduğu kareye basman yeterli. Ek bir komut yazmana gerek yok.",
     grid: [
       "#######",
       "#M.B.S#",
@@ -163,7 +164,7 @@ export const LEVELS = [
   {
     id: 12,
     title: "12. En Kısa Plan",
-    instructions: "Final artık labirent değil: açık adada tüm muzları toplayıp sandığa ulaşan en kısa planı kur. Akıllı rota butonuyla kendi çözümünü karşılaştırabilirsin.",
+    instructions: "Açık adada tüm muzları toplayıp sandığa ulaşan kısa bir plan kur. İlk hedefin, sonraki hedefe giden yolunu nasıl değiştiriyor?",
     tip: "Döngüler sadece tekrar eden uzun yürüyüşlerde işe yarar; önce hedef sırasını doğru seç.",
     grid: [
       "############",
@@ -412,8 +413,8 @@ export const LEVELS = [
   },
   {
     id: 28,
-    title: "28. Nehir Vadisi Finali",
-    instructions: "Grup 2'nin son sınavı! Köprüleri, döngüleri ve dönüşleri birleştirerek bu karmaşık nehir vadisini geç.",
+    title: "28. Nehir Vadisi Provası",
+    instructions: "İleri köprü görevlerine hazırlık: döngüleri ve dönüşleri birleştirerek nehir vadisini geç.",
     tip: "Önce tüm rotanı kafanda planla. Köprüler seni kısıtlıyor, ama döngüler seni hızlandırıyor.",
     grid: [
       "##############",
@@ -540,8 +541,8 @@ export const LEVELS = [
   },
   {
     id: 48,
-    title: "48. Nilüfer Finali",
-    instructions: "Grup 3'ün son sınavı! Batan nilüfer yaprakları, anahtar-kapı kilitleri ve su engelleri bir arada. Tüm muzları toplayarak sandığa ulaş.",
+    title: "48. Bataklık Provası",
+    instructions: "Tapınak yolculuğuna hazırlık: yapraklar, kilitler ve su engelleri arasında tüm muzları toplayarak sandığa ulaş.",
     tip: "Nilüferler batacak, kapılar kilitli. Her adımını önceden planla, geri dönüş yok!",
     grid: [
       "############",
@@ -666,8 +667,8 @@ export const LEVELS = [
   },
   {
     id: 68,
-    title: "68. Zamanlama Finali",
-    instructions: "Grup 4'ün son sınavı! Kaplumbağalar, köprüler ve kayalar bir arada. Tüm becerilerin sınanıyor.",
+    title: "68. Gelgit Provası",
+    instructions: "Açık denize çıkmadan önce kaplumbağaları, köprüleri ve kayaları aynı rotada birleştir. Her dönüşün zamanlamayı değiştirdiğini unutma.",
     tip: "Tüm araçlarını kullan: döngüler kısa kod için, bekle() zamanlama için, cetvel mesafe ölçmek için.",
     grid: [
       "#############",
@@ -836,7 +837,7 @@ function getIndentWidth(line) {
 
 function isIndentBlockHeader(text) {
   const header = text.trim().replace(/:\s*$/, '');
-  return /^(?:tekrarla|ise)\s*\(/.test(header) || /^(?:}\s*)?degilse$/.test(header);
+  return /^(?:tekrarla|ise|iken)\s*\(/.test(header) || /^(?:}\s*)?degilse$/.test(header);
 }
 
 function openIndentBlock(text) {
@@ -1032,8 +1033,8 @@ export function normalizeBlocks(blocks) {
       normalized.push(...normalizeBlocks(raw));
       continue;
     }
-    if (raw && raw.type === 'loop') {
-      normalized.push({ type: 'loop', count: raw.count, body: normalizeBlocks(raw.body) });
+    if (raw && (raw.type === 'loop' || raw.type === 'while')) {
+      normalized.push({ ...raw, body: normalizeBlocks(raw.body) });
       continue;
     }
     if (raw && raw.type === 'branch') {
@@ -1053,7 +1054,7 @@ export function normalizeBlocks(blocks) {
 export function countBlockLines(blocks) {
   let total = 0;
   for (const block of normalizeBlocks(blocks)) {
-    if (block.type === 'loop') {
+    if (block.type === 'loop' || block.type === 'while') {
       total += 1 + countBlockLines(block.body);
     } else if (block.type === 'branch') {
       // `ise(...)` opens a line; `degilse` reuses the closing brace line in
@@ -1074,6 +1075,12 @@ export function renderBlocks(blocks, syntaxMode = 'indent', depth = 0) {
   const lines = [];
 
   for (const block of normalizeBlocks(blocks)) {
+    if (block.type === 'while') {
+      lines.push(`${pad}iken(${block.condition}())${isIndent ? ':' : ' {'}`);
+      lines.push(...renderBlocks(block.body, syntaxMode, depth + 1));
+      if (!isIndent) lines.push(`${pad}}`);
+      continue;
+    }
     if (block.type === 'loop') {
       if (isIndent) {
         lines.push(`${pad}tekrarla(${block.count}):`);
@@ -1147,7 +1154,7 @@ export function parseCode(code, syntaxMode = 'indent') {
     // 5. }
     const cmdRegex = /^(?:(kaplumbaga)\.)?(ilerle|adimla|solaDon|sagaDon|muzAl|bekle)\s*\(\s*(-?\d+)?\s*\)\s*;?$/;
     const loopStartRegex = /^tekrarla\s*\(\s*(\d+)\s*\)\s*\{$/;
-    const ifStartRegex = /^ise\s*\(\s*(onumdeEngelVar|onumdeMuzVar|onumdeKayaVar|onumdeSuVar|onumdeKilitVar)\s*\(\s*\)\s*\)\s*\{$/;
+    const ifStartRegex = /^(ise|iken)\s*\(\s*(onumdeEngelVar|onumdeMuzVar|onumdeKayaVar|onumdeSuVar|onumdeKilitVar|onumdeGuvenliYolVar|hedefteDegilim)\s*\(\s*\)\s*\)\s*\{$/;
     const elseStartRegex = /^\}\s*degilse\s*\{$/;
     const loopEndRegex = /^\}$/;
 
@@ -1206,15 +1213,16 @@ export function parseCode(code, syntaxMode = 'indent') {
         line: lineNumber
       });
     } else if ((match = ifStartRegex.exec(lineText)) !== null) {
-      const [_, condition] = match;
+      const [_, keyword, condition] = match;
       instructions.push({
         type: 'jump_if_false',
+        sourceName: keyword,
         condition,
         target: -1, // patched on closing
         line: lineNumber
       });
       blockStack.push({
-        type: 'if',
+        type: keyword === 'iken' ? 'while' : 'if',
         jumpIfFalseIdx: instructions.length - 1,
         line: lineNumber
       });
@@ -1247,6 +1255,9 @@ export function parseCode(code, syntaxMode = 'indent') {
           target: block.startIdx,
           line: lineNumber
         });
+      } else if (block.type === 'while') {
+        instructions.push({ type: 'jump', target: block.jumpIfFalseIdx, line: lineNumber });
+        instructions[block.jumpIfFalseIdx].target = instructions.length;
       } else if (block.type === 'if') {
         // Point the 'if' condition failure past the block end
         instructions[block.jumpIfFalseIdx].target = instructions.length;
@@ -1262,7 +1273,7 @@ export function parseCode(code, syntaxMode = 'indent') {
 
   if (blockStack.length > 0) {
     const topBlock = blockStack[blockStack.length - 1];
-    const name = topBlock.type === 'loop' ? 'tekrarla döngüsü' : (topBlock.type === 'if' ? 'ise bloğu' : 'degilse bloğu');
+    const name = topBlock.type === 'loop' ? 'tekrarla döngüsü' : topBlock.type === 'while' ? 'iken döngüsü' : (topBlock.type === 'if' ? 'ise bloğu' : 'degilse bloğu');
     throw new Error(`Kod sonu: Kapatılmamış bir ${name} mevcut (Satır ${topBlock.line}).`);
   }
 
@@ -1626,7 +1637,7 @@ export class Game {
     }
   }
 
-  loadLevel(idx) {
+  loadLevel(idx, scenarioIndex = 0) {
     this.executionGeneration++;
     this.cancelCrashAnimation();
     this.cancelEffectsAnimation();
@@ -1634,6 +1645,8 @@ export class Game {
     this.currentLevelIdx = Math.min(LEVELS.length - 1, Math.max(0, safeIndex));
     this.saveState();
     this.level = LEVELS[this.currentLevelIdx];
+    this.scenarioIndex = Math.max(0, Math.min(this.level.scenarios?.length || 0, scenarioIndex));
+    const scenario = this.scenarioIndex > 0 ? this.level.scenarios[this.scenarioIndex - 1] : this.level;
 
     this.isRunning = false;
     this.currentQueueIdx = -1;
@@ -1651,7 +1664,7 @@ export class Game {
     }
 
     // Parse original grid
-    const origGrid = this.level.grid.map(row => row.split(''));
+    const origGrid = scenario.grid.map(row => row.split(''));
     const origH = origGrid.length;
     const origW = Math.max(...origGrid.map(r => r.length));
 
@@ -1696,7 +1709,7 @@ export class Game {
         if (char === 'M') {
           this.player.x = x;
           this.player.y = y;
-          this.player.dir = this.level.startDir;
+          this.player.dir = scenario.startDir || this.level.startDir;
           this.player.animX = x;
           this.player.animY = y;
           this.setRotationByDir(this.player.dir);
@@ -1944,7 +1957,8 @@ export class Game {
       }
 
       if (instruction.type === 'jump_if_false') {
-        if (!allowed.has('ise')) reject(instruction, 'ise');
+        const keyword = instruction.sourceName || 'ise';
+        if (!allowed.has(keyword)) reject(instruction, keyword);
         continue;
       }
 
@@ -2002,6 +2016,7 @@ export class Game {
       this.loadLevel(this.currentLevelIdx); // Reset state before running
       this.isRunning = true;
       this.currentQueueIdx = 0;
+      if (this.onScenarioChange) this.onScenarioChange(0);
       this.step();
     } catch (err) {
       this.log(err.message, "error");
@@ -2028,6 +2043,7 @@ export class Game {
       this.animationTimer = null;
     }
     this.loadLevel(this.currentLevelIdx); // Reset state
+    if (this.onScenarioChange) this.onScenarioChange(0);
     this.log("Program durduruldu.", "info");
     if (this.onExecutionFinished) {
       this.onExecutionFinished();
@@ -2169,6 +2185,11 @@ export class Game {
     const cell = isOutOfBounds ? '#' : this.gridData[frontY][frontX];
 
     switch (condition) {
+      case 'hedefteDegilim':
+        return this.player.x !== this.starTile.x || this.player.y !== this.starTile.y;
+      case 'onumdeGuvenliYolVar':
+        return this.isWalkableCell(frontX, frontY, this.hasKeyCollected(), this.executionStepCount)
+          && this.isWalkableCell(frontX, frontY, this.hasKeyCollected(), this.executionStepCount + 1);
       case 'onumdeEngelVar':
         return !this.isWalkableCell(frontX, frontY);
       case 'onumdeMuzVar':
@@ -2794,7 +2815,17 @@ export class Game {
     const uncollected = this.bananas.filter(b => !b.collected);
     const atStar = this.player.x === this.starTile.x && this.player.y === this.starTile.y;
 
-    if (atStar && uncollected.length === 0) {
+    if (atStar && uncollected.length === 0 && this.keys.every(key => key.collected)) {
+      if (this.scenarioIndex < (this.level.scenarios?.length || 0)) {
+        const nextScenario = this.scenarioIndex + 1;
+        this.log(`Parkur ${nextScenario} geçti. Aynı kod parkur ${nextScenario + 1} üzerinde deneniyor.`, 'success');
+        this.loadLevel(this.currentLevelIdx, nextScenario);
+        this.isRunning = true;
+        this.currentQueueIdx = 0;
+        if (this.onScenarioChange) this.onScenarioChange(nextScenario);
+        this.step();
+        return;
+      }
       this.log(this.getVictoryMessage(), "success");
       soundEngine.playVictory();
       this.isRunning = false;
@@ -2820,7 +2851,9 @@ export class Game {
         this.onLevelComplete(stars, lineCount, {
           par: targets.par,
           twoStarLimit: targets.two,
-          beatPar: targets.par > 0 && lineCount < targets.par
+          beatPar: targets.par > 0 && lineCount < targets.par,
+          scenarios: 1 + (this.level.scenarios?.length || 0),
+          mastery: this.getMasteryResult(lineCount)
         });
       }
     } else {
@@ -2836,6 +2869,8 @@ export class Game {
           `Sandığa ulaştın ama ${uncollected.length} muz toplanmadı! 🍌 Tüm muzlardan geç.`,
           `Neredeyse! Sadece ${uncollected.length} muz eksik. 🍌 Muzların üzerinden geçerek topla!`
         ]), "error");
+      } else {
+        this.log('Sandıktasın ama anahtarlar eksik. Tüm anahtarları toplayıp geri gel.', 'error');
       }
       soundEngine.playFail();
       this.recordFailure();
@@ -2853,6 +2888,20 @@ export class Game {
       .map(line => line.trim())
       .filter(line => line && line !== '}');
     return lines.length;
+  }
+
+  getMasteryResult(lineCount = this.getUniqueCodeLineCount()) {
+    const goal = this.level.mastery;
+    if (!goal) return null;
+    const program = this.executionQueue;
+    const hasConcept = goal.concept === 'while'
+      ? program.some(i => i.sourceName === 'iken')
+      : goal.concept === 'branch'
+        ? program.some(i => i.sourceName === 'ise')
+        : goal.concept === 'loop'
+          ? program.some(i => i.type === 'loop_init')
+          : true;
+    return { earned: hasConcept && lineCount <= this.getStarTargets().three, label: goal.label };
   }
 
   draw() {
@@ -3835,8 +3884,8 @@ export const CHAPTERS = [
     id: 5,
     name: 'Koşullar & ustalık',
     eyebrow: 'BÖLÜM 5 · KOŞULLAR & USTALIK',
-    summary: 'Kararlarını koda gömün: ise / degilse ve tüm mekanikler bir arada.',
-    teaches: ['ise', 'degilse']
+    summary: 'Kararlarını koda dönüştür: koşullar, koşullu döngüler ve aynı kodla farklı parkurlar.',
+    teaches: ['ise', 'degilse', 'iken']
   }
 ];
 
@@ -3856,7 +3905,8 @@ export const COMMAND_UNLOCKS = [
   { command: 'tekrarla', from: 6, label: 'Döngü' },
   { command: 'adimla', from: 29, label: 'Toplu adım' },
   { command: 'bekle', from: 61, label: 'Bekleme' },
-  { command: 'ise', from: 81, label: 'Koşul' }
+  { command: 'ise', from: 81, label: 'Koşul' },
+  { command: 'iken', from: 91, label: 'Koşullu döngü' }
 ];
 
 // Turtle piloting is a per-mission mechanic rather than a permanent unlock:
@@ -3884,6 +3934,12 @@ for (const level of GENERATED_LEVELS) {
   }
 }
 LEVELS.sort((a, b) => a.id - b.id);
+
+// Authored puzzle arcs replace old generated slots while keeping saved IDs.
+for (const level of AUTHORED_LEVELS) {
+  const index = LEVELS.findIndex(existing => existing.id === level.id);
+  if (index >= 0) LEVELS[index] = level;
+}
 
 // Single normalization pass: a mission's command palette is always derived,
 // never hand-maintained alongside the grid.

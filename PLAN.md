@@ -1,7 +1,38 @@
-# KodMaymunu v3 — Eğitsel Algoritma Oyunu
+# KodMaymunu v4 — Keşif Atlası
 
 Mojo adında bir maymunu kod yazarak yönlendirdiğin, sıralı komutlardan döngülere ve
-koşullara uzanan 100 görevlik bir web oyunu. Tarayıcıda çalışır, sunucu gerektirmez.
+koşullara ve koşullu döngülere uzanan 100 görevlik bir web oyunu. Tarayıcıda çalışır,
+sunucu gerektirmez. 54 görev kavram odaklı parkurlarla yenilendi; son bölümde 35 ek
+harita, oyuncunun aynı programını farklı koşullarda sınar.
+
+## Keşif sürümü
+
+- **Atlas:** Beş adanın görevleri, yıldızları, muhafız mühürleri ve ustalık rozetleri.
+- **30–40:** Tekrarlanan köprü/basamak motifleri; 32 ve 38'de negatif adımla
+  iskelelerden geri çıkma. Uzunluk değil, tekrarın fark edilmesi ödüllendirilir.
+- **49–60:** Yan yoldaki anahtar ve muzları toplama, gerçek kapı geçişleri,
+  tek kullanımlık yapraklara basmadan önce hedefleri sıralama.
+- **70–80:** Atlanamayan kaplumbağa geçişleri. Gelgit göstergesi bir sonraki
+  hareketin güvenli olup olmadığını gösterir. Finalde anahtar ve zamanlama birleşir.
+- **81–90:** Koşullar ve iç içe kararlar; aynı kod farklı kıyı ve sarmal haritalarda
+  çalışır. `onumdeGuvenliYolVar()` hem mevcut hem bir sonraki zaman adımını kontrol eder.
+- **91–100:** `iken(hedefteDegilim())` ile değişen uzunluklara uyarlanan algoritmalar.
+  100. görevin dört parkuru arasında iç içe bir tapınak sarmalı da bulunur.
+- **Yardım:** Üç kademeli ipucu, komut/sensör rehberi ve editörü değiştirmeden
+  incelenebilen örnek çözüm. Örneğin editöre aktarılması ayrı bir eylemdir.
+- **Ustalık:** Tamamlanan tüm parkurlar + üç yıldızlık satır hedefi + görevin
+  kavramı (`loop`, `branch`, `while`) için ayrı rozet. Normal yıldız akışı korunur.
+
+### Tasarım referansları
+
+[CodeMonkey Coding Adventure](https://www.codemonkey.com/courses/coding-adventure/)
+sıralama, döngü, koşul ve hata ayıklamayı kademeli öğretir.
+[Lightbot'un eğitim yaklaşımı](https://lightbot.com/Lightbot_HowDoesLightbotTeachProgramming.pdf)
+kısa program kısıtlarıyla tekrar eden parçaları fark ettirir.
+[CodeCombat'ın değerlendirmeleri](https://blog.codecombat.com/assessments/)
+birden fazla kavramın birlikte uygulanmasını sınar. Bu sürümün tasarım tercihi:
+kompakt ama mekanikleri zorunlu parkurlar, kavramlara bağlı rozetler ve aynı
+algoritmanın değişen haritalarda doğrulanmasıdır. Rakiplerin görsel varlıkları kullanılmaz.
 
 ## Dosya yapısı
 
@@ -10,8 +41,11 @@ koşullara uzanan 100 görevlik bir web oyunu. Tarayıcıda çalışır, sunucu 
 | `index.html` | Arayüz kabuğu ve tüm UI mantığı (tek satır içi modül) |
 | `style.css` | Orman temalı görsel katman, açık/koyu tema, duyarlı yerleşim |
 | `game.js` | Seviye verisi, güvenli yorumlayıcı, sanal makine, yol planlayıcı, çizim motoru |
+| `authored-levels.js` | 54 tasarlanmış görevin pişirilmiş harita, çözüm, ipucu ve parkur verileri |
+| `tools/author-missions.mjs` | Tasarlanmış görev aileleri ve çözüm üretimi (`npm run missions`) |
 | `audio.js` | Web Audio API ile sentezlenen ses efektleri ve ortam sesi |
 | `test/game.test.js` | Motorun ve müfredatın değişmezlerini doğrulayan test paketi (`npm test`) |
+| `test/browser.test.mjs` | Gerçek Chromium ile masaüstü, mobil, final akışı ve kayıt geçişi testleri |
 
 ## Mimari kararlar
 
@@ -44,8 +78,9 @@ daha kısa bir program yazmak "rekor" olarak kaydedilir.
 
 ## Müfredat
 
-100 görev, 20'şerlik 5 bölüm. Her bölümün başındaki görevler el yapımıdır ve
-bölümün mekaniğini öğretir; kalan slotlar aynı temaya göre üretilir.
+100 görev, 20'şerlik 5 bölüm. Açılış görevleri bölümün mekaniğini öğretir;
+ileri görevler tasarlanmış bulmaca aileleriyle beceriyi geliştirir. Eski üretilmiş
+verilerden yalnızca tasarlanmış bir görevin yerini almadığı slotlar kullanılır.
 
 | Bölüm | Görevler | Konu | Açılan komut |
 | --- | --- | --- | --- |
@@ -53,7 +88,7 @@ bölümün mekaniğini öğretir; kalan slotlar aynı temaya göre üretilir.
 | 2 | 21-40 | Köprüler, nehir geçişleri, kalıp döngüleri | `adimla(N)` (29) |
 | 3 | 41-60 | Anahtar-kilit, batan nilüfer yaprakları | — |
 | 4 | 61-80 | Dalan kaplumbağalar, zamanlama | `bekle` (61), `kaplumbaga.adimla` (69, göreve özel) |
-| 5 | 81-100 | Koşullu komutlar ve tüm mekaniklerin birleşimi | `ise` / `degilse` (81) |
+| 5 | 81-100 | Koşullar, değişen parkurlar ve koşullu döngüler | `ise` / `degilse` (81), `iken` (91) |
 
 ## Karo alfabesi
 
@@ -83,3 +118,27 @@ bölümün mekaniğini öğretir; kalan slotlar aynı temaya göre üretilir.
 - Görev adları tekildir; tahtalar dikdörtgendir ve tek `M`/`S` içerir.
 - Tahtanın çerçeve dolgusu hiçbir görevde yürünebilir alana açılmaz.
 - Bir komut, onu öğreten görevden önceki görevlerde kullanılamaz.
+- 35 ek parkurun her biri aynı referansla iki sözdiziminde de kazanılır.
+- İlk harita için ezberlenen sabit rota ikinci haritada başarısız olur.
+- İlerleme yapmayan `iken` döngüsü işlem bütçesiyle durdurulur.
+- Güvenli yol sensörü kaplumbağanın dört zaman fazında doğrulanır.
+- 70–80 arasındaki görevlerde kaplumbağa geçitleri atlanamaz.
+
+Tarayıcı testleri için Playwright kurulu olmalıdır:
+
+```sh
+node test/browser.test.mjs
+```
+
+Başka bir kurulum kullanılıyorsa `PLAYWRIGHT_MODULE` değişkenini Playwright'ın
+`index.mjs` dosyasına, `PLAYWRIGHT_BROWSERS_PATH` değişkenini tarayıcı önbelleğine
+ayarla. Testler kendi izole tarayıcı profilinde yerel dosyaları sunar; canlı
+oyuncu kaydını değiştirmez. Ekran görüntüleri `/tmp/codemonkey-*.png` altında oluşur.
+
+## Kayıt uyumluluğu
+
+Görev kimlikleri, eski açılma durumu ve yıldızlar korunur. Yenilenen görevlerin
+taslak anahtarlarına `expedition-1` eki eklenir; önceki kodlar eski anahtarlarında
+kalır. Yeni haritaların satır rekorları `kodmaymunu_best_lines_v4`, ustalıkları
+`kodmaymunu_mastery_v4` altında tutulur. Böylece önceki haritanın iki satırlık
+rekoru, yeni harita için yanıltıcı bir hedef olarak gösterilmez.

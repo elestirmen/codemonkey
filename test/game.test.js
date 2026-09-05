@@ -644,6 +644,9 @@ test('playing every reference solution through the engine earns three stars', ()
       if (result.meta.beatPar) {
         problems.push(`L${level.id}: reference solution reported as beating its own par`);
       }
+      assert.equal(result.meta.scenarios, 1 + (level.scenarios?.length || 0), `L${level.id}: not all scenarios completed`);
+      assert.equal(game.scenarioIndex, level.scenarios?.length || 0);
+      if (level.mastery) assert.equal(result.meta.mastery.earned, true, `L${level.id}: reference must earn mastery`);
     }
   } finally {
     globalThis.performance = realPerformance;
@@ -683,4 +686,88 @@ test('level data loads without blocking work', async () => {
   await import(`../generated-levels.js?fresh=${Date.now()}`);
   const elapsed = performance.now() - start;
   assert.ok(elapsed < 500, `importing baked level data took ${elapsed.toFixed(0)}ms; it must not run the generator`);
+});
+
+test('every alternate parkur is valid and the same reference program solves it in both syntaxes', () => {
+  const game = createGame();
+  let scenarios = 0;
+  for (const [index, level] of LEVELS.entries()) {
+    for (let scenario = 1; scenario <= (level.scenarios?.length || 0); scenario++) {
+      scenarios++;
+      const board = level.scenarios[scenario - 1];
+      assert.equal(new Set(board.grid.map(row => row.length)).size, 1);
+      assert.ok(board.grid.length <= 12 && board.grid[0].length <= 20);
+      for (const tile of board.grid.join('')) assert.ok(VALID_TILES.has(tile));
+      for (const tile of ['M', 'S']) assert.equal([...board.grid.join('')].filter(c => c === tile).length, 1);
+      for (const mode of SYNTAX_MODES) {
+        game.loadLevel(index, scenario);
+        const code = renderBlocks(game.getReferenceSolution().blocks, mode).join('\n');
+        const instructions = parseCode(code, mode);
+        game.validateInstructionsForLevel(instructions, level);
+        game.isRunning = true;
+        assert.equal(executeProgram(game, instructions), null, `L${level.id} parkur ${scenario + 1} ${mode}`);
+        assert.ok(levelIsSolved(game), `L${level.id} parkur ${scenario + 1} ${mode}`);
+      }
+    }
+  }
+  assert.ok(scenarios >= 35);
+});
+
+test('a route memorized for the first map fails the second map', () => {
+  const game = createGame();
+  const index = LEVELS.findIndex(level => level.id === 92);
+  game.loadLevel(index);
+  const route = planLevelRoute(game.level);
+  const code = renderBlocks(encodeActions(route, { allowCompact: true }).blocks).join('\n');
+  game.isRunning = true;
+  assert.equal(executeProgram(game, parseCode(code)), null);
+  assert.ok(levelIsSolved(game));
+  game.loadLevel(index, 1);
+  game.isRunning = true;
+  game.triggerCrashAnimation = () => {};
+  executeProgram(game, parseCode(code));
+  assert.equal(levelIsSolved(game), false);
+});
+
+test('conditional loops unlock at 91 and obey the operation budget without freezing', () => {
+  const game = createGame();
+  const code = 'iken(hedefteDegilim()):\n    ise(onumdeMuzVar()):\n        ilerle()';
+  const instructions = parseCode(code);
+  game.loadLevel(89);
+  assert.throws(() => game.validateInstructionsForLevel(instructions, game.level), /iken/);
+  game.loadLevel(90);
+  assert.doesNotThrow(() => game.validateInstructionsForLevel(instructions, game.level));
+  let finished = false;
+  const messages = [];
+  game.onExecutionFinished = () => { finished = true; };
+  game.onLogMessage = message => messages.push(message);
+  game.runCodeText(code);
+  assert.equal(finished, true);
+  assert.equal(game.isRunning, false);
+  assert.ok(messages.some(message => message.includes('güvenli çalışma sınırı')));
+});
+
+test('safe path sensor accounts for both entry time and next turtle phase', () => {
+  const game = createGame();
+  game.loadLevel(84);
+  const turtle = game.turtles[0];
+  game.player.x = turtle.x - 1;
+  game.player.y = turtle.y;
+  game.player.dir = 'RIGHT';
+  game.isRunning = true;
+  for (let phase = 0; phase < 4; phase++) {
+    game.executionStepCount = phase;
+    assert.equal(game.evaluateCondition('onumdeGuvenliYolVar'), phase === 0);
+  }
+});
+
+test('authored arcs have specific hints, reachable mastery and unavoidable mechanics', () => {
+  for (const level of LEVELS.filter(level => level.authored)) {
+    assert.equal(level.hints.length, 3);
+    assert.ok(level.skill && level.mastery && level.solution && level.revision);
+    if (level.id >= 70 && level.id <= 80) {
+      const blocked = { ...level, grid: level.grid.map(row => row.replaceAll('T', '~')), allowedCommands: commandsForLevel(level.id) };
+      assert.equal(planLevelRoute(blocked), null, `L${level.id}: turtle can be bypassed`);
+    }
+  }
 });

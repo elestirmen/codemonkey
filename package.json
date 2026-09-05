@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "node test/game.test.js",
-    "levels": "node tools/generate-levels.mjs"
+    "test:browser": "node test/browser.test.mjs",
+    "levels": "node tools/generate-levels.mjs",
+    "missions": "node tools/author-missions.mjs"
   }
 }

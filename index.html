@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#07110e">
   <title>KodMaymunu · Algoritma Adası</title>
   <link rel="preload" href="banana-sprite.png" as="image" type="image/png">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=20260905-v4">
 </head>
 <body>
   <svg class="svg-sprite" aria-hidden="true">
@@ -63,6 +63,7 @@
           <input id="level-search" type="search" placeholder="Seviye ara..." autocomplete="off">
           <kbd>/</kbd>
         </label>
+        <button id="btn-atlas" class="atlas-launch" type="button"><span>⌘</span><span>Keşif atlası<small>5 ada · 100 görev · ustalık rozetleri</small></span><span>↗</span></button>
       </div>
       <div class="level-list" id="level-list" aria-live="polite"></div>
       <div class="sidebar-footer">
@@ -128,6 +129,12 @@
       </div>
     </header>
 
+    <div class="expedition-banner" id="expedition-banner">
+      <div class="expedition-seal" id="expedition-seal" aria-hidden="true">01</div>
+      <div class="expedition-copy"><span class="eyebrow" id="expedition-kicker">KEŞİF GÜNLÜĞÜ</span><strong id="expedition-name">Filiz Ormanı</strong><span id="expedition-summary">Her büyük keşif bir adımla başlar.</span></div>
+      <div class="expedition-progress"><span id="expedition-progress-label">0 / 20 görev</span><div class="progress-track"><span id="expedition-progress-fill"></span></div></div>
+      <button id="btn-atlas-main" class="text-button" type="button">Atlası aç ↗</button>
+    </div>
     <div class="workspace">
       <section class="arena-panel panel-shell" aria-labelledby="arena-title">
         <div class="panel-header">
@@ -144,6 +151,7 @@
         </div>
 
         <div id="instructions-card" class="instructions-card"></div>
+        <div class="scenario-bar" id="scenario-bar" aria-label="Algoritma test parkurları" hidden></div>
         <div class="canvas-container">
           <div class="canvas-stage">
             <canvas id="game-canvas" aria-label="Mojo'nun algoritma oyun alanı">Tarayıcın oyun alanını göstermek için gereken Canvas özelliğini desteklemiyor.</canvas>
@@ -151,6 +159,7 @@
             <div class="stage-chip stage-chip-right" id="direction-chip">MOJO · DOĞU</div>
           </div>
         </div>
+        <div class="field-guide" id="field-guide" aria-live="polite"></div>
       </section>
 
       <section class="ide-panel panel-shell" aria-labelledby="editor-title">
@@ -187,7 +196,9 @@
           <button class="btn-command turtle-command" data-cmd="kaplumbaga.adimla()" id="cmd-kaplumbaga" type="button">kaplumbaga.adimla()</button>
           <button class="btn-command" data-cmd="tekrarla(3) {\n  ilerle()\n}" id="cmd-tekrarla" type="button">tekrarla() {}</button>
           <button class="btn-command" data-cmd="ise(onumdeEngelVar()) {\n  solaDon()\n}" id="cmd-ise" type="button">ise() {}</button>
+          <button class="btn-command" data-cmd="iken(hedefteDegilim()) {\n  ilerle()\n}" id="cmd-iken" type="button">iken() {}</button>
         </div>
+        <details class="command-guide" id="command-guide"><summary>Komut rehberi <span>Sensörler nasıl çalışır?</span></summary><div id="command-guide-content"></div></details>
 
         <div class="controls-bar">
           <div class="action-buttons">
@@ -200,8 +211,8 @@
             <button id="btn-step-back" class="btn-secondary btn-control" type="button" title="Bir adım geri al" disabled>
               <svg><use href="#icon-back"></use></svg><span>Geri</span>
             </button>
-            <button id="btn-smart-route" class="btn-secondary btn-control smart-route-button" type="button" title="Bu seviyenin doğrulanmış referans çözümünü editöre yaz">
-              <svg><use href="#icon-sparkle"></use></svg><span>Örnek çözüm</span>
+            <button id="btn-smart-route" class="btn-secondary btn-control smart-route-button" type="button" title="Kademeli ipuçları ve örnek çözüm">
+              <svg><use href="#icon-sparkle"></use></svg><span>Yardım al</span>
             </button>
             <button id="btn-stop" class="btn-danger btn-control" type="button" disabled>
               <svg><use href="#icon-stop"></use></svg><span>Durdur</span>
@@ -227,7 +238,7 @@
     </section>
   </main>
 
-  <div class="modal-overlay" id="success-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true">
+  <div class="modal-overlay" id="success-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true" inert>
     <div class="modal-content">
       <div class="modal-glow" aria-hidden="true"></div>
       <span class="modal-eyebrow">GÖREV TAMAMLANDI</span>
@@ -245,7 +256,7 @@
     </div>
   </div>
 
-  <div class="welcome-overlay" id="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title" aria-hidden="true">
+  <div class="welcome-overlay" id="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title" aria-hidden="true" inert>
     <div class="welcome-card">
       <button id="btn-welcome-close" class="btn-icon welcome-close" type="button" aria-label="Tanıtımı kapat"><svg><use href="#icon-close"></use></svg></button>
       <div class="welcome-visual"><span>🐒</span><i></i><i></i><i></i></div>
@@ -263,9 +274,30 @@
 
   <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
 
+  <div class="modal-overlay" id="atlas-modal" role="dialog" aria-modal="true" aria-labelledby="atlas-title" aria-hidden="true" inert>
+    <div class="atlas-card">
+      <button id="btn-atlas-close" class="btn-icon atlas-close" type="button" aria-label="Atlası kapat"><svg><use href="#icon-close"></use></svg></button>
+      <span class="eyebrow">MOJO'NUN KEŞİF ATLASI</span>
+      <h2 id="atlas-title">Bir adım. Beş dünya.<br><em>Yüz yeni keşif.</em></h2>
+      <p class="atlas-intro">Her adada yeni bir düşünme biçimi öğren. Muhafız görevini tamamla, mührünü kazan ve keşfine devam et.</p>
+      <div class="atlas-worlds" id="atlas-worlds"></div>
+      <div class="atlas-footer"><span id="atlas-mastery-count">0 ustalık rozeti</span><span>Yıldızlar kısa kodu, rozetler öğrendiğin beceriyi ödüllendirir.</span></div>
+    </div>
+  </div>
+  <div class="modal-overlay" id="coach-modal" role="dialog" aria-modal="true" aria-labelledby="coach-title" aria-hidden="true" inert>
+    <div class="coach-card">
+      <button id="btn-coach-close" class="btn-icon atlas-close" type="button" aria-label="Yardımı kapat"><svg><use href="#icon-close"></use></svg></button>
+      <span class="eyebrow">MOJO'NUN ATÖLYESİ</span><h2 id="coach-title">Birlikte düşünelim.</h2>
+      <p class="coach-intro">Her ipucu biraz daha yol gösterir. İpuçları yıldızlarını etkilemez.</p>
+      <ol id="coach-hints" class="coach-hints"></ol>
+      <button id="btn-next-hint" class="btn-primary" type="button">İlk ipucunu aç</button>
+      <details class="solution-disclosure" id="solution-disclosure"><summary>Örnek çözümü incele</summary><p>Kendi kodun editörde kalır. Örneği karşılaştırmak için kullanabilirsin.</p><pre id="solution-preview"></pre><button id="btn-use-solution" class="btn-secondary" type="button">Örneği editöre aktar</button></details>
+    </div>
+  </div>
+
   <!-- Script Modules setup -->
   <script type="module">
-    import { LEVELS, Game, CHAPTERS, CHAPTER_SIZE, getLevelGroup, getChapter, COMMAND_UNLOCKS } from './game.js?v=20260904-v3';
+    import { LEVELS, Game, CHAPTERS, CHAPTER_SIZE, getLevelGroup, getChapter, COMMAND_UNLOCKS } from './game.js?v=20260905-v4';
     import { soundEngine } from './audio.js';
 
     let game;
@@ -277,6 +309,15 @@
     let devMode = false;
     let autosaveTimer = null;
     let lastFocusedBeforeModal = null;
+    let masteryBadges = {};
+    let hintDepth = {};
+    const WORLDS = [
+      { name: 'Filiz Ormanı', symbol: '❧', color: '#72d9a5', story: 'Her büyük keşif bir adımla başlar.', seal: 'Orman Kaşifi' },
+      { name: 'Kemer Takımadaları', symbol: '≋', color: '#74cce8', story: 'Suyun üzerinde aynı ritmi bul, tekrarın gücünü keşfet.', seal: 'Köprü Mimarı' },
+      { name: 'Nilüfer Tapınağı', symbol: '❋', color: '#c5a2ef', story: 'Bazı yollar yalnızca bir kez açılır. Önce düşün, sonra geç.', seal: 'Tapınak Koruyucusu' },
+      { name: 'Gelgit Kıyıları', symbol: '◷', color: '#f4bd78', story: 'Doğru adım kadar, doğru an da önemlidir.', seal: 'Gelgit Ustası' },
+      { name: 'Bilgelik Zirvesi', symbol: '◇', color: '#f1d782', story: 'Haritalar değişir. İyi bir algoritma yolunu yine bulur.', seal: 'Algoritma Ustası' }
+    ];
 
     // DOM References
     const editor = document.getElementById('code-editor');
@@ -367,6 +408,16 @@
             .filter(([idx, stars]) => Number.isInteger(Number(idx)) && Number(idx) >= 0 && Number(idx) < LEVELS.length && Number.isFinite(Number(stars)))
             .map(([idx, stars]) => [idx, Math.max(0, Math.min(3, Number(stars)))])
         );
+      }
+
+      const savedMastery = safelyParseJSON(safeStorageGet('kodmaymunu_mastery_v4'), {});
+      masteryBadges = savedMastery && typeof savedMastery === 'object' && !Array.isArray(savedMastery) ? savedMastery : {};
+      // Changed boards keep old unlocks/stars, but records belong to their revision.
+      const revisionRecords = safelyParseJSON(safeStorageGet('kodmaymunu_best_lines_v4'), {});
+      for (const [idx, level] of LEVELS.entries()) {
+        if (!level.revision) continue;
+        delete bestLines[idx];
+        if (Number.isInteger(revisionRecords?.[idx]) && revisionRecords[idx] > 0) bestLines[idx] = revisionRecords[idx];
       }
 
       // Initialize Dev Mode
@@ -596,6 +647,10 @@
       });
 
       smartRouteBtn.addEventListener('click', () => {
+        openCoach();
+      });
+
+      document.getElementById('btn-use-solution').addEventListener('click', () => {
         const meaningfulCode = editor.value
           .replace(/\/\/.*$/gm, '')
           .replace(/#.*$/gm, '')
@@ -614,6 +669,15 @@
         const par = game.getStarTargets().par;
         logToConsole(`Referans çözüm editöre yazıldı (${par} satır, 3 yıldız).`, 'success');
         showToast(`Referans çözüm ${par} satır. Daha kısasını bulursan rekor kırarsın.`);
+        setOverlayVisibility(document.getElementById('coach-modal'), false);
+      });
+
+      for (const id of ['btn-atlas', 'btn-atlas-main']) document.getElementById(id).addEventListener('click', openAtlas);
+      document.getElementById('btn-atlas-close').addEventListener('click', () => setOverlayVisibility(document.getElementById('atlas-modal'), false));
+      document.getElementById('btn-coach-close').addEventListener('click', () => setOverlayVisibility(document.getElementById('coach-modal'), false));
+      document.getElementById('btn-next-hint').addEventListener('click', () => {
+        hintDepth[game.level.id] = (hintDepth[game.level.id] || 0) + 1;
+        renderCoachHints();
       });
 
       stopBtn.addEventListener('click', () => game.stop());
@@ -707,6 +771,7 @@
       });
 
       document.addEventListener('keydown', event => {
+        if (document.querySelector('.modal-overlay.show, .welcome-overlay.show') && !['Escape', 'Tab'].includes(event.key)) return;
         if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
           event.preventDefault();
           if (!runBtn.disabled) runBtn.click();
@@ -720,6 +785,8 @@
         }
         if (event.key === 'Escape') {
           if (welcomeOverlay.classList.contains('show')) finishWelcome();
+          else if (document.getElementById('coach-modal').classList.contains('show')) setOverlayVisibility(document.getElementById('coach-modal'), false);
+          else if (document.getElementById('atlas-modal').classList.contains('show')) setOverlayVisibility(document.getElementById('atlas-modal'), false);
           else if (modal.classList.contains('show')) setOverlayVisibility(modal, false);
           else if (document.body.classList.contains('sidebar-open')) closeSidebar();
           else if (settingsMenu.open) settingsMenu.open = false;
@@ -758,10 +825,15 @@
         restoreEditorState();
         showVictoryScreen(stars, lineCount, meta);
       };
+      game.onScenarioChange = () => {
+        renderScenarios();
+        updateBananaCounter();
+        updateRuntimeHUD();
+      };
     }
 
     function getCodeStorageKey(idx, mode = game?.syntaxMode || 'indent') {
-      return `kodmaymunu_code_lvl_${idx}_${mode}`;
+      return `kodmaymunu_code_lvl_${idx}_${mode}${LEVELS[idx]?.revision ? '_' + LEVELS[idx].revision : ''}`;
     }
 
     function createStarterCode(idx, mode = game?.syntaxMode || 'indent') {
@@ -774,7 +846,7 @@
       const idx = game.currentLevelIdx;
       const stored = safeStorageSet(getCodeStorageKey(idx, mode), editor.value);
       // Legacy key is kept in sync so existing installations remain compatible.
-      safeStorageSet(`kodmaymunu_code_lvl_${idx}`, editor.value);
+      if (!LEVELS[idx].revision) safeStorageSet(`kodmaymunu_code_lvl_${idx}`, editor.value);
       const autosaveState = document.querySelector('.autosave-state');
       if (autosaveState) autosaveState.lastChild.textContent = stored ? 'Kaydedildi' : 'Yerel kayıt kapalı';
     }
@@ -828,6 +900,8 @@
       prevLvlBtn.disabled = running || game.currentLevelIdx === 0;
       nextLvlBtn.disabled = running || game.currentLevelIdx === LEVELS.length - 1 || (!devMode && !unlockedLevels.includes(game.currentLevelIdx + 1));
       document.getElementById('level-list').toggleAttribute('inert', running);
+      for (const id of ['btn-atlas', 'btn-atlas-main']) document.getElementById(id).disabled = running;
+      document.querySelectorAll('#scenario-bar button').forEach(button => { button.disabled = running; });
       if (running) updateConsoleStatus(debugMode ? 'Adım modu' : 'Çalışıyor', '');
     }
 
@@ -858,6 +932,7 @@
       if (!game || !game.player) return;
       const directions = { UP: 'KUZEY', RIGHT: 'DOĞU', DOWN: 'GÜNEY', LEFT: 'BATI' };
       directionChip.textContent = `MOJO · ${directions[game.player.dir] || game.player.dir}`;
+      renderFieldGuide();
     }
 
     function showToast(message, type = '') {
@@ -872,6 +947,7 @@
 
     function setOverlayVisibility(overlay, visible, focusTarget = null) {
       if (!overlay) return;
+      overlay.inert = !visible;
       if (visible) {
         lastFocusedBeforeModal = document.activeElement;
         overlay.classList.add('show');
@@ -884,8 +960,10 @@
         if (!document.querySelector('.modal-overlay.show, .welcome-overlay.show')) {
           document.body.classList.remove('modal-open');
         }
-        if (lastFocusedBeforeModal && document.contains(lastFocusedBeforeModal)) lastFocusedBeforeModal.focus();
       }
+      const hasOverlay = Boolean(document.querySelector('.modal-overlay.show, .welcome-overlay.show'));
+      document.querySelectorAll('main, #level-sidebar').forEach(element => { element.inert = hasOverlay; });
+      if (!visible && lastFocusedBeforeModal && document.contains(lastFocusedBeforeModal)) lastFocusedBeforeModal.focus();
     }
 
     function trapModalFocus(event) {
@@ -921,9 +999,13 @@
       const targets = game.getStarTargets();
       const record = bestLines[idx];
       const unlock = COMMAND_UNLOCKS.find(entry => entry.from === level.id);
+      renderExpedition();
+      renderScenarios();
+      renderCommandGuide();
 
       let chipsHtml = `
         <div class="mission-chips">
+          <span class="mission-chip mission-skill">${level.kind === 'finale' || level.id % 20 === 0 ? '◆ MUHAFIZ GÖREVİ' : level.skill || 'İlk keşif'}</span>
           <span class="mission-chip mission-chip-target" title="Referans çözümün satır sayısı">
             <span class="chip-key">⭐⭐⭐</span><span class="chip-value">≤ ${targets.three} satır</span>
           </span>
@@ -932,6 +1014,7 @@
           </span>
           ${record !== undefined ? `<span class="mission-chip mission-chip-record" title="Bu seviyedeki en iyi çözümün"><span class="chip-key">🏅</span><span class="chip-value">${record} satır</span></span>` : ''}
           ${unlock ? `<span class="mission-chip mission-chip-unlock" title="Bu seviyede açılan komut"><span class="chip-key">✦ YENİ</span><span class="chip-value">${unlock.label}</span></span>` : ''}
+          ${level.revision && masteryBadges[level.id] === level.revision ? '<span class="mission-chip mission-chip-record">◇ Ustalık kazanıldı</span>' : ''}
         </div>`;
 
       let instructionHtml = `
@@ -953,13 +1036,13 @@
       }
       setSafeHTML(instructionsCard, instructionHtml);
       const tipToggle = document.getElementById('tip-toggle');
-      const tipBox = document.getElementById('level-tip');
-      tipToggle?.addEventListener('click', () => {
-        const open = tipBox.hasAttribute('hidden');
-        tipBox.toggleAttribute('hidden', !open);
-        tipToggle.setAttribute('aria-expanded', String(open));
-        tipToggle.textContent = open ? '💡 İpucunu gizle' : '💡 İpucu';
-      });
+      tipToggle?.addEventListener('click', openCoach);
+      if (level.mastery) {
+        const goal = document.createElement('div');
+        goal.className = 'mastery-objective';
+        goal.textContent = `◇ Ustalık hedefi · ${level.mastery.label}`;
+        instructionsCard.appendChild(goal);
+      }
 
       // Reset ruler state on level switch
       if (game) {
@@ -983,7 +1066,7 @@
       configureQuickButtons(level.allowedCommands);
 
       const modeDraft = safeStorageGet(getCodeStorageKey(idx, game.syntaxMode));
-      const legacyDraft = safeStorageGet(`kodmaymunu_code_lvl_${idx}`);
+      const legacyDraft = level.revision ? null : safeStorageGet(`kodmaymunu_code_lvl_${idx}`);
       editor.value = modeDraft ?? legacyDraft ?? createStarterCode(idx, game.syntaxMode);
 
       updateLineNumbers();
@@ -1009,6 +1092,153 @@
       document.getElementById('overall-progress-fill').style.width = `${percent}%`;
       document.getElementById('overall-progress-text').textContent = `${completedCount} / ${LEVELS.length} görev`;
       document.getElementById('overall-progress-percent').textContent = `%${percent}`;
+    }
+
+    function renderExpedition() {
+      const chapter = getChapter(game.level.id);
+      const world = WORLDS[chapter.id - 1];
+      document.body.dataset.world = chapter.id;
+      document.getElementById('expedition-banner').style.setProperty('--world-color', world.color);
+      document.getElementById('expedition-seal').textContent = world.symbol;
+      document.getElementById('expedition-kicker').textContent = `ADA ${String(chapter.id).padStart(2, '0')} / 05 · KEŞİF GÜNLÜĞÜ`;
+      document.getElementById('expedition-name').textContent = world.name;
+      document.getElementById('expedition-summary').textContent = world.story;
+      const solved = LEVELS.filter((level, idx) => getLevelGroup(level.id) === chapter.id && completedStars[idx] > 0).length;
+      document.getElementById('expedition-progress-label').textContent = `${solved} / 20 görev`;
+      document.getElementById('expedition-progress-fill').style.width = `${solved * 5}%`;
+    }
+
+    function openAtlas() {
+      if (game.isRunning) return;
+      const container = document.getElementById('atlas-worlds');
+      container.replaceChildren();
+      WORLDS.forEach((world, i) => {
+        const start = i * CHAPTER_SIZE;
+        const chapterLevels = LEVELS.slice(start, start + CHAPTER_SIZE);
+        const solved = chapterLevels.filter((_, n) => completedStars[start + n] > 0).length;
+        const stars = chapterLevels.reduce((sum, _, n) => sum + (completedStars[start + n] || 0), 0);
+        const available = devMode || unlockedLevels.some(n => n >= start && n < start + CHAPTER_SIZE);
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = `world-card${getLevelGroup(game.level.id) === i + 1 ? ' current' : ''}`;
+        card.style.setProperty('--world-color', world.color);
+        card.disabled = !available;
+        card.setAttribute('aria-label', `${world.name}, ${solved}/20 görev, ${available ? 'aç' : 'kilitli'}`);
+        setSafeHTML(card, `<span class="world-number">ADA 0${i + 1}<span>${available ? '↗' : 'KİLİTLİ'}</span></span>
+          <div class="world-art" aria-hidden="true"><div class="island-shape"></div><span>${world.symbol}</span><i></i><i></i><i></i></div>
+          <strong>${world.name}</strong><span class="world-topic">${CHAPTERS[i].name}</span>
+          <div class="world-nodes" aria-hidden="true">${chapterLevels.map((_, n) => `<i class="${completedStars[start + n] > 0 ? 'done' : ''}"></i>`).join('')}</div>
+          <span class="world-score">${solved}/20 görev <span>★ ${stars}/60</span></span>
+          <span class="world-seal">${completedStars[start + 19] > 0 ? '◆ ' + world.seal : '◇ Mühür için muhafız görevini tamamla'}</span>`);
+        card.addEventListener('click', () => {
+          const next = chapterLevels.findIndex((_, n) => !completedStars[start + n] && (devMode || unlockedLevels.includes(start + n)));
+          setOverlayVisibility(document.getElementById('atlas-modal'), false);
+          navigateToLevel(start + (next >= 0 ? next : 0));
+        });
+        container.appendChild(card);
+      });
+      const medals = LEVELS.filter(l => l.revision && masteryBadges[l.id] === l.revision).length;
+      document.getElementById('atlas-mastery-count').textContent = `◇ ${medals} / ${LEVELS.filter(l => l.mastery).length} ustalık rozeti`;
+      setOverlayVisibility(document.getElementById('atlas-modal'), true);
+    }
+
+    function renderScenarios() {
+      const bar = document.getElementById('scenario-bar');
+      bar.replaceChildren();
+      const count = 1 + (game.level.scenarios?.length || 0);
+      bar.hidden = count < 2;
+      if (count < 2) return;
+      const label = document.createElement('span');
+      label.textContent = 'AYNI KOD · HER PARKUR';
+      bar.appendChild(label);
+      for (let n = 0; n < count; n++) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = `0${n + 1}`;
+        button.setAttribute('aria-label', `Parkur ${n + 1} haritasını incele`);
+        button.setAttribute('aria-pressed', String(game.scenarioIndex === n));
+        button.disabled = game.isRunning;
+        button.addEventListener('click', () => {
+          if (game.isRunning) return;
+          game.loadLevel(game.currentLevelIdx, n);
+          renderScenarios();
+          updateRuntimeHUD();
+          updateBananaCounter();
+        });
+        bar.appendChild(button);
+      }
+    }
+
+    function renderFieldGuide() {
+      const guide = document.getElementById('field-guide');
+      if (!game.level || !guide) return;
+      const tiles = game.level.grid.join('');
+      const parts = [`<span>📦 Tüm muzları topla, sandığa ulaş</span>`];
+      if (tiles.includes('L')) parts.push('<span>❋ Yaprak · tek geçiş</span>');
+      if (tiles.includes('G')) parts.push(`<span>⚿ Anahtar · ${game.keys.filter(k => k.collected).length}/${game.keys.length}</span>`);
+      if (game.turtles?.length && !game.level.pilotTurtles) {
+        const time = game.executionStepCount;
+        parts.push(`<span class="tide-clock">GELGİT ${[0, 1, 2, 3].map(n => `<i class="${time % 4 === n ? 'active' : ''}">${n + 1}</i>`).join('')}</span>`);
+        game.turtles.forEach((turtle, i) => {
+          const phase = (time + turtle.phase) % 4;
+          const safe = phase === 0;
+          parts.push(`<span class="turtle-phase ${safe ? 'safe' : ''}">🐢 ${i + 1} · ${safe ? 'Geçiş zamanı' : phase === 1 ? 'Sonraki adımda dalar' : 'Su altında'}</span>`);
+        });
+      }
+      setSafeHTML(guide, parts.join(''));
+    }
+
+    function renderCommandGuide() {
+      const entries = [
+        ['ilerle()', 'Baktığın yönde bir kare ilerle.'],
+        ['sagaDon() / solaDon()', 'Yerinde 90° dön. Bir zaman adımı harcar.']
+      ];
+      if (game.level.id >= 6) entries.push(['tekrarla(N)', 'İçindeki komutları N kez uygula.']);
+      if (game.level.id >= 29) entries.push(['adimla(N)', 'N kare ilerle. Negatif N ile yön değiştirmeden geri yürü.']);
+      if (game.level.id >= 61) entries.push(['bekle()', 'Bir zaman adımı bekle. Kaplumbağanın üzerinde beklemek tehlikelidir.']);
+      if (game.level.id >= 81) entries.push(
+        ['ise / degilse', 'Koşul doğruysa ilk blok, yanlışsa ikinci blok çalışır.'],
+        ['onumdeKayaVar()', 'Öndeki kare kaya mı? Dönüş kararları için kullan.'],
+        ['onumdeGuvenliYolVar()', 'Öndeki kare hem şimdi hem bir sonraki adımda güvenli mi? Kaplumbağaya çıkmadan önce kontrol et.'],
+        ['onumdeEngelVar()', 'Öndeki kare şu an kapalı mı? Dalışın bir sonraki anını kontrol etmez.'],
+        ['hedefteDegilim()', 'Mojo henüz sandığa ulaşmadı mı?']
+      );
+      if (game.level.id >= 91) entries.push(['iken(hedefteDegilim())', 'Sandığa varana kadar içindeki kodu tekrarla. İçeride ilerleme sağlayan bir komut olmalı.']);
+      const content = document.getElementById('command-guide-content');
+      content.replaceChildren();
+      entries.forEach(([command, explanation]) => {
+        const row = document.createElement('p');
+        const code = document.createElement('code');
+        code.textContent = command;
+        row.append(code, document.createTextNode(explanation));
+        content.appendChild(row);
+      });
+    }
+
+    function openCoach() {
+      if (game.isRunning) return;
+      renderCoachHints();
+      document.getElementById('solution-disclosure').open = false;
+      document.getElementById('solution-preview').textContent = game.createSmartRouteCode() || 'Örnek çözüm bulunamadı.';
+      setOverlayVisibility(document.getElementById('coach-modal'), true);
+    }
+
+    function renderCoachHints() {
+      const level = game.level;
+      const hints = level.hints || [level.tip, 'Rotayı küçük parçalara ayır; önce ilk dönüşe kadar olan kodu dene.', 'Adım modunda Mojo’nun yönünü kontrol et. Uzun düzlükleri ve tekrar eden parçaları kısalt.'];
+      const depth = Math.min(hints.length, hintDepth[level.id] || 0);
+      const list = document.getElementById('coach-hints');
+      list.replaceChildren();
+      hints.forEach((hint, i) => {
+        const item = document.createElement('li');
+        item.className = i < depth ? 'revealed' : '';
+        if (i < depth) setSafeHTML(item, `<strong>${['Yolu oku', 'Planını kur', 'Kodu düşün'][i]}</strong><span>${hint}</span>`);
+        else item.textContent = `${i + 1}. ipucu · henüz açılmadı`;
+        list.appendChild(item);
+      });
+      const button = document.getElementById('btn-next-hint');
+      button.disabled = depth >= hints.length;
+      button.textContent = depth === 0 ? 'İlk ipucunu aç' : depth < hints.length ? `Sonraki ipucunu aç (${depth}/3)` : 'Tüm ipuçları açık';
     }
 
     function updateThemeUI(theme) {
@@ -1185,8 +1415,7 @@
     }
 
     function updateBananaCounter() {
-      const activeLevel = LEVELS[game.currentLevelIdx];
-      const totalBananas = activeLevel.grid.join('').split('B').length - 1;
+      const totalBananas = game.bananas.length;
       const collectedCount = game.bananas.filter(b => b.collected).length;
       const value = bananaCounter.querySelector('strong');
       if (value) value.textContent = `${collectedCount} / ${totalBananas}`;
@@ -1212,6 +1441,7 @@
           btn.style.display = show ? 'inline-block' : 'none';
         }
       }
+      document.getElementById('cmd-iken').style.display = allowedCommands.includes('iken') ? 'inline-block' : 'none';
     }
 
     function disableQuickButtons(disable) {
@@ -1223,6 +1453,9 @@
     function updateSyntaxModeUI(mode) {
       const cmdTekrarla = document.getElementById('cmd-tekrarla');
       const cmdIse = document.getElementById('cmd-ise');
+      const cmdIken = document.getElementById('cmd-iken');
+      cmdIken.dataset.cmd = mode === 'indent' ? 'iken(hedefteDegilim()):\n    ilerle()' : 'iken(hedefteDegilim()) {\n  ilerle()\n}';
+      cmdIken.textContent = mode === 'indent' ? 'iken:' : 'iken() {}';
 
       // Snippets only ever use `ilerle()`, which every mission allows; the
       // palette used to paste `adimla()` into levels that had not unlocked it.
@@ -1435,7 +1668,8 @@
       const isNewRecord = Number.isFinite(lineCount) && (previousBest === undefined || lineCount < previousBest);
       const beatPar = Boolean(meta.beatPar);
 
-      modalTitle.textContent = `Seviye ${level.id} tamamlandı!`;
+      modalTitle.textContent = level.id === 100 ? 'Algoritma Adası senin!' : level.id % 20 === 0 ? `${WORLDS[getLevelGroup(level.id) - 1].seal}!` : `Seviye ${level.id} tamamlandı!`;
+      document.querySelector('#success-modal .modal-eyebrow').textContent = level.id % 20 === 0 ? 'ADA MÜHRÜ KAZANILDI' : 'GÖREV TAMAMLANDI';
 
       let descHtml = `Çözümün <strong>${lineCount} etkin satır</strong>, referans çözüm <strong>${par} satır</strong>.`;
       if (beatPar) {
@@ -1457,6 +1691,14 @@
       const hasCompact = allowed.includes('adimla');
 
       let detailsHtml = '<div class="star-detail-row earned">⭐ <strong>Görev tamamlandı:</strong> Mojo tüm muzları topladı ve sandığa ulaştı.</div>';
+      if (meta.scenarios > 1) detailsHtml += `<div class="star-detail-row earned">✓ <strong>Dayanıklı algoritma:</strong> Aynı kod ${meta.scenarios} farklı parkuru geçti.</div>`;
+      if (meta.mastery) {
+        detailsHtml += `<div class="star-detail-row ${meta.mastery.earned ? 'record' : 'neutral'}">◇ <strong>${meta.mastery.earned ? 'Ustalık rozeti kazanıldı' : 'Sıradaki ustalık hedefin'}:</strong> ${meta.mastery.label}</div>`;
+        if (meta.mastery.earned) {
+          masteryBadges[level.id] = level.revision;
+          safeStorageSet('kodmaymunu_mastery_v4', JSON.stringify(masteryBadges));
+        }
+      }
 
       if (stars >= 2) {
         detailsHtml += `<div class="star-detail-row earned">⭐ <strong>Verimli kod:</strong> ${lineCount} satır, ${twoStarLimit} satırlık sınırın altında.</div>`;
@@ -1489,10 +1731,13 @@
 
       if (isNewRecord) {
         bestLines[game.currentLevelIdx] = lineCount;
-        safeStorageSet('kodmaymunu_best_lines', JSON.stringify(bestLines));
+        safeStorageSet('kodmaymunu_best_lines_v4', JSON.stringify(bestLines));
+        if (!level.revision) {
+          const legacyBest = safelyParseJSON(safeStorageGet('kodmaymunu_best_lines'), {}) || {};
+          safeStorageSet('kodmaymunu_best_lines', JSON.stringify({ ...legacyBest, [game.currentLevelIdx]: lineCount }));
+        }
       }
       if (beatPar) showToast(`🏅 Rekor! ${lineCount} satırla referansı geçtin.`);
-      announceChapterProgress(level, stars);
 
       // Update unlock progression
       const currentIdx = game.currentLevelIdx;
@@ -1510,6 +1755,7 @@
         completedStars[currentIdx] = stars;
         safeStorageSet('kodmaymunu_stars', JSON.stringify(completedStars));
       }
+      if (currentStoredStars === 0) announceChapterProgress(level, stars);
 
       // Toggle next button if last level
       modalNextBtn.hidden = currentIdx === LEVELS.length - 1;
@@ -1518,6 +1764,7 @@
       renderSidebarList();
       updateStarsSummary();
       prevLvlBtn.disabled = currentIdx === 0;
+      renderExpedition();
       nextLvlBtn.disabled = currentIdx === LEVELS.length - 1 || (!devMode && !unlockedLevels.includes(currentIdx + 1));
 
       runtimeStatus.textContent = 'Görev tamamlandı';
