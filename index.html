@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#07110e">
   <title>KodMaymunu · Algoritma Adası</title>
   <link rel="preload" href="banana-sprite.png" as="image" type="image/png">
-  <link rel="stylesheet" href="style.css?v=20260905-v4">
+  <link rel="stylesheet" href="style.css?v=20260923-v5">
 </head>
 <body>
   <svg class="svg-sprite" aria-hidden="true">
@@ -297,7 +297,7 @@
 
   <!-- Script Modules setup -->
   <script type="module">
-    import { LEVELS, Game, CHAPTERS, CHAPTER_SIZE, getLevelGroup, getChapter, COMMAND_UNLOCKS } from './game.js?v=20260905-v4';
+    import { LEVELS, Game, CHAPTERS, CHAPTER_SIZE, getLevelGroup, getChapter, COMMAND_UNLOCKS } from './game.js?v=20260923-v5';
     import { soundEngine } from './audio.js';
 
     let game;
@@ -377,6 +377,7 @@
       }
 
       game = new Game('game-canvas');
+      game.startRenderLoop();
       updateThemeUI(savedTheme);
 
       // Initialize Syntax Mode
@@ -439,6 +440,12 @@
       }
       updateSoundUI(soundEngine.isSoundEnabled());
       updateSpeedUI();
+
+      // Browsers only start audio from a user gesture; the first one also
+      // brings in the island ambience.
+      const unlockAudio = () => soundEngine.unlock();
+      document.addEventListener('pointerdown', unlockAudio, { once: true });
+      document.addEventListener('keydown', unlockAudio, { once: true });
 
       if (!safeStorageGet('kodmaymunu_welcome_seen')) {
         window.setTimeout(() => setOverlayVisibility(welcomeOverlay, true, welcomeStartBtn), 180);
@@ -538,19 +545,15 @@
       });
 
       const canvasEl = document.getElementById('game-canvas');
+      // The renderer centres and scales the island inside the canvas, so only
+      // it knows which board cell sits under the pointer.
       const updateRulerCell = event => {
         if (!game || !game.rulerActive) return;
-        const rect = canvasEl.getBoundingClientRect();
-        if (!rect.width || !rect.height) return;
-        const clickX = (event.clientX - rect.left) * (canvasEl.width / rect.width);
-        const clickY = (event.clientY - rect.top) * (canvasEl.height / rect.height);
-        const cellX = Math.floor(clickX / game.tileSize);
-        const cellY = Math.floor(clickY / game.tileSize);
-        if (cellX >= 0 && cellX < game.gridWidth && cellY >= 0 && cellY < game.gridHeight) {
-          if (!game.hoveredCell || game.hoveredCell.x !== cellX || game.hoveredCell.y !== cellY) {
-            game.hoveredCell = { x: cellX, y: cellY };
-            game.draw();
-          }
+        const cell = game.renderer.cellFromClient(event.clientX, event.clientY);
+        if (!cell) return;
+        if (!game.hoveredCell || game.hoveredCell.x !== cell.x || game.hoveredCell.y !== cell.y) {
+          game.hoveredCell = cell;
+          game.draw();
         }
       };
       canvasEl.addEventListener('pointermove', updateRulerCell);
@@ -641,6 +644,7 @@
       stepBackBtn.addEventListener('click', () => {
         if (game && game.isRunning && game.isDebugMode && game.isWaitingForStep && game.stepBack()) {
           stepBackBtn.disabled = game.historyStack.length === 0;
+          updateLoopBadges();
           logToConsole('Bir adım geri alındı.', 'info');
           updateRuntimeHUD();
         }
@@ -807,7 +811,11 @@
       };
       game.onExecutionStep = lineNum => {
         highlightExecutingLine(lineNum);
+        updateLoopBadges();
         window.setTimeout(updateRuntimeHUD, 0);
+      };
+      game.onConditionEvaluated = (lineNum, condition, result) => {
+        setRunLineBadge(lineNum, result ? '✓ doğru' : '✗ yanlış', result ? 'true' : 'false');
       };
       game.onExecutionFinished = () => restoreEditorState();
       game.onHint = () => {
@@ -1622,6 +1630,32 @@
       }
 
       updateBananaCounter();
+    }
+
+    // While a program runs, counted loops show which pass they are on and each
+    // ise/iken shows what its sensor answered, so the run explains itself.
+    function setRunLineBadge(lineNum, text, tone) {
+      const line = document.getElementById(`run-line-${lineNum}`);
+      if (!line) return;
+      let badge = line.querySelector('.run-line-badge');
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.className = 'run-line-badge';
+        line.appendChild(badge);
+      }
+      badge.textContent = text;
+      badge.dataset.tone = tone;
+    }
+
+    function updateLoopBadges() {
+      const active = new Set();
+      for (const loop of game.getActiveLoops()) {
+        active.add(`run-line-${loop.line}`);
+        setRunLineBadge(loop.line, `tur ${loop.iteration}/${loop.count}`, 'loop');
+      }
+      preview.querySelectorAll('.run-line-badge[data-tone="loop"]').forEach(badge => {
+        if (!active.has(badge.parentElement.id)) badge.remove();
+      });
     }
 
     function restoreEditorState() {

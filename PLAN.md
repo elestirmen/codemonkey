@@ -40,10 +40,12 @@ algoritmanın değişen haritalarda doğrulanmasıdır. Rakiplerin görsel varl�
 | --- | --- |
 | `index.html` | Arayüz kabuğu ve tüm UI mantığı (tek satır içi modül) |
 | `style.css` | Orman temalı görsel katman, açık/koyu tema, duyarlı yerleşim |
-| `game.js` | Seviye verisi, güvenli yorumlayıcı, sanal makine, yol planlayıcı, çizim motoru |
+| `game.js` | Seviye verisi, güvenli yorumlayıcı, sanal makine, yol planlayıcı |
+| `renderer.js` | Ada temalı çizim motoru: tuvale sığdırma, önbellekli statik katman, Mojo, efektler ve cetvel |
 | `authored-levels.js` | 54 tasarlanmış görevin pişirilmiş harita, çözüm, ipucu ve parkur verileri |
 | `tools/author-missions.mjs` | Tasarlanmış görev aileleri ve çözüm üretimi (`npm run missions`) |
-| `audio.js` | Web Audio API ile sentezlenen ses efektleri ve ortam sesi |
+| `audio.js` | Web Audio API ile sentezlenen ses efektleri ve her adaya özgü ortam sesi |
+| `fonts/` | Çevrimdışı çalışan yerel yazı tipleri (Fredoka, Nunito, JetBrains Mono; OFL) |
 | `test/game.test.js` | Motorun ve müfredatın değişmezlerini doğrulayan test paketi (`npm test`) |
 | `test/browser.test.mjs` | Gerçek Chromium ile masaüstü, mobil, final akışı ve kayıt geçişi testleri |
 

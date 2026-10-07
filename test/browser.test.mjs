@@ -6,8 +6,9 @@ const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright')
 const browser = await chromium.launch({ headless: true });
 const root = new URL('../', import.meta.url);
 const errors = [];
-const types = { html: 'text/html', js: 'text/javascript', css: 'text/css', png: 'image/png' };
-const files = new Set(['index.html', 'game.js', 'audio.js', 'style.css', 'generated-levels.js', 'authored-levels.js', 'banana-sprite.png']);
+const types = { html: 'text/html', js: 'text/javascript', css: 'text/css', png: 'image/png', woff2: 'font/woff2' };
+const fonts = ['fredoka', 'nunito', 'jetbrains-mono'].flatMap(name => [`fonts/${name}-latin.woff2`, `fonts/${name}-latin-ext.woff2`]);
+const files = new Set(['index.html', 'game.js', 'renderer.js', 'audio.js', 'style.css', 'generated-levels.js', 'authored-levels.js', 'banana-sprite.png', ...fonts]);
 
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
@@ -60,7 +61,7 @@ try {
 
   // Keep the real VM, animation and callbacks; only shorten movement duration.
   await page.evaluate(async () => {
-    const { Game } = await import('./game.js?v=20260905-v4');
+    const { Game } = await import('./game.js?v=20260923-v5');
     const original = Game.prototype.runCodeText;
     Game.prototype.runCodeText = function (code) { this.executionSpeed = 1; return original.call(this, code); };
   });
@@ -81,6 +82,11 @@ try {
   await page.screenshot({ path: '/tmp/codemonkey-laptop.png', fullPage: true });
   const canvasBounds = await page.locator('#game-canvas').boundingBox();
   assert.ok(canvasBounds.height >= 170, 'laptop board is too small to play');
+  const backing = await page.evaluate(() => {
+    const canvas = document.getElementById('game-canvas');
+    return { width: canvas.width, cssWidth: canvas.clientWidth };
+  });
+  assert.ok(backing.cssWidth > 300 && backing.width >= backing.cssWidth, 'canvas backing store must follow its CSS box');
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
 
   await page.setViewportSize({ width: 390, height: 844 });

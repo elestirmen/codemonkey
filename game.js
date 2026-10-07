@@ -2,7 +2,8 @@ import { soundEngine } from './audio.js';
 // Version query busts the browser cache when `npm run levels` rewrites the
 // baked board data; keep it in step with the game.js query in index.html.
 import { GENERATED_LEVELS } from './generated-levels.js?v=20260904-v3';
-import { AUTHORED_LEVELS } from './authored-levels.js?v=20260905-v4';
+import { AUTHORED_LEVELS } from './authored-levels.js?v=20260923-v5';
+import { WorldRenderer } from './renderer.js?v=20260923-v5';
 
 // Level definitions with increasing difficulty
 export const LEVELS = [
@@ -1516,6 +1517,18 @@ export function planLevelRoute(level) {
   return planShortestRoute(world);
 }
 
+// Movement easing: a glide for position and a soft overshoot for turns.
+function easeInOutSine(t) {
+  return -(Math.cos(Math.PI * t) - 1) / 2;
+}
+
+function easeOutBackSoft(t) {
+  const c1 = 0.9;
+  const c3 = c1 + 1;
+  const x = t - 1;
+  return 1 + c3 * x * x * x + c1 * x * x;
+}
+
 // Game State Class
 export class Game {
   constructor(canvasId) {
@@ -1581,28 +1594,21 @@ export class Game {
     }
     this.syntaxMode = savedSyntaxMode === 'bracket' ? 'bracket' : 'indent';
 
-    // Particles and special animations state
-    this.particles = []; // Visual particle effects (banana pick, victory fanfare)
-    this.flyingKey = null; // Key-to-gate animation trajectory
-    this.showVictoryFanfare = false; // continuous fireworks toggle
+    // Failure and victory presentation state. The renderer owns every visual
+    // effect; the engine only records what happened and where.
     this.crashType = null; // 'water', 'rock', 'gate', or 'outOfBounds'
+    this.crashOrigin = null;
+    this.crashTarget = null;
     this.crashAnimationFrame = null;
     this.crashAnimationGeneration = 0;
     this.effectsAnimationFrame = null;
     this.effectsAnimationGeneration = 0;
+    this.currentAction = null; // The command being animated right now
+    this.worldId = 1;
 
     // Fail counter and hint system
     this.failCountPerLevel = {}; // { levelId: count }
     this.hintShownForLevel = {}; // { levelId: true }
-
-    // Load the pre-processed transparent sprite (small enough for mobile GPUs).
-    this.bananaImg = new Image();
-    this.bananaImgProcessed = null;
-    this.bananaImg.onload = () => {
-      this.bananaImgProcessed = this.bananaImg;
-      this.draw();
-    };
-    this.bananaImg.src = 'banana-sprite.png';
 
     // UI Callbacks
     this.onLevelComplete = null;
@@ -1612,9 +1618,35 @@ export class Game {
     this.onLogMessage = null;
     this.onBananaChange = null;
     this.onHint = null; // Callback for contextual hints
+    this.onConditionEvaluated = null; // (line, condition, result) for the editor
+
+    this.renderer = new WorldRenderer(this);
+    this.renderLoopActive = false;
+    this.renderLoopFrame = null;
 
     // Assets loaded/setup
     this.loadState();
+  }
+
+  // Continuous painting for idle animation (water, breathing, bobbing). Only
+  // the browser UI starts it; headless callers keep on-demand drawing.
+  startRenderLoop() {
+    if (this.renderLoopActive || typeof requestAnimationFrame !== 'function') return;
+    this.renderLoopActive = true;
+    const frame = now => {
+      if (!this.renderLoopActive) return;
+      if (!(typeof document !== 'undefined' && document.hidden)) this.renderer.render(now);
+      this.renderLoopFrame = requestAnimationFrame(frame);
+    };
+    this.renderLoopFrame = requestAnimationFrame(frame);
+  }
+
+  stopRenderLoop() {
+    this.renderLoopActive = false;
+    if (this.renderLoopFrame !== null && typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(this.renderLoopFrame);
+    }
+    this.renderLoopFrame = null;
   }
 
   loadState() {
@@ -1648,16 +1680,20 @@ export class Game {
     this.scenarioIndex = Math.max(0, Math.min(this.level.scenarios?.length || 0, scenarioIndex));
     const scenario = this.scenarioIndex > 0 ? this.level.scenarios[this.scenarioIndex - 1] : this.level;
 
+    this.worldId = getLevelGroup(this.level.id);
+    soundEngine.setWorld(this.worldId);
+
     this.isRunning = false;
     this.currentQueueIdx = -1;
     this.loopCounters = {};
     this.historyStack = [];
-    this.particles = [];
-    this.flyingKey = null;
-    this.showVictoryFanfare = false;
     this.crashType = null;
+    this.crashOrigin = null;
+    this.crashTarget = null;
+    this.currentAction = null;
     this.executionStepCount = 0;
     this.executionOperationCount = 0;
+    this.renderer.reset();
     if (this.animationTimer) {
       clearTimeout(this.animationTimer);
       this.animationTimer = null;
@@ -1694,10 +1730,6 @@ export class Game {
         }
       }
     }
-
-    // Resize canvas
-    this.canvas.width = this.gridWidth * this.tileSize;
-    this.canvas.height = this.gridHeight * this.tileSize;
 
     // Scan for start points, bananas, stars, keys, turtles
     this.bananas = [];
@@ -2001,7 +2033,7 @@ export class Game {
       this.lastSourceCode = code;
       this.executionQueue = parseCode(code, this.syntaxMode);
       if (this.executionQueue.length === 0) {
-        this.log("Hata: Çalıştırılacak geçerli bir kod bulunamadı!", "error");
+        this.log('Çalıştırılacak bir komut yok. Komut paletinden bir komut ekleyerek başla.', 'error');
         soundEngine.playFail();
         if (this.onExecutionFinished) {
           this.onExecutionFinished();
@@ -2012,8 +2044,9 @@ export class Game {
       const activeLevel = this.level || LEVELS[this.currentLevelIdx];
       this.validateInstructionsForLevel(this.executionQueue, activeLevel);
 
-      this.log("Algoritma başlatılıyor...", "info");
       this.loadLevel(this.currentLevelIdx); // Reset state before running
+      this.log('Hazırım, başlıyorum!', 'info');
+      soundEngine.playStart();
       this.isRunning = true;
       this.currentQueueIdx = 0;
       if (this.onScenarioChange) this.onScenarioChange(0);
@@ -2028,15 +2061,13 @@ export class Game {
   }
 
   stop() {
+    const wasRunning = this.isRunning;
     this.cancelCrashAnimation();
     this.cancelEffectsAnimation();
     this.isRunning = false;
     this.currentQueueIdx = -1;
     this.loopCounters = {};
     this.historyStack = [];
-    this.particles = [];
-    this.flyingKey = null;
-    this.showVictoryFanfare = false;
     this.crashType = null;
     if (this.animationTimer) {
       clearTimeout(this.animationTimer);
@@ -2044,7 +2075,7 @@ export class Game {
     }
     this.loadLevel(this.currentLevelIdx); // Reset state
     if (this.onScenarioChange) this.onScenarioChange(0);
-    this.log("Program durduruldu.", "info");
+    this.log(wasRunning ? 'Durdum. Kodu düzenleyip yeniden çalıştırabilirsin.' : 'Harita başa alındı.', 'info');
     if (this.onExecutionFinished) {
       this.onExecutionFinished();
     }
@@ -2081,8 +2112,6 @@ export class Game {
             gridData: this.gridData.map(row => [...row]),
             executionStepCount: this.executionStepCount,
             executionOperationCount: this.executionOperationCount,
-            particles: this.particles.map(p => ({ ...p })),
-            flyingKey: this.flyingKey ? { ...this.flyingKey } : null,
             loopCounters: { ...this.loopCounters },
             trail: this.trail.map(cell => ({ ...cell })),
             queueIdx: this.currentQueueIdx
@@ -2090,6 +2119,7 @@ export class Game {
         }
 
         // Execute command action
+        this.currentAction = { name: currentStep.name, target: currentStep.target, line: currentStep.line };
         const success = this.applyAction(currentStep.name, currentStep.target);
         if (!success) {
           this.isRunning = false;
@@ -2117,6 +2147,9 @@ export class Game {
         this.currentQueueIdx = currentStep.target;
       } else if (currentStep.type === 'jump_if_false') {
         const condVal = this.evaluateCondition(currentStep.condition);
+        if (this.onConditionEvaluated) {
+          this.onConditionEvaluated(currentStep.line, currentStep.condition, condVal, currentStep.sourceName);
+        }
         if (condVal) {
           this.currentQueueIdx++;
         } else {
@@ -2129,6 +2162,24 @@ export class Game {
 
     // Program reached the end
     this.checkWinCondition();
+  }
+
+  // Which counted loops are open at the instruction pointer, innermost last,
+  // with the iteration they are on. The editor shows these as "tur 2/3".
+  getActiveLoops() {
+    const active = [];
+    const queue = this.executionQueue || [];
+    const pointer = this.currentQueueIdx;
+    for (let i = 0; i < queue.length; i++) {
+      const init = queue[i];
+      if (init.type !== 'loop_init') continue;
+      const remaining = this.loopCounters[init.loopId];
+      if (!(remaining > 0)) continue;
+      const end = queue.findIndex((step, index) => index > i && step.type === 'loop_step' && step.loopId === init.loopId);
+      if (end === -1 || pointer <= i || pointer > end) continue;
+      active.push({ line: init.line, iteration: init.count - remaining + 1, count: init.count });
+    }
+    return active;
   }
 
   stepBack() {
@@ -2151,11 +2202,10 @@ export class Game {
     this.gridData = prevState.gridData || this.gridData;
     this.executionStepCount = prevState.executionStepCount || 0;
     this.executionOperationCount = prevState.executionOperationCount || 0;
-    this.particles = prevState.particles || [];
-    this.flyingKey = prevState.flyingKey || null;
     this.loopCounters = prevState.loopCounters;
     this.trail = prevState.trail || this.trail;
     this.currentQueueIdx = prevState.queueIdx; // Point IP back to this instruction
+    this.currentAction = null;
 
     this.animationProgress = 1;
     this.draw();
@@ -2205,85 +2255,82 @@ export class Game {
     }
   }
 
-  // ── Encouraging Message Pools ──
+  // ── Mojo's voice ──
+  // World feedback is spoken by Mojo in the first person and names the line
+  // that caused it, so the editor can point straight at the culprit. Code
+  // errors from the parser keep a neutral voice.
   getRandomMessage(pool) {
     return pool[Math.floor(Math.random() * pool.length)];
   }
 
+  linePrefix() {
+    const line = this.currentAction && this.currentAction.line;
+    return line ? `Satır ${line}: ` : '';
+  }
+
   getWaterFailMessage() {
-    return this.getRandomMessage([
-      "Mojo suya düştü ama sorun değil! 🏊 Cetvelle mesafeyi kontrol edip tekrar dene.",
-      "Çıldırma! 💧 Mojo yüzme bilmiyor ama sen algoritma biliyorsun. Bir daha dene!",
-      "Su engeli seni durdurdu. 🌊 Rotanı gözden geçir, doğru yol yakınlarda!",
-      "Mojo ıslandı! 💦 Suya basmamak için hangi yönde kaç adım gideceğini hesapla.",
-      "Splash! 🐟 Mojo suya düştü. Ama her hata seni çözüme bir adım daha yaklaştırıyor!"
+    return this.linePrefix() + this.getRandomMessage([
+      'Suya adım attım! Yüzme bilmiyorum; köprü, nilüfer yaprağı ya da su üstünde bir kaplumbağa gerekiyor.',
+      'Hop, suya düştüm. Bu adımdan önce yönümü ya da adım sayısını kontrol edelim.',
+      'Burası su! Simidim sayesinde iyiyim ama rota bu kareden geçmemeli.'
     ]);
   }
 
   getRockFailMessage() {
-    return this.getRandomMessage([
-      "Mojo kayaya çarptı! 🪨 Dönüş komutlarını kontrol et, doğru yöne mi bakıyor?",
-      "Kayalar sert ama sen daha sertsin! 💪 Rotanı düzelt ve tekrar dene.",
-      "Oops, kaya engeli! ⛰️ Cetvel ile mesafeyi ölç ve doğru adım sayısını bul.",
-      "Mojo kafasını kayaya çarptı! 😵 Hangi yönde ilerlemen gerektiğini düşün.",
-      "Taş gibi bir engel! 🧱 Ama algoritmacılar her engelin üstesinden gelir."
+    return this.linePrefix() + this.getRandomMessage([
+      'Önümde kaya var, geçemiyorum. Bu satırdan önce dönmem gerekebilir.',
+      'Kayaya tosladım! Hangi yöne baktığımı ve kaç adım attığımı kontrol edelim.',
+      'Bu yol kapalı. Bir önceki dönüş doğru yöne miydi?'
     ]);
   }
 
   getGateFailMessage() {
-    return this.getRandomMessage([
-      "Kapı kilitli! 🔒 Önce altın anahtarı bulmalısın. Haritada K harfini ara!",
-      "Mojo kapıdan geçemedi. 🗝️ Anahtarı almadan kapıyı açamazsın, rotanı değiştir!",
-      "Kilitli kapı seni durdurdu! 🚪 Önce anahtarın olduğu yere git.",
-      "Anahtar olmadan kapı açılmaz! 🔐 Rotanı yeniden planla, önce K karesine uğra."
+    return this.linePrefix() + this.getRandomMessage([
+      'Kapı kilitli. Önce anahtarı almam gerekiyor.',
+      'Anahtarım yok, kapı açılmıyor. Rotayı önce anahtarın üzerinden geçirelim.'
     ]);
   }
 
   getOutOfBoundsMessage() {
-    return this.getRandomMessage([
-      "Mojo haritanın dışına çıktı! 🗺️ Sınırları aşmadan hedefe ulaşmalısın.",
-      "Harita sınırı! 🚧 Mojo daha fazla ilerleyemez. Dönüş komutlarını kontrol et.",
-      "Mojo maceraya fazla kapıldı ve haritadan çıktı! 🧭 Yönünü düzelt."
-    ]);
+    return `${this.linePrefix()}Adanın kenarına geldim, daha ileri gidemem.`;
   }
 
   getTurtleDrownMessage() {
-    return this.getRandomMessage([
-      "Mojo altındaki kaplumbağa suya dalınca boğuldu! 🐢💦 bekle() ile zamanlamayı ayarla.",
-      "Kaplumbağa dalınca Mojo suya düştü! 🐢 Zamanlama her şey, bekle() kullanmayı dene.",
-      "Kaplumbağa batarken Mojo da battı! ⏱️ 2 adım üstte, 2 adım altta. Sayarak ilerle!",
-      "Kaplumbağanın dalış zamanı geldi! 🌊 Bir sonraki seferde daha hızlı geç veya bekle."
+    return this.linePrefix() + this.getRandomMessage([
+      'Kaplumbağa daldı, ben de suya düştüm. Gelgit göstergesine bakıp bekle() ile zamanlamayı ayarlayalım.',
+      'Kaplumbağanın üzerindeyken dalış zamanı geldi. Su üstündeyken çıkıp hemen karşıya geçmeliyim.'
     ]);
+  }
+
+  getTurtleUnderwaterMessage() {
+    return `${this.linePrefix()}Kaplumbağa şu an su altında, üzerine basamam. Önce bekle() ile su üstüne çıkmasını bekleyelim.`;
   }
 
   getBananaCollectMessage() {
     const collected = this.bananas.filter(b => b.collected).length;
     const total = this.bananas.length;
+    if (collected === total) {
+      return total > 1 ? `Son muzu da aldım (${collected}/${total}). Şimdi sandığa!` : 'Muzu aldım. Şimdi sandığa!';
+    }
     return this.getRandomMessage([
-      `Lezzetli! 🍌 Mojo bu muzu bayıldı. (${collected}/${total})`,
-      `Harika yakalama! 🍌✨ ${total - collected} muz daha kaldı!`,
-      `Muz toplandı! 🎯 Devam et, Mojo'nun karnı doymuyor! (${collected}/${total})`,
-      `Yummy! 🍌 ${collected}. muz cebimizde. ${total - collected > 0 ? `Sıradaki hedef nerede acaba? 🤔` : `Hepsi tamam!`}`,
-      `Nefis! 🍌 Mojo mutlu. ${total - collected > 0 ? `${total - collected} tane daha var!` : `Tüm muzlar toplandı! 🎉`}`
+      `Bir muz aldım (${collected}/${total}).`,
+      `Nefis! ${total - collected} muz kaldı.`,
+      `Muz cebimde (${collected}/${total}).`
     ]);
   }
 
   getKeyCollectMessage() {
-    return this.getRandomMessage([
-      "Harika! 🔑 Anahtarı aldın, kilitli kapılar artık açık! Yoluna devam et.",
-      "Altın anahtar cebinde! 🗝️✨ Kapılar seni bekliyor, ilerle!",
-      "Mükemmel keşif! 🔑 Anahtar toplandı. Şimdi kapıyı aç ve hedefe koş!",
-      "Anahtar senin! 🗝️ Artık kilitli geçitler engel değil. Devam!"
-    ]);
+    const remaining = this.keys.filter(k => !k.collected).length;
+    return remaining > 0
+      ? `Bir anahtar aldım. ${remaining} anahtar daha var.`
+      : 'Anahtarı aldım. Kilitli kapılar artık açık.';
   }
 
   getVictoryMessage() {
     return this.getRandomMessage([
-      "🎉 Tebrikler! Mojo hedefe ulaştı ve tüm muzları topladı! Muhteşem algoritma!",
-      "🏆 Bravo! Mükemmel bir çözüm! Mojo sana teşekkür ediyor!",
-      "🌟 Harika iş! Algoritman kusursuz çalıştı! Mojo çok mutlu!",
-      "🎊 Fantastik! Tüm muzlar toplandı, hedef bulundu! Sen bir algoritma ustasısın!",
-      "🥳 Muhteşem! Mojo sandığa ulaştı! Kodlama yeteneklerin gelişiyor!"
+      'Sandığa ulaştım! Harika bir algoritmaydı.',
+      'Başardık! Tüm hedefler tamam.',
+      'Sandık açıldı! Kodun kusursuz çalıştı.'
     ]);
   }
 
@@ -2304,14 +2351,14 @@ export class Game {
     let hint = '';
 
     if (this.level.tip) {
-      // Strip HTML tags from the tip for console display
-      hint = '💡 İpucu: ' + this.level.tip.replace(/<[^>]*>/g, '');
+      // Strip HTML tags from the tip for plain-text display
+      hint = 'İpucu: ' + this.level.tip.replace(/<[^>]*>/g, '');
     } else if (allowed.includes('tekrarla')) {
-      hint = '💡 İpucu: tekrarla() döngüsünü kullanmayı denedin mi? Tekrarlayan kalıpları otomatikleştir!';
+      hint = 'İpucu: Tekrar eden kalıpları tekrarla() ile tek yere topla.';
     } else if (allowed.includes('bekle')) {
-      hint = '💡 İpucu: bekle() komutuyla kaplumbağanın su üstüne çıkmasını bekleyebilirsin!';
+      hint = 'İpucu: bekle() ile kaplumbağanın su üstüne çıkmasını bekleyebilirsin.';
     } else {
-      hint = '💡 İpucu: Cetvel aracını kullanarak mesafeleri ölç. Kaç adım gideceğini hesapla!';
+      hint = 'İpucu: Cetvel ile mesafeleri ölç, kaç adım gideceğini hesapla.';
     }
 
     this.log(hint, 'hint');
@@ -2329,10 +2376,31 @@ export class Game {
     }
   }
 
+  // Footsteps change with the surface underfoot.
+  surfaceAt(x, y) {
+    const cell = this.gridData[y] && this.gridData[y][x];
+    if (cell === '=') return 'wood';
+    if (cell === 'L') return 'leaf';
+    if (cell === '~') return 'shell';
+    if (this.worldId === 3) return 'stone';
+    if (this.worldId === 4) return 'sand';
+    return 'grass';
+  }
+
+  // A failed step leaves Mojo where the plan broke instead of resetting the
+  // board, so the trail and the final position explain what went wrong.
+  failAt(message, type, target = null, origin = null) {
+    this.log(message, 'error');
+    this.recordFailure();
+    this.crashOrigin = origin || { x: this.player.x, y: this.player.y };
+    this.crashTarget = target || { x: this.player.x, y: this.player.y };
+    this.triggerCrashAnimation(type);
+  }
+
   applyAction(action, target = 'mojo') {
     if (target === 'kaplumbaga') {
       if (!this.turtles || this.turtles.length === 0) {
-        this.log("Haritada kaplumbaga yok!", "error");
+        this.log(`${this.linePrefix()}Bu haritada yönetebileceğim bir kaplumbağa yok.`, "error");
         soundEngine.playFail();
         this.recordFailure();
         return false;
@@ -2347,7 +2415,7 @@ export class Game {
           const nextY = Math.round(turtle.y + dy * offsetFactor);
 
           if (nextX < 0 || nextX >= this.gridWidth || nextY < 0 || nextY >= this.gridHeight || this.gridData[nextY][nextX] !== '~') {
-            this.log("Kaplumbağa karaya oturdu veya sınırı aştı!", "error");
+            this.log(`${this.linePrefix()}Kaplumbağa o yöne yüzemez: önünde kara ya da adanın kenarı var.`, "error");
             allSuccess = false;
             break;
           }
@@ -2360,8 +2428,6 @@ export class Game {
         } else if (action === 'solaDon') {
           turtle.dir = this.getNextDirection(turtle.dir, 'LEFT');
           this.setTurtleRotation(turtle);
-        } else if (action === 'bekle') {
-          // just delay
         }
       }
 
@@ -2374,13 +2440,10 @@ export class Game {
       this.executionStepCount++;
       // Check if Mojo drowned because turtle moved away
       if (!this.isWalkableCell(this.player.x, this.player.y)) {
-         this.log(this.getTurtleDrownMessage(), "error");
-         soundEngine.playFail();
-         this.recordFailure();
-         this.triggerCrashAnimation('water');
-         return false;
+        this.failAt(this.getTurtleDrownMessage(), 'water');
+        return false;
       }
-      soundEngine.playStep();
+      soundEngine.playPaddle();
       return true;
     }
 
@@ -2393,23 +2456,22 @@ export class Game {
       const nextY = this.player.y + dy * offsetFactor;
 
       if (!this.isWalkableCell(nextX, nextY)) {
-        const cell = nextX >= 0 && nextX < this.gridWidth && nextY >= 0 && nextY < this.gridHeight ? this.gridData[nextY][nextX] : '#';
+        const inside = nextX >= 0 && nextX < this.gridWidth && nextY >= 0 && nextY < this.gridHeight;
+        const cell = inside ? this.gridData[nextY][nextX] : '#';
         let obstacleType = 'outOfBounds';
+        let message = this.getOutOfBoundsMessage();
         if (cell === 'G') {
-          this.log(this.getGateFailMessage(), "error");
           obstacleType = 'gate';
+          message = this.getGateFailMessage();
         } else if (cell === '#') {
-          this.log(this.getRockFailMessage(), "error");
           obstacleType = 'rock';
+          message = this.getRockFailMessage();
         } else if (cell === '~') {
-          this.log(this.getWaterFailMessage(), "error");
           obstacleType = 'water';
-        } else {
-          this.log(this.getOutOfBoundsMessage(), "error");
+          const turtleThere = (this.turtles || []).some(turtle => turtle.x === nextX && turtle.y === nextY);
+          message = turtleThere ? this.getTurtleUnderwaterMessage() : this.getWaterFailMessage();
         }
-        soundEngine.playFail();
-        this.recordFailure();
-        this.triggerCrashAnimation(obstacleType);
+        this.failAt(message, obstacleType, { x: nextX, y: nextY });
         return false;
       }
 
@@ -2421,80 +2483,55 @@ export class Game {
       // Sinking Lilypad check:
       if (this.gridData[oldY][oldX] === 'L') {
         this.gridData[oldY][oldX] = '~';
-        this.spawnLeafParticles(oldX, oldY);
+        this.renderer.burst('leaf', oldX, oldY);
+        soundEngine.playLeaf();
       }
 
       this.executionStepCount++;
 
       // Check if Mojo drowned at the new step count (e.g. stepped on a turtle that just submerged)
       if (!this.isWalkableCell(nextX, nextY)) {
-        this.log(this.getWaterFailMessage(), "error");
-        soundEngine.playFail();
-        this.recordFailure();
-        this.triggerCrashAnimation('water');
+        this.failAt(this.getTurtleDrownMessage(), 'water', { x: nextX, y: nextY }, { x: oldX, y: oldY });
         return false;
       }
 
       this.trail.push({ x: nextX, y: nextY });
       if (this.trail.length > 400) this.trail.shift();
 
-      this.collectBananaAtPlayer();
-      this.collectKeyAtPlayer();
-      soundEngine.playStep();
+      const gotBanana = this.collectBananaAtPlayer();
+      const gotKey = this.collectKeyAtPlayer();
+      if (!gotBanana && !gotKey) soundEngine.playStep(this.surfaceAt(nextX, nextY));
       return true;
 
-    } else if (action === 'sagaDon') {
-      this.player.dir = this.getNextDirection(this.player.dir, 'RIGHT');
+    } else if (action === 'sagaDon' || action === 'solaDon') {
+      this.player.dir = this.getNextDirection(this.player.dir, action === 'sagaDon' ? 'RIGHT' : 'LEFT');
       this.setRotationByDir(this.player.dir);
 
       this.executionStepCount++;
       // Check if turtle under Mojo submerged
       if (!this.isWalkableCell(this.player.x, this.player.y)) {
-        this.log(this.getTurtleDrownMessage(), "error");
-        soundEngine.playFail();
-        this.recordFailure();
-        this.triggerCrashAnimation('water');
+        this.failAt(this.getTurtleDrownMessage(), 'water');
         return false;
       }
 
-      soundEngine.playStep();
-      return true;
-
-    } else if (action === 'solaDon') {
-      this.player.dir = this.getNextDirection(this.player.dir, 'LEFT');
-      this.setRotationByDir(this.player.dir);
-
-      this.executionStepCount++;
-      // Check if turtle under Mojo submerged
-      if (!this.isWalkableCell(this.player.x, this.player.y)) {
-        this.log(this.getTurtleDrownMessage(), "error");
-        soundEngine.playFail();
-        this.recordFailure();
-        this.triggerCrashAnimation('water');
-        return false;
-      }
-
-      soundEngine.playStep();
+      soundEngine.playTurn();
       return true;
 
     } else if (action === 'bekle') {
       this.executionStepCount++;
       // Check if turtle under Mojo submerged
       if (!this.isWalkableCell(this.player.x, this.player.y)) {
-        this.log(this.getTurtleDrownMessage(), "error");
-        soundEngine.playFail();
-        this.recordFailure();
-        this.triggerCrashAnimation('water');
+        this.failAt(this.getTurtleDrownMessage(), 'water');
         return false;
       }
 
-      soundEngine.playStep();
+      soundEngine.playWait();
       return true;
 
     } else if (action === 'muzAl') {
       // Retired command: the validator rejects it before execution, so this is
       // only a safety net for programs compiled elsewhere.
-      this.log("muzAl() kaldırıldı; Mojo muzlara değince otomatik toplar.", "info");
+      this.log("muzAl() kaldırıldı; muzların üzerinden geçtiğimde onları kendim toplarım.", "info");
       this.collectBananaAtPlayer();
       return true;
     }
@@ -2508,27 +2545,29 @@ export class Game {
 
     key.collected = true;
     this.log(this.getKeyCollectMessage(), "success");
-    soundEngine.playCoin();
+    soundEngine.playKey();
+    this.renderer.burst('key', key.x, key.y);
 
-    // Trigger sliding key flying animation to the gate!
-    let gateX = -1, gateY = -1;
+    // The key flies to the nearest gate; gates open once every key is in.
+    let gate = null;
+    let best = Infinity;
     for (let y = 0; y < this.gridHeight; y++) {
       for (let x = 0; x < this.gridWidth; x++) {
-        if (this.gridData[y][x] === 'G') {
-          gateX = x;
-          gateY = y;
-          break;
+        if (this.gridData[y][x] !== 'G') continue;
+        const distance = Math.abs(x - key.x) + Math.abs(y - key.y);
+        if (distance < best) {
+          best = distance;
+          gate = { x, y };
         }
       }
     }
-    if (gateX !== -1) {
-      this.flyingKey = {
-        startX: this.player.x,
-        startY: this.player.y,
-        targetX: gateX,
-        targetY: gateY,
-        progress: 0
-      };
+    if (gate) {
+      const flight = Math.max(180, Math.min(650, this.executionSpeed * 1.1));
+      this.renderer.flyKey({ x: key.x, y: key.y }, gate, flight);
+      if (this.hasKeyCollected()) {
+        this.renderer.gateOpened(flight * 0.8);
+        soundEngine.playGate((flight * 0.8) / 1000);
+      }
     }
     return true;
   }
@@ -2538,79 +2577,19 @@ export class Game {
     if (!banana) return false;
 
     banana.collected = true;
+    const collected = this.bananas.filter(b => b.collected).length;
     this.log(this.getBananaCollectMessage(), "success");
-    soundEngine.playCoin();
-
-    // Spawn pick particles
-    this.spawnBananaParticles(this.player.x, this.player.y);
+    // Each banana in a run sounds one step higher than the last.
+    soundEngine.playCoin(collected - 1);
+    this.renderer.burst('banana', banana.x, banana.y);
+    if (collected === this.bananas.length && this.keys.every(key => key.collected)) {
+      this.renderer.burst('ready', this.starTile.x, this.starTile.y);
+    }
 
     if (this.onBananaChange) {
-      this.onBananaChange(this.bananas.filter(b => b.collected).length, this.bananas.length);
+      this.onBananaChange(collected, this.bananas.length);
     }
     return true;
-  }
-
-  spawnBananaParticles(cellX, cellY) {
-    const center = this.tileSize / 2;
-    const px = cellX * this.tileSize + center;
-    const py = cellY * this.tileSize + center;
-    for (let i = 0; i < 15; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 1 + Math.random() * 3;
-      this.particles.push({
-        x: px,
-        y: py,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 1, // slight upwards bias
-        color: '#facc15', // yellow gold
-        size: 3 + Math.random() * 3,
-        alpha: 1,
-        life: 0,
-        maxLife: 20 + Math.random() * 15
-      });
-    }
-  }
-
-  spawnLeafParticles(cellX, cellY) {
-    const center = this.tileSize / 2;
-    const px = cellX * this.tileSize + center;
-    const py = cellY * this.tileSize + center;
-    for (let i = 0; i < 12; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 0.5 + Math.random() * 2;
-      this.particles.push({
-        x: px,
-        y: py,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 0.5,
-        color: '#10b981', // green leaf color
-        size: 2.5 + Math.random() * 3,
-        alpha: 1,
-        life: 0,
-        maxLife: 15 + Math.random() * 15
-      });
-    }
-  }
-
-  spawnVictoryParticles() {
-    const px = this.starTile.x * this.tileSize + this.tileSize / 2;
-    const py = this.starTile.y * this.tileSize + this.tileSize / 2;
-    const colors = ['#facc15', '#10b981', '#ef4444', '#3b82f6', '#ec4899'];
-    for (let i = 0; i < 5; i++) {
-      const angle = -Math.PI / 4 - Math.random() * Math.PI / 2; // shoot upwards
-      const speed = 2 + Math.random() * 4;
-      this.particles.push({
-        x: px,
-        y: py,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed - 1.5, // upward force
-        color: colors[Math.floor(Math.random() * colors.length)],
-        size: 4 + Math.random() * 4,
-        alpha: 1,
-        life: 0,
-        maxLife: 40 + Math.random() * 25
-      });
-    }
   }
 
   cancelEffectsAnimation() {
@@ -2619,27 +2598,28 @@ export class Game {
       cancelAnimationFrame(this.effectsAnimationFrame);
     }
     this.effectsAnimationFrame = null;
-    this.showVictoryFanfare = false;
   }
 
   startVictoryEffects() {
     this.cancelEffectsAnimation();
-    this.showVictoryFanfare = true;
+    this.renderer.startVictory();
+    // With the render loop running the celebration paints itself.
+    if (this.renderLoopActive) return;
     const generation = this.effectsAnimationGeneration;
     const startedAt = performance.now();
+    let frames = 0;
 
     const renderEffects = now => {
       if (generation !== this.effectsAnimationGeneration) return;
-      if (now - startedAt > 1500) this.showVictoryFanfare = false;
+      frames++;
       this.draw();
-      if (this.showVictoryFanfare || this.particles.length > 0 || this.flyingKey) {
+      if (frames < 240 && (now - startedAt < 2600 || this.renderer.isAnimatingEffects())) {
         this.effectsAnimationFrame = requestAnimationFrame(renderEffects);
       } else {
         this.effectsAnimationFrame = null;
       }
     };
 
-    this.spawnVictoryParticles();
     this.effectsAnimationFrame = requestAnimationFrame(renderEffects);
   }
 
@@ -2654,58 +2634,27 @@ export class Game {
 
   triggerCrashAnimation(obstacleType) {
     this.cancelCrashAnimation();
-    this.animationProgress = 0;
     this.crashType = obstacleType; // 'water', 'rock', 'gate', or 'outOfBounds'
-    const self = this;
+    const origin = this.crashOrigin || { x: this.player.x, y: this.player.y };
+    this.renderer.startCrash(obstacleType, origin, this.crashTarget || origin);
+    if (obstacleType === 'water') soundEngine.playSplash();
+    else soundEngine.playBump();
+
     const generation = this.crashAnimationGeneration;
+    const startedAt = performance.now();
     let frames = 0;
-
-    function crashLoop() {
-      if (generation !== self.crashAnimationGeneration) return;
-      if (frames < 30) {
-        frames++;
-        self.drawCrash(frames);
-        self.crashAnimationFrame = requestAnimationFrame(crashLoop);
-      } else {
-        self.crashAnimationFrame = null;
-        self.crashType = null;
-        self.loadLevel(self.currentLevelIdx);
+    const tick = now => {
+      if (generation !== this.crashAnimationGeneration) return;
+      frames++;
+      this.draw();
+      if (frames < 90 && now - startedAt < 1200) {
+        this.crashAnimationFrame = requestAnimationFrame(tick);
+        return;
       }
-    }
-    this.crashAnimationFrame = requestAnimationFrame(crashLoop);
-  }
-
-  drawCrash(frames) {
-    const center = this.tileSize / 2;
-    const px = this.player.x * this.tileSize + center;
-    const py = this.player.y * this.tileSize + center;
-
-    this.ctx.save();
-
-    if (this.crashType === 'water') {
-      // Drowning animation: spin and scale down
-      this.draw(); // draw normal scene first
-      this.ctx.translate(px, py);
-      this.ctx.rotate(frames * 0.25);
-      const scale = Math.max(0, 1 - frames / 30);
-      this.ctx.scale(scale, scale);
-      this.ctx.translate(-px, -py);
-      this.drawPlayer(px, py, false);
-    } else {
-      // Rock/gate/outOfBounds shake
-      const shakeX = (Math.random() - 0.5) * 8;
-      const shakeY = (Math.random() - 0.5) * 8;
-      this.ctx.translate(shakeX, shakeY);
-      this.draw(); // draw normal scene with shake
-      this.ctx.translate(-shakeX, -shakeY);
-      // Draw player override as dizzy (stars around head)
-      this.drawPlayer(px + shakeX, py + shakeY, true);
-    }
-    this.ctx.restore();
-
-    // Red tint flash
-    this.ctx.fillStyle = `rgba(239, 68, 68, ${Math.max(0, 0.4 - frames * 0.015)})`;
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      this.crashAnimationFrame = null;
+      this.crashType = null;
+    };
+    this.crashAnimationFrame = requestAnimationFrame(tick);
   }
 
   animate() {
@@ -2742,20 +2691,22 @@ export class Game {
       if (!self.isRunning || generation !== self.executionGeneration) return;
       const elapsed = time - start;
       const progress = Math.min(1, elapsed / (speed * 0.8)); // Leave 20% buffer
+      const glide = easeInOutSine(progress);
+      const turn = easeOutBackSoft(progress);
 
       self.animationProgress = progress;
-      self.player.animX = startX + (self.player.x - startX) * progress;
-      self.player.animY = startY + (self.player.y - startY) * progress;
-      self.player.animRotation = startRot + (targetRot - startRot) * progress;
+      self.player.animX = startX + (self.player.x - startX) * glide;
+      self.player.animY = startY + (self.player.y - startY) * glide;
+      self.player.animRotation = startRot + (targetRot - startRot) * turn;
 
       // Animate turtles
       if (self.turtles) {
         for (let i = 0; i < self.turtles.length; i++) {
           const t = self.turtles[i];
           const state = turtleAnimStates[i];
-          t.animX = state.startX + (t.x - state.startX) * progress;
-          t.animY = state.startY + (t.y - state.startY) * progress;
-          t.animRotation = state.startRot + (state.targetRot - state.startRot) * progress;
+          t.animX = state.startX + (t.x - state.startX) * glide;
+          t.animY = state.startY + (t.y - state.startY) * glide;
+          t.animRotation = state.startRot + (state.targetRot - state.startRot) * turn;
         }
       }
 
@@ -2800,11 +2751,8 @@ export class Game {
     // Check if player is on a water cell with a submerged turtle
     const currentCell = this.gridData[this.player.y][this.player.x];
     if (currentCell === '~' && !this.isWalkableCell(this.player.x, this.player.y)) {
-      this.log(this.getTurtleDrownMessage(), "error");
-      soundEngine.playFail();
       this.isRunning = false;
-      this.recordFailure();
-      this.triggerCrashAnimation('water');
+      this.failAt(this.getTurtleDrownMessage(), 'water');
       if (this.onExecutionFinished) {
         this.onExecutionFinished();
       }
@@ -2818,7 +2766,8 @@ export class Game {
     if (atStar && uncollected.length === 0 && this.keys.every(key => key.collected)) {
       if (this.scenarioIndex < (this.level.scenarios?.length || 0)) {
         const nextScenario = this.scenarioIndex + 1;
-        this.log(`Parkur ${nextScenario} geçti. Aynı kod parkur ${nextScenario + 1} üzerinde deneniyor.`, 'success');
+        this.log(`Parkur ${nextScenario} tamam. Aynı kodu parkur ${nextScenario + 1} üzerinde deniyorum.`, 'success');
+        soundEngine.playScenario();
         this.loadLevel(this.currentLevelIdx, nextScenario);
         this.isRunning = true;
         this.currentQueueIdx = 0;
@@ -2857,21 +2806,19 @@ export class Game {
         });
       }
     } else {
+      let message;
       if (!atStar) {
-        this.log(this.getRandomMessage([
-          "Mojo sandığa ulaşamadı! 📦 Rotanı gözden geçir, hedefe doğru yönlendir.",
-          "Hedefe ulaşılamadı! 🎯 Mojo'nun son konumunu kontrol et, birkaç adım eksik olabilir.",
-          "Sandık hâlâ uzakta! 🗺️ Kodu gözden geçirip doğru yöne dönmeyi dene."
-        ]), "error");
+        message = this.getRandomMessage([
+          'Kod bitti ama sandığa ulaşamadım. Durduğum yere bak: birkaç adım ya da bir dönüş eksik olabilir.',
+          'Komutlar bitti, sandık hâlâ ileride. İzimi takip edip rotanın nerede ayrıldığını bulalım.'
+        ]);
       } else if (uncollected.length > 0) {
-        this.log(this.getRandomMessage([
-          `Hedefe vardın ama ${uncollected.length} muz yolda kaldı! 🍌 Rotanı değiştir.`,
-          `Sandığa ulaştın ama ${uncollected.length} muz toplanmadı! 🍌 Tüm muzlardan geç.`,
-          `Neredeyse! Sadece ${uncollected.length} muz eksik. 🍌 Muzların üzerinden geçerek topla!`
-        ]), "error");
+        message = `Sandığa vardım ama ${uncollected.length} muz geride kaldı. Rotayı muzların üzerinden geçirelim.`;
       } else {
-        this.log('Sandıktasın ama anahtarlar eksik. Tüm anahtarları toplayıp geri gel.', 'error');
+        message = 'Sandıktayım ama anahtarlar eksik. Tüm anahtarları toplayıp gelelim.';
       }
+      this.log(message, 'error');
+      this.renderer.markStuck();
       soundEngine.playFail();
       this.recordFailure();
       this.isRunning = false;
@@ -2905,939 +2852,10 @@ export class Game {
   }
 
   draw() {
-    const isLight = document.body.classList.contains('light-theme');
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-    // 1. Draw Ground Tiles & Grid lines
-    for (let y = 0; y < this.gridHeight; y++) {
-      for (let x = 0; x < this.gridWidth; x++) {
-        const px = x * this.tileSize;
-        const py = y * this.tileSize;
-
-        // Draw basic grass block
-        if (isLight) {
-          this.ctx.fillStyle = (x + y) % 2 === 0 ? '#e2f5ea' : '#d0eedd';
-        } else {
-          this.ctx.fillStyle = (x + y) % 2 === 0 ? '#112217' : '#0c1a11';
-        }
-        this.ctx.fillRect(px, py, this.tileSize, this.tileSize);
-
-        // Soft grid outline
-        this.ctx.strokeStyle = isLight ? 'rgba(16, 185, 129, 0.08)' : 'rgba(16, 185, 129, 0.04)';
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(px, py, this.tileSize, this.tileSize);
-
-        // Draw cell items
-        const cell = this.gridData[y][x];
-        if (cell === '#') {
-          this.drawRock(px, py);
-        } else if (cell === '~') {
-          this.drawWater(px, py);
-        } else if (cell === 'G') {
-          this.drawGate(px, py, this.hasKeyCollected());
-        } else if (cell === '=') {
-          this.drawWater(px, py);
-          this.drawBridge(px, py);
-        } else if (cell === 'L') {
-          this.drawWater(px, py);
-          this.drawLilypad(px, py);
-        }
-      }
-    }
-
-    // 1.4 Shade the padding so the designed board reads as an island
-    this.drawBoardFrame(isLight);
-
-    // 1.45 Draw the trail Mojo has actually walked this attempt
-    this.drawTrail(isLight);
-
-    // 1.5 Draw dynamic turtles
-    if (this.turtles) {
-      for (const t of this.turtles) {
-        this.drawTurtle(t.animX * this.tileSize, t.animY * this.tileSize, t.animRotation, t.phase || 0);
-      }
-    }
-
-    // 2. Draw Target Star/Chest
-    this.drawStar(this.starTile.x * this.tileSize, this.starTile.y * this.tileSize);
-
-    // 3. Draw Active Bananas
-    for (const b of this.bananas) {
-      if (!b.collected) {
-        this.drawBanana(b.x * this.tileSize, b.y * this.tileSize);
-      }
-    }
-
-    // 4. Draw Active Keys
-    for (const k of this.keys) {
-      if (!k.collected) {
-        this.drawKey(k.x * this.tileSize, k.y * this.tileSize);
-      }
-    }
-
-    // 5. Draw Player (Mojo)
-    if (this.crashType === null) {
-      this.drawPlayer();
-    }
-
-    // 6. Draw flying key if active
-    if (this.flyingKey) {
-      this.flyingKey.progress = Math.min(1, this.flyingKey.progress + 0.04);
-      const kx = this.flyingKey.startX * this.tileSize + (this.flyingKey.targetX - this.flyingKey.startX) * this.flyingKey.progress * this.tileSize;
-      const ky = this.flyingKey.startY * this.tileSize + (this.flyingKey.targetY - this.flyingKey.startY) * this.flyingKey.progress * this.tileSize;
-      this.drawKey(kx, ky);
-      if (this.flyingKey.progress >= 1) {
-        this.flyingKey = null;
-      }
-    }
-
-    // 7. Update and draw particles
-    for (let i = this.particles.length - 1; i >= 0; i--) {
-      const p = this.particles[i];
-      p.life++;
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.06; // gravity
-      p.alpha = Math.max(0, 1 - p.life / p.maxLife);
-
-      this.ctx.save();
-      this.ctx.globalAlpha = p.alpha;
-      this.ctx.fillStyle = p.color;
-      this.ctx.beginPath();
-      this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.ctx.restore();
-
-      if (p.life >= p.maxLife) {
-        this.particles.splice(i, 1);
-      }
-    }
-
-    // Continuously spawn victory fanfare particles if active
-    if (this.showVictoryFanfare && Math.random() < 0.25) {
-      this.spawnVictoryParticles();
-    }
-
-    // 8. Draw Grid Coordinates HUD (Numbers along borders)
-    this.drawCoordinatesHUD();
-
-    // 9. Draw Ruler Tool Overlay
-    if (this.rulerActive && this.hoveredCell) {
-      this.drawRulerOverlay();
-    }
-  }
-
-  // Padding cells exist only to frame a compact mission; a soft wash keeps
-  // them from looking like ground the player forgot to use.
-  drawBoardFrame(isLight) {
-    if (!this.playArea) return;
-    const { x, y, width, height } = this.playArea;
-    if (width >= this.gridWidth && height >= this.gridHeight) return;
-
-    const size = this.tileSize;
-    this.ctx.save();
-    this.ctx.fillStyle = isLight ? 'rgba(15, 60, 40, 0.10)' : 'rgba(0, 0, 0, 0.42)';
-    this.ctx.beginPath();
-    this.ctx.rect(0, 0, this.canvas.width, this.canvas.height);
-    this.ctx.rect(x * size, y * size, width * size, height * size);
-    this.ctx.fill('evenodd');
-
-    this.ctx.strokeStyle = isLight ? 'rgba(5, 150, 105, 0.30)' : 'rgba(16, 185, 129, 0.28)';
-    this.ctx.lineWidth = 2;
-    this.ctx.setLineDash([6, 6]);
-    this.ctx.strokeRect(x * size, y * size, width * size, height * size);
-    this.ctx.restore();
-  }
-
-  // A fading ribbon of the route just executed. Seeing the actual path is the
-  // fastest way to spot where an algorithm went wrong.
-  drawTrail(isLight) {
-    if (!this.trail || this.trail.length < 2) return;
-    const size = this.tileSize;
-    const half = size / 2;
-
-    this.ctx.save();
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
-
-    for (let i = 1; i < this.trail.length; i++) {
-      const from = this.trail[i - 1];
-      const to = this.trail[i];
-      // Newer segments are brighter, so direction of travel is readable.
-      const freshness = i / this.trail.length;
-      this.ctx.strokeStyle = isLight
-        ? `rgba(5, 150, 105, ${0.10 + freshness * 0.30})`
-        : `rgba(52, 211, 153, ${0.10 + freshness * 0.35})`;
-      this.ctx.lineWidth = 3 + freshness * 3;
-      this.ctx.beginPath();
-      this.ctx.moveTo(from.x * size + half, from.y * size + half);
-      this.ctx.lineTo(to.x * size + half, to.y * size + half);
-      this.ctx.stroke();
-    }
-
-    this.ctx.restore();
-  }
-
-  drawCoordinatesHUD() {
-    const isLight = document.body.classList.contains('light-theme');
-    this.ctx.save();
-    this.ctx.font = 'bold 9px monospace';
-    this.ctx.fillStyle = isLight ? 'rgba(5, 150, 105, 0.45)' : 'rgba(16, 185, 129, 0.35)';
-
-    // Draw column numbers (1 to 20) at top border
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'top';
-    for (let x = 0; x < this.gridWidth; x++) {
-      const px = x * this.tileSize + this.tileSize / 2;
-      this.ctx.fillText(x + 1, px, 4);
-    }
-
-    // Draw row letters (A to L) at left border
-    this.ctx.textAlign = 'left';
-    this.ctx.textBaseline = 'middle';
-    const alphabet = 'ABCDEFGHIJKL';
-    for (let y = 0; y < this.gridHeight; y++) {
-      const py = y * this.tileSize + this.tileSize / 2;
-      this.ctx.fillText(alphabet[y] || y, 4, py);
-    }
-    this.ctx.restore();
-  }
-
-  drawRock(x, y) {
-    const isLight = document.body.classList.contains('light-theme');
-    const padding = 6;
-    const size = this.tileSize - padding * 2;
-    this.ctx.fillStyle = isLight ? '#94a3b8' : '#4b5563'; // Slate grey rock
-    this.ctx.strokeStyle = isLight ? '#cbd5e1' : '#374151';
-    this.ctx.lineWidth = 2;
-
-    // Smooth rounded stone path
-    this.ctx.beginPath();
-    this.ctx.roundRect(x + padding, y + padding, size, size, 8);
-    this.ctx.fill();
-    this.ctx.stroke();
-
-    // Rock detail highlights
-    this.ctx.fillStyle = isLight ? '#cbd5e1' : '#6b7280';
-    this.ctx.beginPath();
-    this.ctx.arc(x + padding + 15, y + padding + 15, 6, 0, Math.PI * 2);
-    this.ctx.fill();
-  }
-
-  drawWater(x, y) {
-    const isLight = document.body.classList.contains('light-theme');
-    const padding = 2;
-    const size = this.tileSize - padding * 2;
-    // Cyan water block
-    this.ctx.fillStyle = isLight ? '#bae6fd' : '#0f766e';
-    this.ctx.fillRect(x + padding, y + padding, size, size);
-
-    // Only animate water waves if level.id > 20
-    const shouldAnimate = this.level && this.level.id > 20;
-    const time = shouldAnimate ? performance.now() * 0.003 : 0;
-    const waveOffset = Math.sin(time + x + y) * 2.5;
-
-    // Draw wavy lines
-    this.ctx.strokeStyle = isLight ? '#38bdf8' : '#14b8a6';
-    this.ctx.lineWidth = 2;
-    this.ctx.lineCap = 'round';
-
-    this.ctx.beginPath();
-    this.ctx.moveTo(x + 10 + waveOffset, y + 25);
-    this.ctx.bezierCurveTo(x + 20 + waveOffset, y + 20, x + 30 + waveOffset, y + 30, x + 40 + waveOffset, y + 25);
-    this.ctx.stroke();
-
-    this.ctx.beginPath();
-    this.ctx.moveTo(x + 20 - waveOffset, y + 45);
-    this.ctx.bezierCurveTo(x + 30 - waveOffset, y + 40, x + 40 - waveOffset, y + 50, x + 50 - waveOffset, y + 45);
-    this.ctx.stroke();
-  }
-
-  drawBridge(x, y) {
-    const isLight = document.body.classList.contains('light-theme');
-    this.ctx.save();
-
-    // Convert pixel coordinates to grid indexes
-    const gridX = Math.round(x / this.tileSize);
-    const gridY = Math.round(y / this.tileSize);
-
-    // Check neighbors to determine direction
-    let isVertical = false;
-    const upCell = gridY > 0 ? this.gridData[gridY - 1][gridX] : '#';
-    const downCell = gridY < this.gridHeight - 1 ? this.gridData[gridY + 1][gridX] : '#';
-    const leftCell = gridX > 0 ? this.gridData[gridY][gridX - 1] : '#';
-    const rightCell = gridX < this.gridWidth - 1 ? this.gridData[gridY][gridX + 1] : '#';
-
-    // If there is water left and right, it's likely a vertical bridge spanning north-south
-    if ((leftCell === '~' || leftCell === '#') && (rightCell === '~' || rightCell === '#') && upCell !== '~' && downCell !== '~') {
-      isVertical = true;
-    }
-
-    const plankColor = isLight ? '#b45309' : '#78350f'; // Warm brown wood
-    const darkWood = isLight ? '#78350f' : '#451a03';
-    const ropeColor = isLight ? '#d97706' : '#92400e';
-
-    if (isVertical) {
-      // Draw handrail ropes on left and right
-      this.ctx.strokeStyle = ropeColor;
-      this.ctx.lineWidth = 3;
-      this.ctx.beginPath();
-      this.ctx.moveTo(x + 6, y);
-      this.ctx.lineTo(x + 6, y + this.tileSize);
-      this.ctx.moveTo(x + this.tileSize - 6, y);
-      this.ctx.lineTo(x + this.tileSize - 6, y + this.tileSize);
-      this.ctx.stroke();
-
-      // Draw horizontal wooden planks
-      this.ctx.fillStyle = plankColor;
-      this.ctx.strokeStyle = darkWood;
-      this.ctx.lineWidth = 1;
-
-      const plankCount = 4;
-      const plankHeight = (this.tileSize - 8) / plankCount;
-      for (let i = 0; i < plankCount; i++) {
-        const py = y + 4 + i * plankHeight;
-        this.ctx.fillRect(x + 8, py + 1, this.tileSize - 16, plankHeight - 2);
-        this.ctx.strokeRect(x + 8, py + 1, this.tileSize - 16, plankHeight - 2);
-      }
-    } else {
-      // Horizontal bridge (default)
-      // Draw handrail ropes on top and bottom
-      this.ctx.strokeStyle = ropeColor;
-      this.ctx.lineWidth = 3;
-      this.ctx.beginPath();
-      this.ctx.moveTo(x, y + 6);
-      this.ctx.lineTo(x + this.tileSize, y + 6);
-      this.ctx.moveTo(x, y + this.tileSize - 6);
-      this.ctx.lineTo(x + this.tileSize, y + this.tileSize - 6);
-      this.ctx.stroke();
-
-      // Draw vertical wooden planks
-      this.ctx.fillStyle = plankColor;
-      this.ctx.strokeStyle = darkWood;
-      this.ctx.lineWidth = 1;
-
-      const plankCount = 4;
-      const plankWidth = (this.tileSize - 8) / plankCount;
-      for (let i = 0; i < plankCount; i++) {
-        const px = x + 4 + i * plankWidth;
-        this.ctx.fillRect(px + 1, y + 8, plankWidth - 2, this.tileSize - 16);
-        this.ctx.strokeRect(px + 1, y + 8, plankWidth - 2, this.tileSize - 16);
-      }
-    }
-    this.ctx.restore();
-  }
-
-  drawTurtle(x, y, rotation = 0, phase = 0) {
-    const center = this.tileSize / 2;
-    const tx = x + center;
-    const ty = y + center;
-
-    // Check if emerged based on step count
-    // If the level allows turtle control, they are always surfaced
-    const isControllable = levelPilotsTurtles(this.level);
-    const step = this.isRunning ? this.executionStepCount : 0;
-    const isEmerged = isControllable ? true : ((step + phase) % 4 < 2);
-
-    this.ctx.save();
-
-    // Apply turtle transformations
-    this.ctx.translate(tx, ty);
-
-    if (!isEmerged) {
-      this.ctx.globalAlpha = 0.3;
-      this.ctx.scale(0.8, 0.8);
-    }
-
-    // Apply direction rotation
-    this.ctx.rotate(rotation);
-
-    // Move back to draw relative to 0,0
-    this.ctx.translate(-tx, -ty);
-
-    const time = performance.now() * 0.005;
-    // Flippers paddling animation
-    const paddleOffset = Math.sin(time) * 0.2;
-
-    // Draw flippers
-    this.ctx.fillStyle = '#10b981'; // Green flippers
-    this.ctx.strokeStyle = '#047857';
-    this.ctx.lineWidth = 1.5;
-
-    // Front Left Flipper
-    this.ctx.save();
-    this.ctx.translate(tx - 12, ty - 12);
-    this.ctx.rotate(-Math.PI / 4 + paddleOffset);
-    this.ctx.beginPath();
-    this.ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.stroke();
-    this.ctx.restore();
-
-    // Front Right Flipper
-    this.ctx.save();
-    this.ctx.translate(tx + 12, ty - 12);
-    this.ctx.rotate(Math.PI / 4 - paddleOffset);
-    this.ctx.beginPath();
-    this.ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.stroke();
-    this.ctx.restore();
-
-    // Back Left Flipper
-    this.ctx.save();
-    this.ctx.translate(tx - 10, ty + 12);
-    this.ctx.rotate(-Math.PI * 3 / 4 - paddleOffset * 0.5);
-    this.ctx.beginPath();
-    this.ctx.ellipse(0, 0, 8, 4, 0, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.stroke();
-    this.ctx.restore();
-
-    // Back Right Flipper
-    this.ctx.save();
-    this.ctx.translate(tx + 10, ty + 12);
-    this.ctx.rotate(Math.PI * 3 / 4 + paddleOffset * 0.5);
-    this.ctx.beginPath();
-    this.ctx.ellipse(0, 0, 8, 4, 0, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.stroke();
-    this.ctx.restore();
-
-    // Draw Tail
-    this.ctx.fillStyle = '#10b981';
-    this.ctx.beginPath();
-    this.ctx.moveTo(tx - 3, ty + 16);
-    this.ctx.lineTo(tx, ty + 22);
-    this.ctx.lineTo(tx + 3, ty + 16);
-    this.ctx.closePath();
-    this.ctx.fill();
-    this.ctx.stroke();
-
-    // Draw Head
-    const headWiggle = Math.sin(time * 0.5) * 1.5;
-    this.ctx.save();
-    this.ctx.translate(tx + headWiggle, ty - 18);
-    this.ctx.beginPath();
-    this.ctx.arc(0, 0, 6, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.stroke();
-    // Eyes
-    this.ctx.fillStyle = '#000';
-    this.ctx.beginPath();
-    this.ctx.arc(-2, -2, 1, 0, Math.PI * 2);
-    this.ctx.arc(2, -2, 1, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.restore();
-
-    // Draw Shell (Carapace)
-    this.ctx.fillStyle = '#047857'; // Dark green shell
-    this.ctx.strokeStyle = '#064e3b';
-    this.ctx.lineWidth = 2;
-    this.ctx.beginPath();
-    this.ctx.arc(tx, ty, 15, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.stroke();
-
-    // Shell details / Hex patterns
-    this.ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
-    this.ctx.lineWidth = 1;
-    this.ctx.beginPath();
-    // Central hexagon
-    for (let i = 0; i < 6; i++) {
-      const angle = (i * Math.PI) / 3;
-      const hx = tx + Math.cos(angle) * 6;
-      const hy = ty + Math.sin(angle) * 6;
-      if (i === 0) this.ctx.moveTo(hx, hy);
-      else this.ctx.lineTo(hx, hy);
-    }
-    this.ctx.closePath();
-    this.ctx.stroke();
-
-    // Radials from center hex to outer border
-    this.ctx.beginPath();
-    for (let i = 0; i < 6; i++) {
-      const angle = (i * Math.PI) / 3;
-      this.ctx.moveTo(tx + Math.cos(angle) * 6, ty + Math.sin(angle) * 6);
-      this.ctx.lineTo(tx + Math.cos(angle) * 15, ty + Math.sin(angle) * 15);
-    }
-    this.ctx.stroke();
-
-    this.ctx.restore();
-  }
-
-  drawLilypad(x, y) {
-    const center = this.tileSize / 2;
-    const lx = x + center;
-    const ly = y + center;
-
-    this.ctx.save();
-    this.ctx.fillStyle = '#10b981'; // vibrant green leaf
-    this.ctx.strokeStyle = '#047857';
-    this.ctx.lineWidth = 1.5;
-
-    // Draw circle with a pie slice missing (typical lilypad shape)
-    this.ctx.beginPath();
-    this.ctx.arc(lx, ly, 18, 0.3, Math.PI * 2 - 0.3);
-    this.ctx.lineTo(lx, ly);
-    this.ctx.closePath();
-    this.ctx.fill();
-    this.ctx.stroke();
-
-    // Leaf veins
-    this.ctx.strokeStyle = '#34d399';
-    this.ctx.lineWidth = 1;
-    this.ctx.beginPath();
-    this.ctx.moveTo(lx, ly);
-    this.ctx.lineTo(lx + Math.cos(0.8) * 16, ly + Math.sin(0.8) * 16);
-    this.ctx.moveTo(lx, ly);
-    this.ctx.lineTo(lx + Math.cos(2.2) * 16, ly + Math.sin(2.2) * 16);
-    this.ctx.moveTo(lx, ly);
-    this.ctx.lineTo(lx + Math.cos(3.8) * 16, ly + Math.sin(3.8) * 16);
-    this.ctx.moveTo(lx, ly);
-    this.ctx.lineTo(lx + Math.cos(5.2) * 16, ly + Math.sin(5.2) * 16);
-    this.ctx.stroke();
-
-    // Draw a small pink flower on top of the leaf to make it look extra premium!
-    this.ctx.fillStyle = '#f472b6'; // pink petal
-    this.ctx.strokeStyle = '#db2777';
-    const flowerX = lx + 4;
-    const flowerY = ly - 4;
-    for (let i = 0; i < 5; i++) {
-      const angle = (i * Math.PI * 2) / 5;
-      this.ctx.beginPath();
-      this.ctx.arc(flowerX + Math.cos(angle) * 4, flowerY + Math.sin(angle) * 4, 3, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.ctx.stroke();
-    }
-    this.ctx.fillStyle = '#fef08a'; // yellow center
-    this.ctx.beginPath();
-    this.ctx.arc(flowerX, flowerY, 2.5, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    this.ctx.restore();
-  }
-
-  drawBanana(x, y) {
-    const isLight = document.body.classList.contains('light-theme');
-    const center = this.tileSize / 2;
-    const bx = x + center;
-    const by = y + center;
-
-    // Glowing aura effect
-    const grad = this.ctx.createRadialGradient(bx, by, 4, bx, by, 22);
-    grad.addColorStop(0, isLight ? 'rgba(234, 179, 8, 0.4)' : 'rgba(253, 224, 71, 0.45)');
-    grad.addColorStop(1, 'rgba(253, 224, 71, 0)');
-    this.ctx.fillStyle = grad;
-    this.ctx.beginPath();
-    this.ctx.arc(bx, by, 24, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    // Draw the processed real banana illustration if loaded
-    if (this.bananaImgProcessed) {
-      this.ctx.save();
-      // Center the banana inside the tile and scale down to 48x48
-      const size = this.tileSize - 16;
-      this.ctx.translate(bx, by);
-      this.ctx.rotate(-Math.PI / 12); // subtle tilt for natural look
-      this.ctx.drawImage(this.bananaImgProcessed, -size / 2, -size / 2, size, size);
-      this.ctx.restore();
-      return;
-    }
-
-    // Fallback: Draw realistic thick banana shape (vector code)
-    this.ctx.save();
-    // Center it on tile and rotate slightly for a natural look
-    this.ctx.translate(bx, by);
-    this.ctx.rotate(-Math.PI / 6);
-
-    // Outer skin (Yellow)
-    this.ctx.fillStyle = '#facc15'; // bright banana yellow
-    this.ctx.strokeStyle = '#eab308'; // darker border
-    this.ctx.lineWidth = 1.5;
-
-    this.ctx.beginPath();
-    // Start at stem base
-    this.ctx.moveTo(-10, -7);
-    // Outer curve to tip
-    this.ctx.quadraticCurveTo(8, -12, 12, 6);
-    // Tip edge
-    this.ctx.lineTo(10, 8);
-    // Inner curve back to stem base
-    this.ctx.quadraticCurveTo(4, -4, -6, -4);
-    this.ctx.closePath();
-    this.ctx.fill();
-    this.ctx.stroke();
-
-    // Volumetric 3D highlight (light yellow line inside body)
-    this.ctx.strokeStyle = '#fef08a';
-    this.ctx.lineWidth = 2.5;
-    this.ctx.lineCap = 'round';
-    this.ctx.beginPath();
-    this.ctx.moveTo(-6, -5);
-    this.ctx.quadraticCurveTo(4, -8, 8, 2);
-    this.ctx.stroke();
-
-    // Dark stem at base (Brown)
-    this.ctx.fillStyle = '#78350f';
-    this.ctx.beginPath();
-    this.ctx.moveTo(-10, -7);
-    this.ctx.lineTo(-14, -10);
-    this.ctx.lineTo(-11, -12);
-    this.ctx.lineTo(-6, -9);
-    this.ctx.closePath();
-    this.ctx.fill();
-
-    // Dark tip at end (Brown)
-    this.ctx.fillStyle = '#451a03';
-    this.ctx.beginPath();
-    this.ctx.moveTo(12, 6);
-    this.ctx.lineTo(13.5, 9.5);
-    this.ctx.lineTo(10, 8);
-    this.ctx.closePath();
-    this.ctx.fill();
-
-    this.ctx.restore();
-  }
-
-  makeTransparent(img) {
-    const canvas = document.createElement('canvas');
-    canvas.width = img.naturalWidth || img.width;
-    canvas.height = img.naturalHeight || img.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    try {
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imgData.data;
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i+1];
-        const b = data[i+2];
-        const a = data[i+3];
-        // Key out white/light gray background (R, G, B > 240)
-        // Also handle the case where it might already be transparent
-        if (a > 0 && r > 240 && g > 240 && b > 240) {
-          data[i+3] = 0;
-        } else if (a > 0 && r > 220 && g > 220 && b > 220) {
-          // Softly feather alpha for smoother edges near light colors
-          const maxVal = Math.max(r, g, b);
-          const ratio = (maxVal - 220) / 20; // 0 to 1
-          data[i+3] = Math.max(0, Math.min(255, Math.round((1 - ratio) * 255)));
-        }
-      }
-      ctx.putImageData(imgData, 0, 0);
-    } catch (e) {
-      console.warn("Could not process image transparency (likely CORS):", e);
-      return img;
-    }
-    return canvas;
-  }
-
-  drawStar(x, y) {
-    const isLight = document.body.classList.contains('light-theme');
-    const center = this.tileSize / 2;
-    const sx = x + center;
-    const sy = y + center;
-
-    // Pulse effect
-    const time = performance.now() * 0.005;
-    const glowRadius = 18 + Math.sin(time) * 4;
-
-    const grad = this.ctx.createRadialGradient(sx, sy, 3, sx, sy, glowRadius);
-    grad.addColorStop(0, isLight ? 'rgba(234, 88, 12, 0.4)' : 'rgba(249, 115, 22, 0.5)'); // Orange gold glow
-    grad.addColorStop(1, 'rgba(249, 115, 22, 0)');
-    this.ctx.fillStyle = grad;
-    this.ctx.beginPath();
-    this.ctx.arc(sx, sy, glowRadius + 4, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    // Draw Chest/Star symbol
-    this.ctx.fillStyle = isLight ? '#ea580c' : '#f97316';
-    this.ctx.strokeStyle = '#fff';
-    this.ctx.lineWidth = 2;
-    this.ctx.beginPath();
-
-    // Draw simple treasure chest
-    const w = 24;
-    const h = 20;
-    this.ctx.roundRect(sx - w/2, sy - h/2, w, h, 3);
-    this.ctx.fill();
-    this.ctx.stroke();
-
-    // Chest lock/metal strap
-    this.ctx.fillStyle = '#eab308';
-    this.ctx.fillRect(sx - 3, sy - 2, 6, 6);
-    this.ctx.fillStyle = isLight ? '#fff' : '#1e293b';
-    this.ctx.fillRect(sx - 1, sy + 1, 2, 2);
-  }
-
-  drawKey(x, y) {
-    const center = this.tileSize / 2;
-    const kx = x + center;
-    const ky = y + center;
-
-    // Glowing aura effect for key
-    const grad = this.ctx.createRadialGradient(kx, ky, 2, kx, ky, 16);
-    grad.addColorStop(0, 'rgba(245, 158, 11, 0.4)'); // Amber glow
-    grad.addColorStop(1, 'rgba(245, 158, 11, 0)');
-    this.ctx.fillStyle = grad;
-    this.ctx.beginPath();
-    this.ctx.arc(kx, ky, 18, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    // Key body (Gold)
-    this.ctx.fillStyle = '#eab308';
-    this.ctx.strokeStyle = '#d97706';
-    this.ctx.lineWidth = 1.5;
-
-    // Key head ring
-    this.ctx.beginPath();
-    this.ctx.arc(kx - 6, ky, 5, 0, Math.PI * 2);
-    this.ctx.fill();
-    this.ctx.stroke();
-
-    // Inner hole in ring (draw peach circle inside gold ring to create loop)
-    this.ctx.fillStyle = document.body.classList.contains('light-theme') ? '#edf7f1' : '#112217';
-    this.ctx.beginPath();
-    this.ctx.arc(kx - 6, ky, 2, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    // Key shaft
-    this.ctx.fillStyle = '#eab308';
-    this.ctx.fillRect(kx - 1, ky - 2, 12, 4);
-    this.ctx.strokeRect(kx - 1, ky - 2, 12, 4);
-
-    // Key teeth
-    this.ctx.fillRect(kx + 7, ky + 1, 2, 3);
-    this.ctx.fillRect(kx + 9, ky + 1, 2, 3);
-  }
-
-  drawGate(x, y, isUnlocked) {
-    const padding = 4;
-    const size = this.tileSize - padding * 2;
-    const gx = x + padding;
-    const gy = y + padding;
-
-    // Base post / gate frame (Brown wood fence)
-    this.ctx.fillStyle = isUnlocked ? 'rgba(120, 53, 15, 0.3)' : '#78350f';
-    this.ctx.strokeStyle = isUnlocked ? 'rgba(67, 20, 7, 0.3)' : '#451a03';
-    this.ctx.lineWidth = 2;
-
-    this.ctx.beginPath();
-    this.ctx.roundRect(gx, gy + 4, size, size - 8, 4);
-    this.ctx.fill();
-    this.ctx.stroke();
-
-    // Draw grid bars
-    this.ctx.strokeStyle = isUnlocked ? 'rgba(255, 255, 255, 0.2)' : '#a16207';
-    this.ctx.lineWidth = 2;
-    this.ctx.beginPath();
-    this.ctx.moveTo(gx + 12, gy + 4);
-    this.ctx.lineTo(gx + 12, gy + size - 4);
-    this.ctx.moveTo(gx + size - 12, gy + 4);
-    this.ctx.lineTo(gx + size - 12, gy + size - 4);
-    this.ctx.moveTo(gx, gy + size / 2);
-    this.ctx.lineTo(gx + size, gy + size / 2);
-    this.ctx.stroke();
-
-    // Padlock drawing
-    const cx = x + this.tileSize / 2;
-    const cy = y + this.tileSize / 2;
-
-    if (isUnlocked) {
-      // Draw small green indicator
-      this.ctx.fillStyle = '#10b981';
-      this.ctx.beginPath();
-      this.ctx.arc(cx, cy, 5, 0, Math.PI * 2);
-      this.ctx.fill();
-    } else {
-      // Draw Lock body
-      this.ctx.fillStyle = '#94a3b8'; // silver padlock
-      this.ctx.strokeStyle = '#475569';
-      this.ctx.lineWidth = 1.5;
-      this.ctx.beginPath();
-      this.ctx.roundRect(cx - 6, cy - 2, 12, 10, 2);
-      this.ctx.fill();
-      this.ctx.stroke();
-
-      // Lock shackle (loop)
-      this.ctx.beginPath();
-      this.ctx.arc(cx, cy - 2, 4, Math.PI, 0);
-      this.ctx.stroke();
-    }
-  }
-
-  drawRulerOverlay() {
-    const isLight = document.body.classList.contains('light-theme');
-    const t = this.tileSize;
-    const startX = this.player.x * t + t/2;
-    const startY = this.player.y * t + t/2;
-    const endX = this.hoveredCell.x * t + t/2;
-    const endY = this.hoveredCell.y * t + t/2;
-
-    // Highlight hovered cell
-    this.ctx.fillStyle = isLight ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.2)';
-    this.ctx.strokeStyle = '#10b981';
-    this.ctx.lineWidth = 2;
-    this.ctx.beginPath();
-    this.ctx.roundRect(this.hoveredCell.x * t + 3, this.hoveredCell.y * t + 3, t - 6, t - 6, 6);
-    this.ctx.fill();
-    this.ctx.stroke();
-
-    // Draw dotted line between player and target
-    this.ctx.save();
-    this.ctx.strokeStyle = '#10b981';
-    this.ctx.lineWidth = 2.5;
-    this.ctx.setLineDash([6, 4]);
-    this.ctx.beginPath();
-    this.ctx.moveTo(startX, startY);
-    this.ctx.lineTo(endX, endY);
-    this.ctx.stroke();
-    this.ctx.restore();
-
-    // Calculate distances
-    const diffX = Math.abs(this.hoveredCell.x - this.player.x);
-    const diffY = Math.abs(this.hoveredCell.y - this.player.y);
-    let distanceText = "";
-    if (diffX === 0 || diffY === 0) {
-      // Straight line distance
-      distanceText = `${diffX + diffY} adım`;
-    } else {
-      // Manhattan grid distances
-      distanceText = `↔ ${diffX}, ↕ ${diffY}`;
-    }
-
-    // Draw text badge at the center of the line
-    const midX = (startX + endX) / 2;
-    const midY = (startY + endY) / 2;
-
-    this.ctx.fillStyle = '#10b981';
-    this.ctx.beginPath();
-    this.ctx.roundRect(midX - 35, midY - 12, 70, 24, 6);
-    this.ctx.fill();
-
-    this.ctx.fillStyle = '#ffffff';
-    this.ctx.font = 'bold 12px sans-serif';
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
-    this.ctx.fillText(distanceText, midX, midY);
-  }
-
-  drawPlayer(xOverride = null, yOverride = null, isDizzy = false) {
-    const center = this.tileSize / 2;
-    const px = xOverride !== null ? xOverride : (this.player.animX * this.tileSize + center);
-    const py = yOverride !== null ? yOverride : (this.player.animY * this.tileSize + center);
-
-    this.ctx.save();
-    this.ctx.translate(px, py);
-    this.ctx.rotate(this.player.animRotation);
-
-    const time = performance.now() * 0.005;
-
-    // 1. Swaying Tail (using sine time if not dizzy)
-    this.ctx.strokeStyle = '#b45309';
-    this.ctx.lineWidth = 4;
-    this.ctx.lineCap = 'round';
-    this.ctx.beginPath();
-    this.ctx.moveTo(-12, 5);
-    const sway = isDizzy ? 0 : Math.sin(time * 2.5) * 5;
-    this.ctx.bezierCurveTo(-25, 12 + sway, -22, -15 + sway, -30, -5 + sway);
-    this.ctx.stroke();
-
-    // 2. Ears
-    this.ctx.fillStyle = '#b45309'; // Dark brown
-    this.ctx.beginPath();
-    this.ctx.arc(0, -16, 7, 0, Math.PI * 2); // Left ear
-    this.ctx.arc(0, 16, 7, 0, Math.PI * 2); // Right ear
-    this.ctx.fill();
-
-    this.ctx.fillStyle = '#fed7aa'; // Peach inner ear
-    this.ctx.beginPath();
-    this.ctx.arc(0, -16, 4, 0, Math.PI * 2);
-    this.ctx.arc(0, 16, 4, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    // 3. Body/Head
-    this.ctx.fillStyle = '#d97706'; // Medium brown body
-    this.ctx.beginPath();
-    this.ctx.arc(0, 0, 15, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    // 4. Face Mask (Face contour)
-    this.ctx.fillStyle = '#fed7aa'; // Peach face
-    this.ctx.beginPath();
-    this.ctx.arc(4, -5, 7, 0, Math.PI * 2);
-    this.ctx.arc(4, 5, 7, 0, Math.PI * 2);
-    this.ctx.arc(8, 0, 7, 0, Math.PI * 2);
-    this.ctx.fill();
-
-    // 5. Eyes
-    if (isDizzy) {
-      // Draw cross dizzy eyes
-      this.ctx.strokeStyle = '#0f172a';
-      this.ctx.lineWidth = 2;
-      // Left eye X
-      this.ctx.beginPath();
-      this.ctx.moveTo(5, -6); this.ctx.lineTo(9, -2);
-      this.ctx.moveTo(9, -6); this.ctx.lineTo(5, -2);
-      this.ctx.stroke();
-      // Right eye X
-      this.ctx.beginPath();
-      this.ctx.moveTo(5, 2); this.ctx.lineTo(9, 6);
-      this.ctx.moveTo(9, 2); this.ctx.lineTo(5, 6);
-      this.ctx.stroke();
-    } else {
-      // Blinking eyes using time
-      const isBlinking = Math.floor(time) % 5 === 0 && (time % 1 < 0.15);
-      this.ctx.fillStyle = '#0f172a'; // Dark eyes
-      if (isBlinking) {
-        this.ctx.strokeStyle = '#0f172a';
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.moveTo(5, -4); this.ctx.lineTo(9, -4);
-        this.ctx.moveTo(5, 4); this.ctx.lineTo(9, 4);
-        this.ctx.stroke();
-      } else {
-        this.ctx.beginPath();
-        this.ctx.arc(7, -4, 2, 0, Math.PI * 2);
-        this.ctx.arc(7, 4, 2, 0, Math.PI * 2);
-        this.ctx.fill();
-      }
-    }
-
-    // 6. Snout / Smile / Dizzy Mouth
-    this.ctx.strokeStyle = '#b45309';
-    this.ctx.lineWidth = 1;
-    this.ctx.beginPath();
-    if (isDizzy) {
-      // Dizzy wavy mouth
-      this.ctx.moveTo(7, -2);
-      this.ctx.quadraticCurveTo(8, 1, 9, -1);
-      this.ctx.quadraticCurveTo(10, 1, 11, 0);
-    } else {
-      this.ctx.arc(10, 0, 2, 0, Math.PI);
-    }
-    this.ctx.stroke();
-
-    this.ctx.restore();
-
-    // 7. Spinning dizzy stars above head
-    if (isDizzy) {
-      this.ctx.save();
-      const starsAngle = time * 7;
-      this.ctx.translate(px, py - 18);
-      this.ctx.rotate(starsAngle);
-      this.ctx.fillStyle = '#facc15';
-      for (let i = 0; i < 3; i++) {
-        const angle = (i * Math.PI * 2) / 3;
-        const sx = Math.cos(angle) * 8;
-        const sy = Math.sin(angle) * 4;
-        this.ctx.beginPath();
-        this.ctx.arc(sx, sy, 2, 0, Math.PI * 2);
-        this.ctx.fill();
-      }
-      this.ctx.restore();
-    }
+    // With the render loop running, the next animation frame paints the
+    // updated state; otherwise paint right away.
+    if (this.renderLoopActive) return;
+    this.renderer.render();
   }
 }
 
@@ -3851,39 +2869,66 @@ export const CHAPTER_SIZE = 20;
 export const CHAPTER_COUNT = 5;
 export const LEVEL_COUNT = CHAPTER_SIZE * CHAPTER_COUNT;
 
+// Each chapter is one island of the expedition. Name, colour, story and seal
+// live here only; the interface and the renderer read them from this table.
 export const CHAPTERS = [
   {
     id: 1,
+    world: 'Filiz Ormanı',
     name: 'Temel hareketler',
-    eyebrow: 'BÖLÜM 1 · TEMEL HAREKETLER',
+    eyebrow: 'ADA 1 · FİLİZ ORMANI',
+    glyph: 'leaf',
+    color: '#72d9a5',
+    story: 'Her büyük keşif bir adımla başlar.',
+    seal: 'Orman Kaşifi',
     summary: 'İlerle, dön, engelden kaçın ve ilk döngünü yaz.',
     teaches: ['ilerle', 'solaDon', 'sagaDon', 'tekrarla']
   },
   {
     id: 2,
-    name: 'Döngü & köprü',
-    eyebrow: 'BÖLÜM 2 · DÖNGÜLER & KÖPRÜLER',
+    world: 'Kemer Takımadaları',
+    name: 'Döngüler ve köprüler',
+    eyebrow: 'ADA 2 · KEMER TAKIMADALARI',
+    glyph: 'wave',
+    color: '#74cce8',
+    story: 'Suyun üzerinde aynı ritmi bul, tekrarın gücünü keşfet.',
+    seal: 'Köprü Mimarı',
     summary: 'Nehirleri köprüyle aş, tekrar eden kalıpları döngüye çevir.',
     teaches: ['adimla', 'tekrarla']
   },
   {
     id: 3,
-    name: 'Anahtar & nilüfer',
-    eyebrow: 'BÖLÜM 3 · ANAHTAR & NİLÜFER',
+    world: 'Nilüfer Tapınağı',
+    name: 'Anahtarlar ve nilüferler',
+    eyebrow: 'ADA 3 · NİLÜFER TAPINAĞI',
+    glyph: 'lotus',
+    color: '#c5a2ef',
+    story: 'Bazı yollar yalnızca bir kez açılır. Önce düşün, sonra geç.',
+    seal: 'Tapınak Koruyucusu',
     summary: 'Kilitli kapıları anahtarla aç, batan yapraklarda tek şansın var.',
     teaches: ['anahtar', 'nilufer']
   },
   {
     id: 4,
+    world: 'Gelgit Kıyıları',
     name: 'Zamanlama',
-    eyebrow: 'BÖLÜM 4 · ZAMANLAMA',
+    eyebrow: 'ADA 4 · GELGİT KIYILARI',
+    glyph: 'tide',
+    color: '#f4bd78',
+    story: 'Doğru adım kadar, doğru an da önemlidir.',
+    seal: 'Gelgit Ustası',
     summary: 'Dalan kaplumbağaları say, bekle ve doğru anda geç.',
     teaches: ['bekle', 'kaplumbaga.adimla']
   },
   {
     id: 5,
-    name: 'Koşullar & ustalık',
-    eyebrow: 'BÖLÜM 5 · KOŞULLAR & USTALIK',
+    world: 'Bilgelik Zirvesi',
+    name: 'Koşullar ve ustalık',
+    eyebrow: 'ADA 5 · BİLGELİK ZİRVESİ',
+    glyph: 'peak',
+    color: '#f1d782',
+    story: 'Haritalar değişir. İyi bir algoritma yolunu yine bulur.',
+    seal: 'Algoritma Ustası',
     summary: 'Kararlarını koda dönüştür: koşullar, koşullu döngüler ve aynı kodla farklı parkurlar.',
     teaches: ['ise', 'degilse', 'iken']
   }
