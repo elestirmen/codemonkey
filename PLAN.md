@@ -1,146 +1,135 @@
-# KodMaymunu v4 — Keşif Atlası
+# KodMaymunu v5 — Algoritma Adası
 
-Mojo adında bir maymunu kod yazarak yönlendirdiğin, sıralı komutlardan döngülere ve
-koşullara ve koşullu döngülere uzanan 100 görevlik bir web oyunu. Tarayıcıda çalışır,
-sunucu gerektirmez. 54 görev kavram odaklı parkurlarla yenilendi; son bölümde 35 ek
-harita, oyuncunun aynı programını farklı koşullarda sınar.
+Mojo adında bir maymunu Türkçe komutlarla programlayıp bütün muzları toplatarak
+sandığa ulaştırdığın, 5 ada ve 60 görevlik bir tarayıcı oyunu. Sunucu gerektirmez;
+statik dosyalar olarak çalışır.
 
-## Keşif sürümü
+## v5'te ne değişti (neden)
 
-- **Atlas:** Beş adanın görevleri, yıldızları, muhafız mühürleri ve ustalık rozetleri.
-- **30–40:** Tekrarlanan köprü/basamak motifleri; 32 ve 38'de negatif adımla
-  iskelelerden geri çıkma. Uzunluk değil, tekrarın fark edilmesi ödüllendirilir.
-- **49–60:** Yan yoldaki anahtar ve muzları toplama, gerçek kapı geçişleri,
-  tek kullanımlık yapraklara basmadan önce hedefleri sıralama.
-- **70–80:** Atlanamayan kaplumbağa geçişleri. Gelgit göstergesi bir sonraki
-  hareketin güvenli olup olmadığını gösterir. Finalde anahtar ve zamanlama birleşir.
-- **81–90:** Koşullar ve iç içe kararlar; aynı kod farklı kıyı ve sarmal haritalarda
-  çalışır. `onumdeGuvenliYolVar()` hem mevcut hem bir sonraki zaman adımını kontrol eder.
-- **91–100:** `iken(hedefteDegilim())` ile değişen uzunluklara uyarlanan algoritmalar.
-  100. görevin dört parkuru arasında iç içe bir tapınak sarmalı da bulunur.
-- **Yardım:** Üç kademeli ipucu, komut/sensör rehberi ve editörü değiştirmeden
-  incelenebilen örnek çözüm. Örneğin editöre aktarılması ayrı bir eylemdir.
-- **Ustalık:** Tamamlanan tüm parkurlar + üç yıldızlık satır hedefi + görevin
-  kavramı (`loop`, `branch`, `while`) için ayrı rozet. Normal yıldız akışı korunur.
+| Sorun (v4) | v5 çözümü |
+| --- | --- |
+| `ilerle()` ve `adimla(N)` aynı işi yapıyordu. | **Tek hareket komutu:** `ilerle(n)`; sayı verilmezse 1 kare. `adimla` yazan oyuncuya `ilerle(n)` önerilir. |
+| Haritalar koridordu; harita tek bir programı dayatıyordu. | **Açık adalar:** muzları istediğin sırayla toplarsın, birden çok rota vardır. Yıldızlar rotayı değil kodun kısalığını ölçer. Koşul adalarında aynı kod 2–3 farklı haritada (gelgit/parkur) çalışmak zorundadır; ezber rota işe yaramaz. |
+| Oyun ekranın küçük bir bölümündeydi. | **Geniş sahne:** sahne ekranın ~%70'i, tam yükseklik; kod paneli sağda. Telefonda sahne yüksekliği haritanın oranına göre ayarlanır. |
+| Zamanlamalı kaplumbağa, batan yaprak gibi gizli durum taşıyan mekanikler. | Kaldırıldı. Kurallar görünür ve deterministik: çimen/kum, ağaç/kaya, su, köprü, muz, anahtar, kapı, sandık. |
 
-### Tasarım referansları
+## Tasarım ilkeleri
 
-[CodeMonkey Coding Adventure](https://www.codemonkey.com/courses/coding-adventure/)
-sıralama, döngü, koşul ve hata ayıklamayı kademeli öğretir.
-[Lightbot'un eğitim yaklaşımı](https://lightbot.com/Lightbot_HowDoesLightbotTeachProgramming.pdf)
-kısa program kısıtlarıyla tekrar eden parçaları fark ettirir.
-[CodeCombat'ın değerlendirmeleri](https://blog.codecombat.com/assessments/)
-birden fazla kavramın birlikte uygulanmasını sınar. Bu sürümün tasarım tercihi:
-kompakt ama mekanikleri zorunlu parkurlar, kavramlara bağlı rozetler ve aynı
-algoritmanın değişen haritalarda doğrulanmasıdır. Rakiplerin görsel varlıkları kullanılmaz.
+- **Tek kural seti, tek ölçü.** Hedef her görevde aynı: bütün muzlar + sandık.
+  Mojo sandığa bütün muzlarla vardığı anda görev biter. Puan = etkin satır sayısı
+  (komutlar, blok başlıkları, `degilse`; yorum, boş satır ve `}` sayılmaz).
+  ★ çalışan çözüm, ★★ ve ★★★ satır hedefleri. ★★★ hedefi doğrulanmış örnek
+  çözümün uzunluğudur; çözücü daha kısa bir program bulduysa bu `record` olarak
+  "usta meydan okuması" diye gösterilir.
+- **Her ada tek bir düşünme biçimi öğretir**; yapı, öğretildiği görevde açılır ve
+  komut paletinde "YENİ" olarak belirir. İlk görevde kısa bir ders penceresi çıkar.
+- **Kavram, bulmacanın şekliyle zorunlu kılınır** (çözücüyle doğrulanır):
+  - Döngü adasında döngüsüz programlar 3★'a inemez (merdiven, elmas, pervane…).
+  - Fonksiyon adasında tekrarlar *düzensiz aralıklarla* gelir; döngü kısaltamaz.
+  - Çok parkurlu görevlerde hiçbir sabit (koşulsuz) program bütün parkurları
+    kazanamaz: çözücü 3★ hedefine kadar (uzun çözümlerde 9 satıra kadar) arar.
+  - Koşullu döngü / değişken görevlerinde uzunluklar parkurdan parkura değişir
+    (duvara kadar yürü, say ve dön, kareyi ölç, zirve sarmalı).
+- **Hata avları:** her adada 1–2 görev bozuk bir kodla açılır; oyuncu çalıştırır,
+  Mojo'nun hangi satırda takıldığını görür ve düzeltir.
+- **Mojo birinci ağızdan konuşur** ve hatayı satır numarasıyla söyler; sorular
+  (`onumBos()` vb.) haritada yeşil ✓ / kırmızı ✗ kareyle görünür; döngüler
+  editörde "tur 2/4" rozeti, değişkenler editörün altında değerleriyle görünür.
+
+### Araştırma dayanakları
+
+- CodeMonkey: `step N` + cetvel, kısa koda yıldız.
+- CodeCombat: tek komut, isteğe bağlı sayı (`moveRight(3)`).
+- Blockly Games / Code.org: blok sınırı, labirentte "duvarı izle" finali.
+- Lightbot: tekrar eden parçayı fonksiyona alma.
+- Reeborg / Karel: aynı programın birden çok dünyada çalışması.
+- Swift Playgrounds: adım adım çalıştırma, hata avı bulmacaları.
+- Human Resource Machine: kod kısalığı ile yol kısalığı ayrımı (zafer ekranında adım sayısı).
+- Pelánek & Effenberger (2022): sınır yerine genellenebilirlik istemek pedagojik açıdan
+  tercih edilebilir.
+- Lee & Ko (2011, Gidget): hatayı üstlenen karakter oyuncuyu daha uzun tutar.
+
+## Dil
+
+| Yazım | Anlamı |
+| --- | --- |
+| `ilerle()` / `ilerle(3)` | Baktığı yönde 1 / 3 kare ilerler |
+| `sagaDon()` / `solaDon()` | Olduğu yerde 90° döner |
+| `tekrarla(4):` | İçindekileri 4 kez yapar |
+| `tanimla ad():` … `ad()` | Fonksiyon tanımlar ve çağırır (tanımdan önce de çağrılabilir) |
+| `ise(soru):` / `degilse:` | Koşul |
+| `iken(soru):` | Cevap evet oldukça tekrarlar |
+| `n = 1`, `n = n + 1` | Değişken; `+ - *` ve parantez |
+| `onumBos()`, `solumBos()`, `sagimBos()`, `hedefteDegilim()` | Sorular |
+
+Bloklar Python gibi `:` ve 4 boşlukla ya da JavaScript gibi `{ }` ile yazılır
+(ayarlardan seçilir; iki biçim aynı puanı verir). `sağaDön()` gibi Türkçe harfli
+yazım da anlaşılır. Kod `eval` edilmez: metin → sözdizimi ağacı → üreteç tabanlı
+yorumlayıcı. İşlem bütçesi (4000), çağrı derinliği (30) ve sayı sınırları sonsuz
+döngüyü güvenle durdurur.
+
+## Müfredat
+
+| Ada | Görevler | Konu | Açılan yapı |
+| --- | --- | --- | --- |
+| 1 Filiz Ormanı | 1–12 | Sıralama, parametre, dönüşler, rota seçimi, anahtar/kapı, kısa kod ≠ kısa yol | — |
+| 2 Kemer Takımadaları | 13–24 | Kalıp bulma, döngü, ardışık ve iç içe döngü | `tekrarla` (13) |
+| 3 Nilüfer Tapınağı | 25–36 | Fonksiyon, her yönde aynı fonksiyon, fonksiyon + döngü, iki fonksiyon | `tanimla` (25) |
+| 4 Gelgit Kıyıları | 37–48 | Koşul, iç içe koşul, fonksiyon içinde koşul, kıyı izleme; her görev 2–3 gelgit | `ise/degilse` (37) |
+| 5 Bilgelik Zirvesi | 49–60 | `iken`, iç içe `iken`, sonsuz döngü, sağ el kuralı, değişkenle sarmal/merdiven, sayma ve ölçme | `iken` (49), değişken (54) |
 
 ## Dosya yapısı
 
 | Dosya | Sorumluluk |
 | --- | --- |
-| `index.html` | Arayüz kabuğu ve tüm UI mantığı (tek satır içi modül) |
-| `style.css` | Orman temalı görsel katman, açık/koyu tema, duyarlı yerleşim |
-| `game.js` | Seviye verisi, güvenli yorumlayıcı, sanal makine, yol planlayıcı |
-| `renderer.js` | Ada temalı çizim motoru: tuvale sığdırma, önbellekli statik katman, Mojo, efektler ve cetvel |
-| `authored-levels.js` | 54 tasarlanmış görevin pişirilmiş harita, çözüm, ipucu ve parkur verileri |
-| `tools/author-missions.mjs` | Tasarlanmış görev aileleri ve çözüm üretimi (`npm run missions`) |
-| `audio.js` | Web Audio API ile sentezlenen ses efektleri ve her adaya özgü ortam sesi |
-| `fonts/` | Çevrimdışı çalışan yerel yazı tipleri (Fredoka, Nunito, JetBrains Mono; OFL) |
-| `test/game.test.js` | Motorun ve müfredatın değişmezlerini doğrulayan test paketi (`npm test`) |
-| `test/browser.test.mjs` | Gerçek Chromium ile masaüstü, mobil, final akışı ve kayıt geçişi testleri |
+| `index.html` | Arayüz iskeleti (geniş ekran yerleşimi, pencereler) |
+| `style.css` | Tema (koyu/açık), yerleşim, editör ve sözdizimi renkleri |
+| `ui.js` | Arayüz mantığı: editör, palet, çalıştırma/adım/geri, ada haritası, ipuçları, kayıt |
+| `game.js` | Oyun denetleyicisi: olayları canlandırır, sesi ve çizimi tetikler |
+| `lang.js` | Ayrıştırıcı, satır sayacı, biçimlendirici, yazım biçimi dönüştürücü |
+| `interpreter.js` | Üreteç tabanlı yorumlayıcı (her görünür olayda durur) |
+| `world.js` | Harita ve oyun kuralları (deterministik) |
+| `renderer.js` | Ada temalı çizim; soruların ✓/✗ işaretleri, efektler, cetvel |
+| `audio.js` | Web Audio ile ses efektleri ve ada ortam sesleri |
+| `levels.js`, `levels/island*.js` | Adalar ve 60 görevin verisi |
+| `tools/solver.mjs` | En kısa programı arayan çözücü; çoklu parkur için sabit program araması |
+| `tools/check-levels.mjs` | Görev denetimi (`npm run check`) |
+| `tools/design/` | Görev tasarım yardımcıları (iz sürme, oda/labirent/teras/sarmal üreticileri) |
+| `test/game.test.js` | Dil, kurallar ve müfredat değişmezleri (`npm test`) |
+| `test/browser.test.mjs` | Gerçek Chromium'da 60 görevin arayüzden oynanması (`npm run test:browser`) |
 
-## Mimari kararlar
+### Harita alfabesi
 
-### Güvenlik
-- `eval()` yok: `parseCode` komutları satır satır ayrıştırıp bir bayt kodu üretir,
-  sanal makine (`Game#step`) bu bayt kodunu yürütür.
-- DOM güncellemelerinde `innerHTML` kullanılmaz; zengin metin gerektiğinde
-  `setSafeHTML` DOMParser ile ayrıştırıp script/olay özniteliklerini temizler.
-- Kod uzunluğu (500 satır / 20.000 karakter), döngü sayısı (1-100) ve toplam
-  işlem bütçesi (5000 adım) sınırlıdır; sonsuz döngü tarayıcıyı kilitlemez.
+`.` çimen/kum · `#` ağaç/kaya · `~` su · `=` köprü · `M` Mojo · `S` sandık ·
+`B` muz · `K` anahtar · `G` kapı. Haritanın dışı denizdir.
 
-### Tek doğruluk kaynağı
-Sürüm 3'ün ana ilkesi: aynı bilgi iki yerde tutulmaz.
+### Görev verisi
 
-- **Komut izinleri** yalnızca `COMMAND_UNLOCKS` tablosundan türetilir
-  (`commandsForLevel`). Seviye verisi izin listesi taşımaz.
-- **Yol planlama** tek bir planlayıcıdan geçer (`buildRouteWorld` +
-  `planShortestRoute`); hem oyun içi "örnek çözüm" hem seviye üreticisinin
-  çözülebilirlik kontrolü aynı kuralları görür.
-- **Yıldız hedefleri** elle yazılmaz. Her görevin doğrulanmış bir referans
-  çözümü vardır; 3 yıldız eşiği o çözümün satır sayısıdır, 2 yıldız eşiği
-  üzerine pay eklenir. Böylece ulaşılamayan hedef oluşamaz.
-- **Bölüm bilgileri** `CHAPTERS` tablosundan gelir; arayüz kendi kopyasını tutmaz.
-
-### Puanlama
-Puan, yazılan programın *etkin satır* sayısıdır (yorumlar ve kapanış parantezleri
-sayılmaz). `encodeActions` bir hareket dizisini en az satıra kodlayan dinamik
-programlama çözümüdür ve hem örnek çözümü hem hedefi üretir. Referans çözümden
-daha kısa bir program yazmak "rekor" olarak kaydedilir.
-
-## Müfredat
-
-100 görev, 20'şerlik 5 bölüm. Açılış görevleri bölümün mekaniğini öğretir;
-ileri görevler tasarlanmış bulmaca aileleriyle beceriyi geliştirir. Eski üretilmiş
-verilerden yalnızca tasarlanmış bir görevin yerini almadığı slotlar kullanılır.
-
-| Bölüm | Görevler | Konu | Açılan komut |
-| --- | --- | --- | --- |
-| 1 | 1-20 | İlerleme, dönüşler, su/kaya engelleri, ilk döngüler | `ilerle` (1), `sagaDon` (3), `solaDon` (4), `tekrarla` (6) |
-| 2 | 21-40 | Köprüler, nehir geçişleri, kalıp döngüleri | `adimla(N)` (29) |
-| 3 | 41-60 | Anahtar-kilit, batan nilüfer yaprakları | — |
-| 4 | 61-80 | Dalan kaplumbağalar, zamanlama | `bekle` (61), `kaplumbaga.adimla` (69, göreve özel) |
-| 5 | 81-100 | Koşullar, değişen parkurlar ve koşullu döngüler | `ise` / `degilse` (81), `iken` (91) |
-
-## Karo alfabesi
-
-| Karo | Anlamı |
-| --- | --- |
-| `M` | Mojo'nun başlangıç karesi |
-| `S` | Hedef sandık |
-| `B` | Muz (üzerinden geçince otomatik toplanır) |
-| `#` | Kaya (geçilemez) |
-| `~` | Su (üzerinde kaplumbağa yoksa geçilemez) |
-| `=` | Köprü (su üzerinde güvenli geçiş) |
-| `K` | Anahtar |
-| `G` | Kilitli kapı (anahtar alınınca açılır) |
-| `L` | Nilüfer yaprağı (bir kez basılır, sonra batar) |
-| `T` | Kaplumbağa (2 adım suda, 2 adım havada; `pilotTurtles` görevlerinde dalmaz) |
-
-## Test paketi
-
-`npm test` müfredatın ve motorun değişmezlerini doğrular:
-
-- Her görevin referans çözümü iki sözdizimi modunda da ayrıştırılır, izin
-  denetiminden geçer, motorda çalıştırılır ve görevi kazanır.
-- Tüm 100 görev gerçek yürütme döngüsünden (animasyon + zafer kontrolü + puanlama)
-  geçirilir ve 3 yıldız alır.
-- Yıldız hedefleri referans çözümle birebir uyumludur ve sıralıdır.
-- Komut izinleri türetilmiştir ve seviye yükleme paylaşılan veriyi değiştirmez.
-- Görev adları tekildir; tahtalar dikdörtgendir ve tek `M`/`S` içerir.
-- Tahtanın çerçeve dolgusu hiçbir görevde yürünebilir alana açılmaz.
-- Bir komut, onu öğreten görevden önceki görevlerde kullanılamaz.
-- 35 ek parkurun her biri aynı referansla iki sözdiziminde de kazanılır.
-- İlk harita için ezberlenen sabit rota ikinci haritada başarısız olur.
-- İlerleme yapmayan `iken` döngüsü işlem bütçesiyle durdurulur.
-- Güvenli yol sensörü kaplumbağanın dört zaman fazında doğrulanır.
-- 70–80 arasındaki görevlerde kaplumbağa geçitleri atlanamaz.
-
-Tarayıcı testleri için Playwright kurulu olmalıdır:
-
-```sh
-node test/browser.test.mjs
+```js
+{
+  title, concept, text, hints: [3 ipucu],
+  map: [...] | scenarios: [{ map: [...] }, ...], dir: 'E',
+  solution: 'girintili örnek çözüm',   // 3★ = satır sayısı
+  stars: { two },                      // isteğe bağlı
+  teaches: 'loop' | 'function' | 'if' | 'while' | 'variable',
+  starter: 'hatalı başlangıç kodu',     // hata avı görevleri
+  record: 5                             // çözücünün bulduğu daha kısa program
+}
 ```
 
-Başka bir kurulum kullanılıyorsa `PLAYWRIGHT_MODULE` değişkenini Playwright'ın
-`index.mjs` dosyasına, `PLAYWRIGHT_BROWSERS_PATH` değişkenini tarayıcı önbelleğine
-ayarla. Testler kendi izole tarayıcı profilinde yerel dosyaları sunar; canlı
-oyuncu kaydını değiştirmez. Ekran görüntüleri `/tmp/codemonkey-*.png` altında oluşur.
+## Doğrulama
 
-## Kayıt uyumluluğu
+- `npm test` — 24 test: dil, hata mesajları, kurallar, 60 görevin örnek çözümü
+  iki yazım biçiminde bütün parkurlarda, hata avı başlangıç kodlarının gerçekten
+  hatalı olması, yapıların öğretilmeden kullanılmaması, oyun denetleyicisi ve
+  adım adım geri alma.
+- `npm run check` — çözücüyle: döngü adasında döngüsüz 3★ olmadığını, kayıtlı
+  rekorların doğru olduğunu ve çok parkurlu görevlerde ezber bir programın
+  yetmediğini denetler (birkaç dakika sürebilir; `--fast` yalnızca örnek
+  çözümleri çalıştırır).
+- `npm run test:browser` — puppeteer ile masaüstü, telefon ve 60 görev.
 
-Görev kimlikleri, eski açılma durumu ve yıldızlar korunur. Yenilenen görevlerin
-taslak anahtarlarına `expedition-1` eki eklenir; önceki kodlar eski anahtarlarında
-kalır. Yeni haritaların satır rekorları `kodmaymunu_best_lines_v4`, ustalıkları
-`kodmaymunu_mastery_v4` altında tutulur. Böylece önceki haritanın iki satırlık
-rekoru, yeni harita için yanıltıcı bir hedef olarak gösterilmez.
+## Kayıt
+
+Yeni anahtarlar `km5_*` (ilerleme, taslaklar, ayarlar). v4 kayıtlarına dokunulmaz;
+v4'te ilerlemiş bir oyuncu, ulaştığı bölümün adasından başlar.

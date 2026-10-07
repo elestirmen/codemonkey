@@ -1,130 +1,194 @@
-// Optional browser acceptance test. Supply PLAYWRIGHT_MODULE if Playwright is
-// installed elsewhere. The game is served from this checkout via route.fulfill.
+// Tarayıcı kabul testi: gerçek Chromium'da arayüzü sürer ve 60 görevin
+// hepsini örnek çözümle editörden çalıştırır. Dosyalar bu klasörden istek
+// yakalamayla sunulur; canlı oyuncu kaydına dokunulmaz.
+//
+//   node test/browser.test.mjs
+//   PUPPETEER_MODULE=/yol/puppeteer node test/browser.test.mjs
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-const { chromium } = await import(process.env.PLAYWRIGHT_MODULE || 'playwright');
-const browser = await chromium.launch({ headless: true });
-const root = new URL('../', import.meta.url);
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const puppeteer = require(process.env.PUPPETEER_MODULE || `${process.env.HOME}/.npm-global/lib/node_modules/puppeteer`);
+
+const ROOT = new URL('../', import.meta.url);
+const ORIGIN = 'http://kodmaymunu.test';
+const TYPES = { html: 'text/html', js: 'text/javascript', css: 'text/css', woff2: 'font/woff2' };
+const SHOTS = process.env.SHOTS || '/tmp';
 const errors = [];
-const types = { html: 'text/html', js: 'text/javascript', css: 'text/css', png: 'image/png', woff2: 'font/woff2' };
-const fonts = ['fredoka', 'nunito', 'jetbrains-mono'].flatMap(name => [`fonts/${name}-latin.woff2`, `fonts/${name}-latin-ext.woff2`]);
-const files = new Set(['index.html', 'game.js', 'renderer.js', 'audio.js', 'style.css', 'generated-levels.js', 'authored-levels.js', 'banana-sprite.png', ...fonts]);
 
-try {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'reduce' });
-  await context.route('**/*', async route => {
-    const url = new URL(route.request().url());
+async function serve(page) {
+  await page.setRequestInterception(true);
+  page.on('request', async request => {
+    const url = new URL(request.url());
+    if (url.origin !== ORIGIN) return request.abort();
     const name = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);
-    if (url.hostname !== 'codemonkey.test' || !files.has(name)) return route.abort();
-    await route.fulfill({ contentType: types[name.split('.').at(-1)], body: await readFile(new URL(name, root)) });
+    if (!/^[\w\-./]+$/.test(name) || name.includes('..')) return request.respond({ status: 404, body: '' });
+    try {
+      const body = await readFile(new URL(name, ROOT));
+      request.respond({ status: 200, contentType: TYPES[name.split('.').at(-1)] || 'application/octet-stream', body });
+    } catch (_) {
+      request.respond({ status: 404, body: '' });
+    }
   });
-  const page = await context.newPage();
+}
+
+async function openPage(browser, viewport, seed = {}) {
+  const page = await browser.newPage();
+  await page.setViewport(viewport);
   page.on('pageerror', error => errors.push(error.message));
-  await page.addInitScript(() => {
-    if (localStorage.getItem('test-seeded')) return;
-    localStorage.setItem('test-seeded', '1');
-    localStorage.setItem('kodmaymunu_welcome_seen', 'true');
-    localStorage.setItem('kodmaymunu_dev_mode', 'true');
-    localStorage.setItem('kodmaymunu_sound', 'false');
-    localStorage.setItem('kodmaymunu_level', '99');
-    localStorage.setItem('kodmaymunu_code_lvl_99_indent', '# old draft stays safe');
-    localStorage.setItem('kodmaymunu_best_lines', JSON.stringify({ 99: 2 }));
-    localStorage.setItem('kodmaymunu_stars', JSON.stringify({ 0: 3 }));
+  page.on('console', message => {
+    if (message.type() === 'error' && !/favicon/.test(message.text())) errors.push(message.text());
   });
-  await page.goto('http://codemonkey.test');
-  await page.locator('#active-level-title').filter({ hasText: 'Algoritma Tapınağı' }).waitFor();
-  assert.equal(await page.locator('#scenario-bar button').count(), 4);
-  assert.equal(await page.locator('#cmd-iken').isVisible(), true);
-  assert.equal(await page.locator('.mission-chip-record').count(), 0, 'old record must not describe a redesigned board');
-  const initialDraft = await page.locator('#code-editor').inputValue();
-  assert.ok(!initialDraft.includes('old draft'));
+  await serve(page);
+  await page.evaluateOnNewDocument(values => {
+    if (sessionStorage.getItem('seeded')) return;
+    sessionStorage.setItem('seeded', '1');
+    localStorage.clear();
+    for (const [key, value] of Object.entries(values)) localStorage.setItem(key, value);
+  }, { km5_sound: 'false', ...seed });
+  await page.goto(`${ORIGIN}/`, { waitUntil: 'load' });
+  await page.waitForFunction(() => window.kodmaymunu && window.kodmaymunu.LEVELS.length === 60);
+  return page;
+}
 
-  await page.locator('#btn-atlas-main').click();
-  assert.equal(await page.locator('.world-card').count(), 5);
-  await page.waitForFunction(() => getComputedStyle(document.getElementById('atlas-modal')).opacity === '1');
-  await page.screenshot({ path: '/tmp/codemonkey-atlas.png', fullPage: true });
-  await page.keyboard.press('Escape');
+const visible = (page, selector) => page.$eval(selector, el => !el.hidden);
 
-  await page.locator('#btn-smart-route').click();
-  for (let i = 1; i <= 3; i++) {
-    await page.locator('#btn-next-hint').click();
-    assert.equal(await page.locator('.coach-hints .revealed').count(), i);
+const browser = await puppeteer.launch({ args: ['--no-sandbox'] });
+try {
+  // 1) İlk ziyaret: hoş geldin, ilk ders, palet ile kod yazma ve zafer.
+  {
+    const page = await openPage(browser, { width: 1440, height: 900 });
+    assert.equal(await visible(page, '#welcome-overlay'), true);
+    await page.click('#btn-welcome');
+    await page.waitForFunction(() => !document.getElementById('learn-overlay').hidden);
+    assert.match(await page.$eval('#learn-title', el => el.textContent), /sırayla/);
+    await page.keyboard.press('Escape');
+    for (let i = 0; i < 3; i++) await page.click('#palette .cmd');
+    assert.equal(await page.$eval('#code', el => el.value), 'ilerle()\nilerle()\nilerle()');
+    assert.match(await page.$eval('#line-meter', el => el.textContent), /3 satır/);
+    await page.evaluate(() => { window.kodmaymunu.game.speed = 1; });
+    await page.click('#btn-run');
+    await page.waitForFunction(() => !document.getElementById('win-overlay').hidden, { timeout: 15000 });
+    await new Promise(resolve => setTimeout(resolve, 1300));
+    assert.equal(await page.$$eval('#win-stars .on', els => els.length), 3);
+    await page.screenshot({ path: `${SHOTS}/kodmaymunu-win.png` });
+    await page.click('#btn-win-next');
+    await page.waitForFunction(() => document.getElementById('level-title').textContent.startsWith('2.'));
+    await page.waitForFunction(() => !document.getElementById('learn-overlay').hidden && /sayı/.test(document.getElementById('learn-title').textContent));
+    await page.keyboard.press('Escape');
+
+    // Yazım hatası: satır işaretlenir, Mojo ne olduğunu söyler.
+    await page.$eval('#code', el => { el.value = 'ilerle(8\n'; el.dispatchEvent(new Event('input')); });
+    await page.click('#btn-run');
+    await page.waitForFunction(() => !document.getElementById('bubble').hidden);
+    assert.match(await page.$eval('#bubble-text', el => el.textContent), /Satır 1/);
+    assert.equal(await page.$$eval('.code-layer .ln.error', els => els.length), 1);
+
+    // Kilitli görev açılmaz; ada haritası açılır.
+    await page.click('#btn-map');
+    assert.equal(await page.$$eval('.level-dot', els => els.length), 60);
+    assert.equal(await page.$$eval('.level-dot:disabled', els => els.length), 58);
+    await page.screenshot({ path: `${SHOTS}/kodmaymunu-map.png` });
+    await page.keyboard.press('Escape');
+    await page.close();
   }
-  assert.equal(await page.locator('#code-editor').inputValue(), initialDraft);
-  await page.locator('#solution-disclosure summary').click();
-  await page.locator('#btn-use-solution').click();
-  const solution = await page.locator('#code-editor').inputValue();
-  assert.ok(solution.includes('iken(hedefteDegilim())'));
-  await page.locator('#scenario-bar button').nth(3).click();
-  assert.equal(await page.locator('#scenario-bar button').nth(3).getAttribute('aria-pressed'), 'true');
-  await page.screenshot({ path: '/tmp/codemonkey-desktop.png', fullPage: true });
 
-  // Keep the real VM, animation and callbacks; only shorten movement duration.
-  await page.evaluate(async () => {
-    const { Game } = await import('./game.js?v=20260923-v5');
-    const original = Game.prototype.runCodeText;
-    Game.prototype.runCodeText = function (code) { this.executionSpeed = 1; return original.call(this, code); };
-  });
-  await page.locator('#btn-run').click();
-  await page.locator('#success-modal.show').waitFor({ timeout: 30000 });
-  assert.match(await page.locator('#star-details').innerText(), /4 farklı parkuru geçti/);
-  assert.match(await page.locator('#star-details').innerText(), /Ustalık rozeti kazanıldı/);
-  assert.equal(await page.locator('#modal-stars .earned').count(), 3);
-  assert.equal(await page.locator('#modal-btn-next').isVisible(), false);
-  assert.equal(await page.evaluate(() => localStorage.getItem('kodmaymunu_code_lvl_99_indent')), '# old draft stays safe');
-  assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('kodmaymunu_stars'))[0]), 3);
-  await page.screenshot({ path: '/tmp/codemonkey-victory.png', fullPage: true });
-  await page.reload();
-  await page.locator('.mission-chip-record').filter({ hasText: 'Ustalık' }).waitFor();
-  assert.equal(await page.locator('#code-editor').inputValue(), solution);
+  // 2) Bütün görevler: örnek çözüm editöre yazılır ve arayüzden çalıştırılır.
+  {
+    const page = await openPage(browser, { width: 1366, height: 768 }, {
+      km5_welcome: 'true',
+      km5_dev: 'true',
+      km5_learned: JSON.stringify(['basics', 'param', 'loop', 'function', 'if', 'while', 'variable'])
+    });
+    const count = await page.evaluate(() => window.kodmaymunu.LEVELS.length);
+    for (let index = 0; index < count; index++) {
+      const info = await page.evaluate(i => {
+        const { loadLevel, LEVELS, game } = window.kodmaymunu;
+        loadLevel(i, { fromUser: false });
+        game.speed = 1;
+        const level = LEVELS[i];
+        const code = document.getElementById('code');
+        code.value = level.solution;
+        code.dispatchEvent(new Event('input'));
+        return { id: level.id, title: level.title, starter: Boolean(level.starter), scenarios: level.scenarios ? level.scenarios.length : 1 };
+      }, index);
+      await page.click('#btn-run');
+      try {
+        await page.waitForFunction(() => !document.getElementById('win-overlay').hidden, { timeout: 30000 });
+      } catch (error) {
+        const status = await page.$eval('#status-text', el => el.textContent);
+        const bubble = await page.$eval('#bubble-text', el => el.textContent);
+        throw new Error(`${info.id}. ${info.title} kazanılamadı: ${status} / ${bubble}`);
+      }
+      await new Promise(resolve => setTimeout(resolve, 1100));
+      assert.equal(await page.$$eval('#win-stars .on', els => els.length), 3, `${info.id} üç yıldız`);
+      if (info.scenarios > 1) {
+        assert.equal(await page.$$eval('#scenario-tabs button[data-state="pass"]', els => els.length), info.scenarios, `${info.id} parkurlar`);
+      }
+      await page.keyboard.press('Escape');
+      if ([1, 13, 25, 37, 49, 53, 60].includes(info.id)) await page.screenshot({ path: `${SHOTS}/kodmaymunu-${info.id}.png` });
+    }
 
-  await page.setViewportSize({ width: 1366, height: 768 });
-  await page.screenshot({ path: '/tmp/codemonkey-laptop.png', fullPage: true });
-  const canvasBounds = await page.locator('#game-canvas').boundingBox();
-  assert.ok(canvasBounds.height >= 170, 'laptop board is too small to play');
-  const backing = await page.evaluate(() => {
-    const canvas = document.getElementById('game-canvas');
-    return { width: canvas.width, cssWidth: canvas.clientWidth };
-  });
-  assert.ok(backing.cssWidth > 300 && backing.width >= backing.cssWidth, 'canvas backing store must follow its CSS box');
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    // Hata avı: başlangıç kodu yüklenir ve kazanmaz.
+    // Az önce yazılan çözüm taslak olarak saklandı; silinince başlangıç kodu gelir.
+    await page.evaluate(() => {
+      localStorage.removeItem('km5_code_7_indent');
+      window.kodmaymunu.loadLevel(6, { fromUser: false });
+    });
+    assert.match(await page.$eval('#code', el => el.value), /ilerle\(6\)/);
+    await page.evaluate(() => { window.kodmaymunu.game.speed = 1; });
+    await page.click('#btn-run');
+    await page.waitForFunction(() => document.getElementById('status-chip').dataset.tone === 'error', { timeout: 15000 });
+    await page.waitForFunction(() => !document.getElementById('bubble').hidden && /Satır 1/.test(document.getElementById('bubble-text').textContent));
 
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: '/tmp/codemonkey-mobile.png', fullPage: true });
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'mobile page has horizontal overflow');
-  await page.locator('#btn-atlas-main').click();
-  assert.ok(await page.locator('#atlas-modal').isVisible());
-  await page.waitForFunction(() => getComputedStyle(document.getElementById('atlas-modal')).opacity === '1');
-  await page.screenshot({ path: '/tmp/codemonkey-atlas-mobile.png', fullPage: true });
-  await page.keyboard.press('Escape');
-  await page.locator('#settings-menu summary').click();
-  await page.locator('#btn-theme-toggle').click();
-  await page.locator('#syntax-mode').selectOption('bracket');
-  await page.keyboard.press('Escape');
-  await page.locator('#btn-smart-route').click();
-  await page.locator('#solution-disclosure summary').click();
-  await page.locator('#btn-use-solution').click();
-  assert.ok((await page.locator('#code-editor').inputValue()).includes('iken(hedefteDegilim()) {'));
-  await page.screenshot({ path: '/tmp/codemonkey-light-mobile.png', fullPage: true });
-  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+    // Adım adım: ileri, geri ve devam.
+    await page.evaluate(() => {
+      window.kodmaymunu.loadLevel(2, { fromUser: false });
+      window.kodmaymunu.game.speed = 1;
+      const code = document.getElementById('code');
+      code.value = 'ilerle(6)\nsagaDon()\nilerle(3)';
+      code.dispatchEvent(new Event('input'));
+    });
+    await page.click('#btn-step');
+    await page.waitForFunction(() => !document.getElementById('btn-back').disabled);
+    await page.click('#btn-step');
+    await new Promise(resolve => setTimeout(resolve, 200));
+    const before = await page.evaluate(() => [window.kodmaymunu.game.player.x, window.kodmaymunu.game.player.y]);
+    await page.click('#btn-back');
+    const after = await page.evaluate(() => [window.kodmaymunu.game.player.x, window.kodmaymunu.game.player.y]);
+    assert.equal(after[0], before[0] - 1);
+    assert.equal(await page.$$eval('.code-layer .ln.active', els => els.length), 1);
+    await page.click('#btn-run');
+    await page.waitForFunction(() => !document.getElementById('win-overlay').hidden, { timeout: 15000 });
+    await page.close();
+  }
 
-  // Also cover the actual new-player path, with developer mode off.
-  await page.evaluate(() => { localStorage.clear(); localStorage.setItem('test-seeded', '1'); });
-  await page.reload();
-  await page.locator('#welcome-overlay.show').waitFor();
-  await page.locator('#btn-welcome-start').click();
-  assert.match(await page.locator('#active-level-title').innerText(), /İlk Adım/);
-  assert.equal(await page.locator('#cmd-iken').isVisible(), false);
-  await page.locator('#btn-atlas-main').click();
-  assert.equal(await page.locator('.world-card:disabled').count(), 4);
-  await page.keyboard.press('Escape');
-  await page.locator('#code-editor').fill('ilerle()\nilerle()\nilerle()\nilerle()');
-  await page.locator('#btn-run').click();
-  await page.locator('#success-modal.show').waitFor({ timeout: 10000 });
-  await page.locator('#modal-btn-next').click();
-  assert.match(await page.locator('#active-level-title').innerText(), /Temasla Topla/);
-  assert.deepEqual(errors, [], 'uncaught browser errors');
-  console.log('Browser acceptance passed: desktop, mobile, atlas, hints, four-map finale, mastery, draft migration, reload, light theme and both syntax modes.');
+  // 3) Telefon: yatay kaydırma yok, sahne ve editör görünür.
+  {
+    const page = await openPage(browser, { width: 390, height: 844, isMobile: true, hasTouch: true }, { km5_welcome: 'true', km5_learned: JSON.stringify(['basics']) });
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    assert.ok(overflow <= 0, `yatay taşma ${overflow}px`);
+    const stage = await page.$eval('.stage', el => el.getBoundingClientRect().height);
+    assert.ok(stage >= 260);
+    await page.screenshot({ path: `${SHOTS}/kodmaymunu-mobile.png`, fullPage: true });
+    await page.close();
+  }
+
+  // 4) Önceki sürümün ilerlemesi: ulaşılan bölümün adası açılır.
+  {
+    const page = await openPage(browser, { width: 1280, height: 800 }, {
+      km5_welcome: 'true',
+      kodmaymunu_unlocked: JSON.stringify(Array.from({ length: 46 }, (_, i) => i))
+    });
+    const unlocked = await page.evaluate(() => window.kodmaymunu.state.unlocked);
+    assert.equal(unlocked, 24, 'üçüncü adanın ilk görevi açık olmalı');
+    assert.match(await page.$eval('#level-title', el => el.textContent), /^25\./);
+    await page.close();
+  }
+
+  assert.deepEqual(errors, [], `sayfa hataları: ${errors.join(' | ')}`);
+  console.log('Tarayıcı testleri geçti.');
 } finally {
   await browser.close();
 }

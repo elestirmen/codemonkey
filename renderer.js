@@ -142,7 +142,7 @@ function starPath(ctx, x, y, outer, inner, points = 5, rotation = -Math.PI / 2) 
   ctx.closePath();
 }
 
-const WATER_TILES = new Set(['~', '=', 'L', 'T']);
+const WATER_TILES = new Set(['~', '=']);
 
 // ── Mojo ────────────────────────────────────────────────────────────────────
 // Drawn in a 100-unit box whose origin is the point between Mojo's feet. The
@@ -492,14 +492,13 @@ export class WorldRenderer {
     this.particles = [];
     this.rings = [];
     this.floaters = [];
-    this.sinks = [];
     this.flyingKey = null;
+    this.sensing = null;
     this.gateOpenedAt = null;
     this.victoryAt = null;
     this.crash = null;
     this.stuckAt = null;
     this.pendingSplash = null;
-    this.turtleSink = [];
     this.staticDirty = true;
     this.layoutKey = '';
   }
@@ -621,6 +620,7 @@ export class WorldRenderer {
     this.drawWaterMotion(ctx, t);
     this.drawTrail(ctx);
     this.drawGroundMarkers(ctx, t);
+    this.drawSensing(ctx);
     this.drawEntities(ctx, t, dt);
     this.drawEffects(ctx, t, dt);
     this.drawRuler(ctx);
@@ -1400,6 +1400,73 @@ export class WorldRenderer {
     ctx.restore();
   }
 
+  // ── Sensors ───────────────────────────────────────────────────────────────
+  // A question such as onumBos() lights the squares it looked at: green for
+  // "evet", coral for "hayır". In step mode the answer stays until the next
+  // event so it can be read at leisure.
+
+  sense(cells, value, { hold = false, duration = 900 } = {}) {
+    this.sensing = { cells, value, t0: this.now(), hold, duration };
+  }
+
+  clearSense() {
+    this.sensing = null;
+  }
+
+  drawSensing(ctx) {
+    const s = this.sensing;
+    if (!s) return;
+    const age = this.now() - s.t0;
+    let fade = 1;
+    if (!s.hold) {
+      if (age > s.duration) {
+        this.sensing = null;
+        return;
+      }
+      fade = age < s.duration * 0.6 ? 1 : 1 - (age - s.duration * 0.6) / (s.duration * 0.4);
+    }
+    const T = this.T;
+    const pop = this.reducedMotion ? 1 : easeOutBack(Math.min(1, age / 220));
+    const color = s.value ? '72, 214, 140' : '255, 120, 96';
+    ctx.save();
+    ctx.globalAlpha = fade;
+    for (const cell of s.cells) {
+      const cx = this.px(cell.x) + T / 2;
+      const cy = this.py(cell.y) + T / 2;
+      const size = T * 0.84 * pop;
+      ctx.fillStyle = `rgba(${color}, 0.26)`;
+      ctx.strokeStyle = `rgba(${color}, 0.95)`;
+      ctx.lineWidth = Math.max(2, T * 0.05);
+      ctx.setLineDash([T * 0.12, T * 0.07]);
+      roundRectPath(ctx, cx - size / 2, cy - size / 2, size, size, T * 0.16);
+      ctx.fill();
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const r = T * 0.17 * pop;
+      const bx = cx + T * 0.28;
+      const by = cy - T * 0.28;
+      ctx.fillStyle = `rgb(${color})`;
+      circle(ctx, bx, by, r);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(2, T * 0.045);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      if (s.value) {
+        ctx.moveTo(bx - r * 0.45, by + r * 0.02);
+        ctx.lineTo(bx - r * 0.1, by + r * 0.38);
+        ctx.lineTo(bx + r * 0.5, by - r * 0.35);
+      } else {
+        ctx.moveTo(bx - r * 0.38, by - r * 0.38);
+        ctx.lineTo(bx + r * 0.38, by + r * 0.38);
+        ctx.moveTo(bx + r * 0.38, by - r * 0.38);
+        ctx.lineTo(bx - r * 0.38, by + r * 0.38);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // ── Entities ──────────────────────────────────────────────────────────────
 
   drawEntities(ctx, t, dt) {
@@ -1410,13 +1477,9 @@ export class WorldRenderer {
     for (let y = area.y; y < area.y + area.height; y++) {
       for (let x = area.x; x < area.x + area.width; x++) {
         const cell = g.gridData[y][x];
-        if (cell === 'L') list.push({ y, order: 0, draw: () => this.drawLily(ctx, x, y, t) });
-        else if (cell === 'G') list.push({ y, order: 2, draw: () => this.drawGate(ctx, x, y, t) });
+        if (cell === 'G') list.push({ y, order: 2, draw: () => this.drawGate(ctx, x, y, t) });
       }
     }
-    (g.turtles || []).forEach((turtle, index) => {
-      list.push({ y: turtle.animY, order: 1, draw: () => this.drawTurtle(ctx, turtle, index, t, dt) });
-    });
     for (const banana of g.bananas) {
       if (!banana.collected) list.push({ y: banana.y, order: 3, draw: () => this.drawBanana(ctx, banana.x, banana.y, t) });
     }
@@ -1489,49 +1552,6 @@ export class WorldRenderer {
     drawGateShape(ctx, this.px(x) + T / 2, this.py(y) + T / 2, T, progress);
   }
 
-  drawLily(ctx, x, y, t) {
-    const T = this.T;
-    const cx = this.px(x) + T / 2;
-    const cy = this.py(y) + T / 2 + T * 0.05;
-    const bob = this.reducedMotion ? 0 : Math.sin(t * 1.8 + x * 2.1 + y) * 0.05;
-    drawLilyShape(ctx, cx, cy, T * 0.8, bob, hash(x, y, 170) < 0.5);
-  }
-
-  drawTurtle(ctx, turtle, index, t, dt) {
-    const g = this.game;
-    const T = this.T;
-    const pilot = Boolean(g.level && g.level.pilotTurtles);
-    const phase = ((g.executionStepCount + (turtle.phase || 0)) % 4 + 4) % 4;
-    const target = pilot ? 0 : (phase < 2 ? 0 : 1);
-    const current = this.turtleSink[index] ?? target;
-    const next = this.reducedMotion ? target : current + (target - current) * Math.min(1, dt * 9);
-    this.turtleSink[index] = next;
-    const cx = this.px(turtle.animX) + T / 2;
-    const cy = this.py(turtle.animY) + T / 2 + T * 0.04;
-    drawTurtleShape(ctx, cx, cy, T * 0.82, turtle.animRotation || 0, next, this.reducedMotion ? 0 : t);
-
-    if (!pilot) {
-      // Four-beat dial: two beats above water, two below. The lit segment is now.
-      const radius = T * 0.43;
-      ctx.save();
-      ctx.lineWidth = Math.max(1.5, T * 0.045);
-      ctx.lineCap = 'round';
-      for (let i = 0; i < 4; i++) {
-        const start = -Math.PI / 2 + i * (Math.PI / 2) + 0.18;
-        const end = start + Math.PI / 2 - 0.36;
-        const up = i < 2;
-        const active = i === phase;
-        ctx.strokeStyle = active
-          ? (up ? 'rgba(160, 255, 190, 0.95)' : 'rgba(255, 150, 150, 0.95)')
-          : (up ? 'rgba(160, 255, 190, 0.28)' : 'rgba(255, 170, 170, 0.22)');
-        ctx.beginPath();
-        ctx.arc(cx, cy, radius, start, end);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-  }
-
   drawHero(ctx, t) {
     const g = this.game;
     const T = this.T;
@@ -1578,14 +1598,12 @@ export class WorldRenderer {
         state.mood = since > 0.2 ? 'dizzy' : 'worried';
         state.squash = since < 0.3 ? -Math.sin((since / 0.3) * Math.PI) * 0.08 : 0;
       }
-    } else if (moving && (action === 'ilerle' || action === 'geriGit')) {
+    } else if (moving && action === 'ilerle') {
       state.hop = Math.sin(Math.PI * progress) * T * 0.14;
       state.squash = Math.sin(Math.PI * 2 * progress) * 0.045;
       state.walk = progress * Math.PI * 2;
     } else if (moving && (action === 'sagaDon' || action === 'solaDon')) {
       state.hop = Math.sin(Math.PI * progress) * T * 0.06;
-    } else if (moving && action === 'bekle') {
-      state.squash = Math.sin(Math.PI * 2 * progress) * 0.05;
     } else if (!this.reducedMotion) {
       state.squash = Math.sin(t * 2.4) * 0.018;
     }
@@ -1594,7 +1612,6 @@ export class WorldRenderer {
     drawMojo(ctx, x, y, size, state);
     if (this.stuckAt && !g.isRunning && !this.crash) this.drawQuestion(ctx, x + T * 0.3, y - size * 0.98, T, t);
 
-    if (moving && action === 'bekle') this.drawThoughtClock(ctx, x + T * 0.3, y - size * 0.95, T, progress);
     if (this.crash && this.crash.type !== 'water') {
       const since = (now - this.crash.t0) / 1000;
       if (since > 0.15) this.drawDizzy(ctx, x, y - size * 0.92, T, t);
@@ -1632,27 +1649,6 @@ export class WorldRenderer {
       ctx.ellipse(x, ringY, T * 0.3, T * 0.11, 0, (i / 8) * TAU, ((i + 1) / 8) * TAU);
       ctx.stroke();
     }
-    ctx.restore();
-  }
-
-  drawThoughtClock(ctx, x, y, T, progress) {
-    ctx.save();
-    ctx.globalAlpha = Math.sin(Math.PI * clamp(progress, 0, 1));
-    ctx.fillStyle = '#ffffff';
-    circle(ctx, x, y, T * 0.17);
-    ctx.fill();
-    circle(ctx, x - T * 0.14, y + T * 0.16, T * 0.04);
-    ctx.fill();
-    ctx.strokeStyle = '#2d3a4a';
-    ctx.lineWidth = Math.max(1, T * 0.03);
-    circle(ctx, x, y, T * 0.11);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + Math.cos(progress * TAU - Math.PI / 2) * T * 0.08, y + Math.sin(progress * TAU - Math.PI / 2) * T * 0.08);
-    ctx.moveTo(x, y);
-    ctx.lineTo(x, y - T * 0.06);
-    ctx.stroke();
     ctx.restore();
   }
 
@@ -1726,10 +1722,6 @@ export class WorldRenderer {
     } else if (kind === 'key') {
       add(16, { speed: [1, 2.4], lift: -1.2, life: [0.5, 0.9], size: [0.03, 0.06], colors: ['#ffd86b', '#fff3c4'], shape: 'star' });
       this.rings.push({ x: cx, y: cy, t0: now, dur: 500, color: '255, 216, 107', max: 0.55 });
-    } else if (kind === 'leaf') {
-      add(9, { speed: [0.5, 1.4], lift: -0.6, gravity: 1.2, life: [0.5, 0.9], size: [0.04, 0.07], colors: ['#6fcf6b', '#9be27f', '#3f9d4f'], shape: 'leaf' });
-      this.rings.push({ x: cx, y: cy + 0.05, t0: now, dur: 700, color: '255, 255, 255', max: 0.5 });
-      this.sinks.push({ x, y, t0: now });
     } else if (kind === 'splash') {
       add(18, { angle: -Math.PI / 2, spread: 1.8, speed: [1.6, 3.2], gravity: 7, life: [0.4, 0.7], size: [0.03, 0.06], colors: ['#ffffff', '#bff2ff', '#7fdcf5'] });
       for (let i = 0; i < 3; i++) this.rings.push({ x: cx, y: cy + 0.1, t0: now + i * 140, dur: 700, color: '255, 255, 255', max: 0.6 });
@@ -1789,7 +1781,7 @@ export class WorldRenderer {
   }
 
   isAnimatingEffects() {
-    return this.particles.length > 0 || this.rings.length > 0 || this.floaters.length > 0 || this.sinks.length > 0 || Boolean(this.flyingKey) || Boolean(this.pendingSplash);
+    return this.particles.length > 0 || this.rings.length > 0 || this.floaters.length > 0 || Boolean(this.flyingKey) || Boolean(this.pendingSplash);
   }
 
   drawEffects(ctx, t, dt) {
@@ -1830,19 +1822,6 @@ export class WorldRenderer {
         ctx.restore();
       }
     }
-
-    // Sinking lily pads.
-    this.sinks = this.sinks.filter(sink => {
-      const k = (now - sink.t0) / 600;
-      if (k >= 1) return false;
-      const cx = this.px(sink.x) + T / 2;
-      const cy = this.py(sink.y) + T / 2 + T * 0.05;
-      ctx.save();
-      ctx.globalAlpha = 1 - k;
-      drawLilyShape(ctx, cx, cy + k * T * 0.05, T * 0.8 * (1 - k * 0.6), 0, false);
-      ctx.restore();
-      return true;
-    });
 
     // Expanding rings.
     this.rings = this.rings.filter(ring => {
@@ -2227,131 +2206,4 @@ export function drawGateShape(ctx, x, y, T, open = 0) {
     ctx.fill();
   }
   ctx.restore();
-}
-
-export function drawLilyShape(ctx, x, y, size, wobble = 0, flower = false) {
-  const s = size / 100;
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(wobble);
-  ctx.scale(s * (1 + wobble * 0.3), s * (1 - wobble * 0.3));
-  ctx.fillStyle = 'rgba(0, 40, 40, 0.25)';
-  ellipse(ctx, 2, 6, 40, 26);
-  ctx.fill();
-  const pad = ctx.createRadialGradient(-10, -10, 4, 0, 0, 44);
-  pad.addColorStop(0, '#8fdc6a');
-  pad.addColorStop(1, '#3f9a45');
-  ctx.fillStyle = pad;
-  ctx.strokeStyle = '#2b6e33';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 40, 27, 0, 0.35, TAU - 0.35);
-  ctx.lineTo(0, 0);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ctx.strokeStyle = 'rgba(210, 255, 180, 0.55)';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (const angle of [0.9, 1.9, 2.8, 3.8, 4.7, 5.5]) {
-    ctx.moveTo(0, 0);
-    ctx.lineTo(Math.cos(angle) * 33, Math.sin(angle) * 22);
-  }
-  ctx.stroke();
-  if (flower) {
-    ctx.fillStyle = '#ffb3d1';
-    ctx.strokeStyle = '#e0709c';
-    ctx.lineWidth = 1.5;
-    for (let i = 0; i < 6; i++) {
-      const angle = (i / 6) * TAU;
-      ellipse(ctx, -12 + Math.cos(angle) * 7, -6 + Math.sin(angle) * 5, 6, 4, angle);
-      ctx.fill();
-      ctx.stroke();
-    }
-    ctx.fillStyle = '#ffe27a';
-    circle(ctx, -12, -6, 3.5);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-export function drawTurtleShape(ctx, x, y, size, rotation = 0, sink = 0, time = 0) {
-  const s = size / 100;
-  ctx.save();
-  ctx.translate(x, y);
-  // Ripple ring on the surface.
-  const surfaced = 1 - sink;
-  ctx.strokeStyle = `rgba(255, 255, 255, ${0.35 * surfaced + 0.15})`;
-  ctx.lineWidth = Math.max(1, size * 0.025);
-  ellipse(ctx, 0, size * 0.06, size * (0.4 + Math.sin(time * 2) * 0.02), size * 0.2);
-  ctx.stroke();
-
-  ctx.rotate(rotation);
-  ctx.scale(s * (1 - sink * 0.12), s * (1 - sink * 0.12));
-  ctx.globalAlpha = 1 - sink * 0.62;
-  const paddle = Math.sin(time * 4) * 0.25;
-  const skin = sink > 0.5 ? '#2f6f6a' : '#5fbf6a';
-  const skinDark = sink > 0.5 ? '#244f4c' : '#2f8a45';
-  ctx.fillStyle = skin;
-  ctx.strokeStyle = skinDark;
-  ctx.lineWidth = 3;
-  const flipper = (fx, fy, rot, rx, ry) => {
-    ctx.save();
-    ctx.translate(fx, fy);
-    ctx.rotate(rot);
-    ellipse(ctx, 0, 0, rx, ry);
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-  };
-  flipper(-22, -18, -0.8 + paddle, 15, 7);
-  flipper(22, -18, 0.8 - paddle, 15, 7);
-  flipper(-19, 20, -2.3 - paddle * 0.6, 11, 6);
-  flipper(19, 20, 2.3 + paddle * 0.6, 11, 6);
-  circle(ctx, 0, -32, 10);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = '#12301c';
-  circle(ctx, -4, -35, 2);
-  ctx.fill();
-  circle(ctx, 4, -35, 2);
-  ctx.fill();
-  const shell = ctx.createRadialGradient(-8, -8, 4, 0, 0, 30);
-  shell.addColorStop(0, sink > 0.5 ? '#3c6f78' : '#9a7a3c');
-  shell.addColorStop(1, sink > 0.5 ? '#244a54' : '#5e4620');
-  ctx.fillStyle = shell;
-  ctx.strokeStyle = sink > 0.5 ? '#1c3a42' : '#3e2c12';
-  ctx.lineWidth = 3.5;
-  ellipse(ctx, 0, 0, 26, 29);
-  ctx.fill();
-  ctx.stroke();
-  ctx.strokeStyle = sink > 0.5 ? 'rgba(160, 220, 230, 0.35)' : 'rgba(255, 220, 150, 0.5)';
-  ctx.lineWidth = 2.2;
-  ctx.beginPath();
-  for (let i = 0; i < 6; i++) {
-    const angle = (i / 6) * TAU;
-    const px = Math.cos(angle) * 10;
-    const py = Math.sin(angle) * 11;
-    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-  }
-  ctx.closePath();
-  for (let i = 0; i < 6; i++) {
-    const angle = (i / 6) * TAU;
-    ctx.moveTo(Math.cos(angle) * 10, Math.sin(angle) * 11);
-    ctx.lineTo(Math.cos(angle) * 24, Math.sin(angle) * 27);
-  }
-  ctx.stroke();
-  ctx.restore();
-
-  if (sink > 0.35) {
-    // Bubbles rise from a submerged turtle.
-    ctx.save();
-    for (let i = 0; i < 3; i++) {
-      const k = (time * 0.9 + i / 3) % 1;
-      ctx.fillStyle = `rgba(255, 255, 255, ${(1 - k) * 0.7 * sink})`;
-      circle(ctx, x + (i - 1) * size * 0.12 + Math.sin(time * 3 + i) * size * 0.03, y - k * size * 0.35, size * (0.03 + i * 0.008));
-      ctx.fill();
-    }
-    ctx.restore();
-  }
 }

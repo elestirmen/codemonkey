@@ -1,12 +1,11 @@
 {
   "name": "kodmaymunu",
-  "version": "1.0.0",
+  "version": "5.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node test/game.test.js",
+    "test": "node --test test/game.test.js",
     "test:browser": "node test/browser.test.mjs",
-    "levels": "node tools/generate-levels.mjs",
-    "missions": "node tools/author-missions.mjs"
+    "check": "node --max-old-space-size=4000 tools/check-levels.mjs"
   }
 }

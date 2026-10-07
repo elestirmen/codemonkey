@@ -3,1807 +3,209 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Kod yazarak Mojo'yu yönlendir, algoritma kur ve 100 görevlik adayı keşfet.">
-  <meta name="theme-color" content="#07110e">
+  <meta name="description" content="Mojo'yu kod yazarak yönlendir: sıralama, döngüler, fonksiyonlar, koşullar ve değişkenlerle 60 görevlik bir algoritma macerası.">
+  <meta name="theme-color" content="#0b1712">
   <title>KodMaymunu · Algoritma Adası</title>
-  <link rel="preload" href="banana-sprite.png" as="image" type="image/png">
-  <link rel="stylesheet" href="style.css?v=20260923-v5">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='88'%3E%F0%9F%90%92%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css?v=20261007-v5">
 </head>
 <body>
   <svg class="svg-sprite" aria-hidden="true">
-    <symbol id="icon-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
-    <symbol id="icon-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
-    <symbol id="icon-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
-    <symbol id="icon-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></symbol>
-    <symbol id="icon-step" viewBox="0 0 24 24"><path d="m6 5 9 7-9 7V5Zm11 0v14"/></symbol>
-    <symbol id="icon-back" viewBox="0 0 24 24"><path d="M9 5v14m9-14-8 7 8 7V5Z"/></symbol>
-    <symbol id="icon-stop" viewBox="0 0 24 24"><path d="M7 7h10v10H7z"/></symbol>
-    <symbol id="icon-sparkle" viewBox="0 0 24 24"><path d="m12 3 1.4 4.1L17.5 8.5l-4.1 1.4L12 14l-1.4-4.1-4.1-1.4 4.1-1.4L12 3Zm6 11 .8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14Z"/></symbol>
-    <symbol id="icon-settings" viewBox="0 0 24 24"><path d="M12 15.25A3.25 3.25 0 1 0 12 8.75a3.25 3.25 0 0 0 0 6.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.86 2.86-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.55v-.1A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.86-2.86.06-.06A1.7 1.7 0 0 0 4.1 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H2.3V9.55h.1A1.7 1.7 0 0 0 4.1 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06L6.56 3.7l.06.06A1.7 1.7 0 0 0 8.5 4.1a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1v-.1h4.05v.1A1.7 1.7 0 0 0 15 4.1a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.86 2.86-.06.06A1.7 1.7 0 0 0 19.4 8.5a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 0 1.1.4h.1v4.05h-.1A1.7 1.7 0 0 0 19.4 15Z"/></symbol>
-    <symbol id="icon-ruler" viewBox="0 0 24 24"><path d="m4 15 11-11 5 5-11 11H4v-5Z"/><path d="m13 6 2 2m-5 1 2 2m-5 1 2 2m-3 1 3 3"/></symbol>
-    <symbol id="icon-terminal" viewBox="0 0 24 24"><path d="m5 7 4 4-4 4m6 0h8"/></symbol>
-    <symbol id="icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5L9 4Zm0 0v13.5m6-11v13.5"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z"/></symbol>
+    <symbol id="i-step" viewBox="0 0 24 24"><path d="m6 5 9 7-9 7V5Zm11 0v14"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="M7 5v14m11-14-9 7 9 7V5Z"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v4.5h4.5"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><path d="M7 7h10v10H7z"/></symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6m-5 3h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 15.25A3.25 3.25 0 1 0 12 8.75a3.25 3.25 0 0 0 0 6.5Z"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.86 2.86-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21H9.55v-.1A1.7 1.7 0 0 0 8.5 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.86-2.86.06-.06A1.7 1.7 0 0 0 4.1 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H2.3V9.55h.1A1.7 1.7 0 0 0 4.1 8.5a1.7 1.7 0 0 0-.34-1.88l-.06-.06L6.56 3.7l.06.06A1.7 1.7 0 0 0 8.5 4.1a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1v-.1h4.05v.1A1.7 1.7 0 0 0 15 4.1a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.86 2.86-.06.06A1.7 1.7 0 0 0 19.4 8.5a1.7 1.7 0 0 0 .6 1 1.7 1.7 0 0 0 1.1.4h.1v4.05h-.1A1.7 1.7 0 0 0 19.4 15Z"/></symbol>
+    <symbol id="i-ruler" viewBox="0 0 24 24"><path d="m4 15 11-11 5 5-11 11H4v-5Z"/><path d="m13 6 2 2m-5 1 2 2m-5 1 2 2"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Zm12.5-.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4Zm12 1 5 5m0-5-5 5"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><path d="M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z"/></symbol>
   </svg>
 
-  <div class="ambient-orb ambient-orb-one" aria-hidden="true"></div>
-  <div class="ambient-orb ambient-orb-two" aria-hidden="true"></div>
-  <button class="sidebar-backdrop" id="sidebar-backdrop" aria-label="Seviye menüsünü kapat" tabindex="-1"></button>
-
-  <aside id="level-sidebar" aria-label="Seviye haritası">
-    <div class="sidebar-container">
-      <div class="sidebar-header">
-        <div class="brand-row">
-          <div class="brand-mark" aria-hidden="true"><span>🐒</span></div>
-          <div class="brand-copy">
-            <h2>KodMaymunu</h2>
-            <p>Algoritma Adası</p>
-          </div>
-          <button id="btn-sidebar-close" class="btn-icon sidebar-close" type="button" aria-label="Seviye menüsünü kapat">
-            <svg><use href="#icon-close"></use></svg>
-          </button>
-        </div>
-
-        <div class="profile-card">
-          <div class="profile-card-top">
-            <span class="profile-label">Ada ilerlemesi</span>
-            <div class="stars-summary" id="stars-summary" aria-label="Toplam yıldız">
-              <span aria-hidden="true">★</span>
-              <span class="stars-summary-value">0 / 300</span>
-            </div>
-          </div>
-          <div class="progress-track" aria-hidden="true"><span id="overall-progress-fill"></span></div>
-          <div class="profile-meta">
-            <span id="overall-progress-text">0 / 100 görev</span>
-            <span id="overall-progress-percent">%0</span>
-          </div>
-        </div>
-
-        <label class="level-search-wrap" for="level-search">
-          <span aria-hidden="true">⌕</span>
-          <input id="level-search" type="search" placeholder="Seviye ara..." autocomplete="off">
-          <kbd>/</kbd>
-        </label>
-        <button id="btn-atlas" class="atlas-launch" type="button"><span>⌘</span><span>Keşif atlası<small>5 ada · 100 görev · ustalık rozetleri</small></span><span>↗</span></button>
-      </div>
-      <div class="level-list" id="level-list" aria-live="polite"></div>
-      <div class="sidebar-footer">
-        <span class="status-dot" aria-hidden="true"></span>
-        <span>İlerleme otomatik kaydedilir</span>
-      </div>
-    </div>
-  </aside>
-
-  <main>
+  <div class="app" id="app">
     <header class="topbar">
-      <div class="topbar-primary">
-        <button id="btn-sidebar-open" class="btn-icon mobile-menu-button" type="button" aria-label="Seviye menüsünü aç" aria-controls="level-sidebar" aria-expanded="false">
-          <svg><use href="#icon-menu"></use></svg>
+      <div class="topbar-left">
+        <button id="btn-map" class="btn-ghost btn-map" type="button" aria-haspopup="dialog">
+          <svg><use href="#i-map"></use></svg><span>Ada haritası</span>
         </button>
-        <div class="level-heading">
-          <span class="eyebrow" id="active-level-group">BÖLÜM 1 · TEMELLER</span>
-          <div class="level-nav">
-            <button id="btn-prev-level" class="btn-icon" title="Önceki seviye" aria-label="Önceki seviye">
-              <svg><use href="#icon-chevron-left"></use></svg>
-            </button>
-            <h1 id="active-level-title" class="active-level-title">1. İlk Adım</h1>
-            <button id="btn-next-level" class="btn-icon" title="Sonraki seviye" aria-label="Sonraki seviye">
-              <svg><use href="#icon-chevron-right"></use></svg>
-            </button>
-          </div>
-        </div>
+        <div class="brand" aria-hidden="true"><span class="brand-mark">🐒</span><span class="brand-name">KodMaymunu</span></div>
       </div>
-
-      <div class="header-controls">
-        <div class="level-position" aria-label="Seviye ilerlemesi">
-          <span id="level-position-label">01 / 100</span>
-          <div class="level-position-track"><span id="level-position-fill"></span></div>
+      <nav class="level-nav" aria-label="Görevler arasında gezin">
+        <button id="btn-prev" class="btn-icon" type="button" aria-label="Önceki görev"><svg><use href="#i-left"></use></svg></button>
+        <div class="level-heading">
+          <span class="level-island" id="level-island">ADA 1 · FİLİZ ORMANI</span>
+          <h1 id="level-title">1. İlk Adımlar</h1>
         </div>
-        <details class="settings-menu" id="settings-menu">
-          <summary class="btn-icon" aria-label="Oyun ayarları" title="Oyun ayarları">
-            <svg><use href="#icon-settings"></use></svg>
-          </summary>
-          <div class="settings-popover">
-            <div class="settings-popover-header">
-              <div><span class="eyebrow">KONTROL MERKEZİ</span><strong>Oyun ayarları</strong></div>
-            </div>
-            <label class="settings-field" for="syntax-mode">
+        <button id="btn-next" class="btn-icon" type="button" aria-label="Sonraki görev"><svg><use href="#i-right"></use></svg></button>
+      </nav>
+      <div class="topbar-right">
+        <div class="star-total" id="star-total" title="Toplam yıldız"><span aria-hidden="true">★</span><strong>0</strong><small>/ 180</small></div>
+        <button id="btn-sound" class="btn-icon" type="button" aria-label="Sesi kapat" aria-pressed="true"><svg><use href="#i-sound"></use></svg></button>
+        <details class="settings" id="settings">
+          <summary class="btn-icon" aria-label="Ayarlar"><svg><use href="#i-settings"></use></svg></summary>
+          <div class="settings-pop">
+            <label class="field">
               <span>Yazım biçimi</span>
               <select id="syntax-mode">
-                <option value="indent">Python · Girinti</option>
+                <option value="indent">Python · girinti ve :</option>
                 <option value="bracket">JavaScript · { }</option>
               </select>
             </label>
-            <div class="settings-grid">
-              <button id="btn-theme-toggle" class="btn-secondary" type="button" title="Temayı değiştir">
-                <span id="theme-icon">☀️</span> <span id="theme-text">Açık</span>
-              </button>
-              <button id="btn-sound-toggle" class="btn-secondary" type="button" title="Sesi aç veya kapat" aria-pressed="true">
-                <span id="sound-icon">🔊</span> <span id="sound-text">Ses açık</span>
-              </button>
-            </div>
-            <button id="btn-reset-code" class="settings-action" type="button"><span>↻</span><span><strong>Kodu sıfırla</strong><small>Bu seviyedeki editörü temizler</small></span></button>
-            <button id="btn-dev-toggle" class="settings-action" type="button" title="Tüm seviyeleri aç veya kapat"><span>⌘</span><span><strong id="dev-text">Geliştirici modu</strong><small>Tüm görevleri test için açar</small></span></button>
-            <a href="https://oyunlar.perinet.org" class="settings-action"><span>⌂</span><span><strong>Oyun portalı</strong><small>Diğer oyunlara geri dön</small></span></a>
+            <button id="btn-theme" class="settings-item" type="button"><span aria-hidden="true">◐</span><span><strong id="theme-label">Açık tema</strong><small>Ekran rengini değiştir</small></span></button>
+            <button id="btn-guide" class="settings-item" type="button"><span aria-hidden="true">?</span><span><strong>Komut rehberi</strong><small>Bütün komutlar ve sorular</small></span></button>
+            <button id="btn-clear-code" class="settings-item" type="button"><span aria-hidden="true">↺</span><span><strong>Kodu temizle</strong><small>Bu görevin editörünü boşaltır</small></span></button>
+            <button id="btn-dev" class="settings-item" type="button"><span aria-hidden="true">⌘</span><span><strong id="dev-label">Öğretmen modu</strong><small>Bütün görevleri açar</small></span></button>
+            <a class="settings-item" href="https://oyunlar.perinet.org"><span aria-hidden="true">⌂</span><span><strong>Oyun portalı</strong><small>Diğer oyunlar</small></span></a>
           </div>
         </details>
       </div>
     </header>
 
-    <div class="expedition-banner" id="expedition-banner">
-      <div class="expedition-seal" id="expedition-seal" aria-hidden="true">01</div>
-      <div class="expedition-copy"><span class="eyebrow" id="expedition-kicker">KEŞİF GÜNLÜĞÜ</span><strong id="expedition-name">Filiz Ormanı</strong><span id="expedition-summary">Her büyük keşif bir adımla başlar.</span></div>
-      <div class="expedition-progress"><span id="expedition-progress-label">0 / 20 görev</span><div class="progress-track"><span id="expedition-progress-fill"></span></div></div>
-      <button id="btn-atlas-main" class="text-button" type="button">Atlası aç ↗</button>
-    </div>
-    <div class="workspace">
-      <section class="arena-panel panel-shell" aria-labelledby="arena-title">
-        <div class="panel-header">
-          <div>
-            <span class="panel-kicker">CANLI SAHNE</span>
-            <h2 class="panel-title" id="arena-title">Algoritma Dünyası</h2>
-          </div>
-          <div class="panel-actions">
-            <button id="btn-ruler" class="btn-secondary btn-compact" type="button" title="Mesafe ölçer" aria-pressed="false">
-              <svg><use href="#icon-ruler"></use></svg><span>Cetvel</span>
-            </button>
-            <div id="banana-counter" class="banana-counter" aria-live="polite"><span>🍌</span><strong>0 / 0</strong></div>
+    <main class="workspace">
+      <section class="stage" aria-label="Oyun alanı">
+        <canvas id="game-canvas" aria-label="Mojo'nun adası">Bu tarayıcı oyun alanını gösteremiyor.</canvas>
+        <div class="stage-top">
+          <div class="scenario-tabs" id="scenario-tabs" role="group" aria-label="Parkurlar" hidden></div>
+          <div class="stage-tools">
+            <div class="counter" id="banana-counter" title="Toplanan muzlar"><span aria-hidden="true">🍌</span><strong>0/0</strong></div>
+            <div class="counter" id="key-counter" title="Anahtar" hidden><span aria-hidden="true">🗝️</span><strong>0/1</strong></div>
+            <button id="btn-ruler" class="btn-chip" type="button" aria-pressed="false" title="Cetvel: bir kareye dokun, Mojo'ya uzaklığını gör"><svg><use href="#i-ruler"></use></svg><span>Cetvel</span></button>
           </div>
         </div>
-
-        <div id="instructions-card" class="instructions-card"></div>
-        <div class="scenario-bar" id="scenario-bar" aria-label="Algoritma test parkurları" hidden></div>
-        <div class="canvas-container">
-          <div class="canvas-stage">
-            <canvas id="game-canvas" aria-label="Mojo'nun algoritma oyun alanı">Tarayıcın oyun alanını göstermek için gereken Canvas özelliğini desteklemiyor.</canvas>
-            <div class="stage-chip stage-chip-left"><span class="status-dot"></span><span id="runtime-status">Planlamaya hazır</span></div>
-            <div class="stage-chip stage-chip-right" id="direction-chip">MOJO · DOĞU</div>
+        <div class="bubble" id="bubble" role="status" aria-live="polite" hidden><p id="bubble-text"></p></div>
+        <div class="stage-bottom">
+          <div class="status-chip" id="status-chip"><span class="dot"></span><span id="status-text">Hazır</span></div>
+          <div class="stage-bottom-right">
+            <label class="speed" title="Canlandırma hızı">
+              <span aria-hidden="true">🐢</span>
+              <input type="range" id="speed" min="1" max="5" step="1" value="3" aria-label="Hız">
+              <span aria-hidden="true">🐇</span>
+            </label>
+            <div class="facing-chip" id="facing-chip" title="Mojo'nun baktığı yön">Mojo → DOĞU</div>
           </div>
         </div>
-        <div class="field-guide" id="field-guide" aria-live="polite"></div>
       </section>
 
-      <section class="ide-panel panel-shell" aria-labelledby="editor-title">
-        <div class="panel-header editor-panel-header">
-          <div>
-            <span class="panel-kicker">KOD LABORATUVARI</span>
-            <h2 class="panel-title" id="editor-title">Rota Editörü</h2>
+      <aside class="panel" aria-label="Görev ve kod">
+        <section class="mission" aria-labelledby="mission-title">
+          <div class="mission-head">
+            <span class="concept-chip" id="concept-chip">Sıralama</span>
+            <h2 id="mission-title">Görev</h2>
+            <button id="btn-hint" class="btn-hint" type="button"><svg><use href="#i-bulb"></use></svg><span>İpucu</span></button>
           </div>
-          <div class="editor-meta">
-            <span class="autosave-state"><span class="status-dot"></span>Kaydedildi</span>
-            <span id="code-length-display">0 satır</span>
+          <p class="mission-text" id="mission-text"></p>
+          <div class="targets" id="targets"></div>
+        </section>
+
+        <section class="editor-card" aria-label="Kod editörü">
+          <div class="editor-head">
+            <span class="editor-file"><span class="file-dot"></span>mojo.kod</span>
+            <span class="line-meter" id="line-meter">0 satır</span>
           </div>
-        </div>
-
-        <div class="editor-tabbar" aria-hidden="true">
-          <div class="editor-tab active"><span class="file-dot"></span>rota.kod</div>
-          <div class="editor-shortcut">Çalıştır <kbd>⌘</kbd><kbd>↵</kbd></div>
-        </div>
-        <div class="editor-container">
-          <div id="line-gutter" aria-hidden="true"></div>
-          <div class="editor-inputs">
-            <textarea id="code-editor" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Algoritma kodu" placeholder="# Komutlarını buraya yaz..."></textarea>
-            <div id="code-display-preview" aria-hidden="true"></div>
-          </div>
-        </div>
-
-        <div class="quick-commands" id="quick-commands">
-          <span class="quick-command-label">KOMUT PALETİ</span>
-          <button class="btn-command" data-cmd="ilerle()" id="cmd-ilerle" type="button">ilerle()</button>
-          <button class="btn-command" data-cmd="adimla(3)" id="cmd-adimla" type="button">adimla(N)</button>
-          <button class="btn-command" data-cmd="solaDon()" id="cmd-solaDon" type="button">solaDon()</button>
-          <button class="btn-command" data-cmd="sagaDon()" id="cmd-sagaDon" type="button">sagaDon()</button>
-          <button class="btn-command" data-cmd="bekle()" id="cmd-bekle" type="button">bekle()</button>
-          <button class="btn-command turtle-command" data-cmd="kaplumbaga.adimla()" id="cmd-kaplumbaga" type="button">kaplumbaga.adimla()</button>
-          <button class="btn-command" data-cmd="tekrarla(3) {\n  ilerle()\n}" id="cmd-tekrarla" type="button">tekrarla() {}</button>
-          <button class="btn-command" data-cmd="ise(onumdeEngelVar()) {\n  solaDon()\n}" id="cmd-ise" type="button">ise() {}</button>
-          <button class="btn-command" data-cmd="iken(hedefteDegilim()) {\n  ilerle()\n}" id="cmd-iken" type="button">iken() {}</button>
-        </div>
-        <details class="command-guide" id="command-guide"><summary>Komut rehberi <span>Sensörler nasıl çalışır?</span></summary><div id="command-guide-content"></div></details>
-
-        <div class="controls-bar">
-          <div class="action-buttons">
-            <button id="btn-run" class="btn-primary" type="button">
-              <svg><use href="#icon-play"></use></svg><span>Çalıştır</span><kbd>⌘↵</kbd>
-            </button>
-            <button id="btn-step" class="btn-secondary btn-control" type="button" title="Kodu adım adım çalıştır">
-              <svg><use href="#icon-step"></use></svg><span>Adımla</span>
-            </button>
-            <button id="btn-step-back" class="btn-secondary btn-control" type="button" title="Bir adım geri al" disabled>
-              <svg><use href="#icon-back"></use></svg><span>Geri</span>
-            </button>
-            <button id="btn-smart-route" class="btn-secondary btn-control smart-route-button" type="button" title="Kademeli ipuçları ve örnek çözüm">
-              <svg><use href="#icon-sparkle"></use></svg><span>Yardım al</span>
-            </button>
-            <button id="btn-stop" class="btn-danger btn-control" type="button" disabled>
-              <svg><use href="#icon-stop"></use></svg><span>Durdur</span>
-            </button>
-          </div>
-          <label class="speed-control" for="speed-slider">
-            <span>Hız</span>
-            <input type="range" id="speed-slider" min="1" max="5" step="1" value="3" title="Animasyon hızı">
-            <span id="speed-value">Orta</span>
-          </label>
-        </div>
-      </section>
-    </div>
-
-    <section class="console-panel" id="console-panel" aria-label="Konsol çıktısı">
-      <div class="console-header">
-        <button id="btn-console-toggle" class="console-toggle" type="button" aria-expanded="true" aria-controls="console-output">
-          <svg><use href="#icon-terminal"></use></svg><span>Konsol</span><span id="console-status-badge" class="console-status-badge">Hazır</span>
-        </button>
-        <button id="btn-clear-console" class="text-button" type="button">Temizle</button>
-      </div>
-      <div class="console-output" id="console-output" role="log" aria-live="polite"></div>
-    </section>
-  </main>
-
-  <div class="modal-overlay" id="success-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" aria-hidden="true" inert>
-    <div class="modal-content">
-      <div class="modal-glow" aria-hidden="true"></div>
-      <span class="modal-eyebrow">GÖREV TAMAMLANDI</span>
-      <div class="modal-icon">🏆</div>
-      <h2 class="modal-title" id="modal-title">Seviye tamamlandı!</h2>
-      <div class="modal-stars" id="modal-stars" aria-label="Kazanılan yıldızlar">
-        <span class="star-big">★</span><span class="star-big">★</span><span class="star-big">★</span>
-      </div>
-      <p class="modal-desc" id="modal-desc">Harika bir iş çıkardın; Mojo hedefine ulaştı.</p>
-      <div class="star-details" id="star-details"></div>
-      <div class="modal-buttons">
-        <button id="modal-btn-retry" class="btn-secondary" type="button">Tekrar oyna</button>
-        <button id="modal-btn-next" class="btn-primary" type="button">Sonraki seviye <svg><use href="#icon-chevron-right"></use></svg></button>
-      </div>
-    </div>
-  </div>
-
-  <div class="welcome-overlay" id="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title" aria-hidden="true" inert>
-    <div class="welcome-card">
-      <button id="btn-welcome-close" class="btn-icon welcome-close" type="button" aria-label="Tanıtımı kapat"><svg><use href="#icon-close"></use></svg></button>
-      <div class="welcome-visual"><span>🐒</span><i></i><i></i><i></i></div>
-      <span class="modal-eyebrow">ALGORİTMA ADASI'NA HOŞ GELDİN</span>
-      <h2 id="welcome-title">Mojo'nun rotasını kodla.</h2>
-      <p>Komutları sırala, kodunu çalıştır ve tüm muzları toplayarak sandığa ulaş. Üçüncü yıldız kısa kod içindir: her görevin doğrulanmış bir referans çözümü var, onu yakala — hatta kır.</p>
-      <div class="welcome-steps">
-        <div><strong>01</strong><span>Rotayı incele</span></div>
-        <div><strong>02</strong><span>Algoritmayı yaz</span></div>
-        <div><strong>03</strong><span>Satır sayısını düşür</span></div>
-      </div>
-      <button id="btn-welcome-start" class="btn-primary welcome-start" type="button"><svg><use href="#icon-play"></use></svg>Maceraya başla</button>
-    </div>
-  </div>
-
-  <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
-
-  <div class="modal-overlay" id="atlas-modal" role="dialog" aria-modal="true" aria-labelledby="atlas-title" aria-hidden="true" inert>
-    <div class="atlas-card">
-      <button id="btn-atlas-close" class="btn-icon atlas-close" type="button" aria-label="Atlası kapat"><svg><use href="#icon-close"></use></svg></button>
-      <span class="eyebrow">MOJO'NUN KEŞİF ATLASI</span>
-      <h2 id="atlas-title">Bir adım. Beş dünya.<br><em>Yüz yeni keşif.</em></h2>
-      <p class="atlas-intro">Her adada yeni bir düşünme biçimi öğren. Muhafız görevini tamamla, mührünü kazan ve keşfine devam et.</p>
-      <div class="atlas-worlds" id="atlas-worlds"></div>
-      <div class="atlas-footer"><span id="atlas-mastery-count">0 ustalık rozeti</span><span>Yıldızlar kısa kodu, rozetler öğrendiğin beceriyi ödüllendirir.</span></div>
-    </div>
-  </div>
-  <div class="modal-overlay" id="coach-modal" role="dialog" aria-modal="true" aria-labelledby="coach-title" aria-hidden="true" inert>
-    <div class="coach-card">
-      <button id="btn-coach-close" class="btn-icon atlas-close" type="button" aria-label="Yardımı kapat"><svg><use href="#icon-close"></use></svg></button>
-      <span class="eyebrow">MOJO'NUN ATÖLYESİ</span><h2 id="coach-title">Birlikte düşünelim.</h2>
-      <p class="coach-intro">Her ipucu biraz daha yol gösterir. İpuçları yıldızlarını etkilemez.</p>
-      <ol id="coach-hints" class="coach-hints"></ol>
-      <button id="btn-next-hint" class="btn-primary" type="button">İlk ipucunu aç</button>
-      <details class="solution-disclosure" id="solution-disclosure"><summary>Örnek çözümü incele</summary><p>Kendi kodun editörde kalır. Örneği karşılaştırmak için kullanabilirsin.</p><pre id="solution-preview"></pre><button id="btn-use-solution" class="btn-secondary" type="button">Örneği editöre aktar</button></details>
-    </div>
-  </div>
-
-  <!-- Script Modules setup -->
-  <script type="module">
-    import { LEVELS, Game, CHAPTERS, CHAPTER_SIZE, getLevelGroup, getChapter, COMMAND_UNLOCKS } from './game.js?v=20260923-v5';
-    import { soundEngine } from './audio.js';
-
-    let game;
-    let unlockedLevels = [0]; // default unlocked level 0 (Level 1)
-    let completedStars = {}; // Map of level index -> star count
-
-    let bestLines = {}; // Map of level id -> fewest scored lines ever submitted
-    let expandedGroups = new Set([1]); // default group 1 expanded
-    let devMode = false;
-    let autosaveTimer = null;
-    let lastFocusedBeforeModal = null;
-    let masteryBadges = {};
-    let hintDepth = {};
-    const WORLDS = [
-      { name: 'Filiz Ormanı', symbol: '❧', color: '#72d9a5', story: 'Her büyük keşif bir adımla başlar.', seal: 'Orman Kaşifi' },
-      { name: 'Kemer Takımadaları', symbol: '≋', color: '#74cce8', story: 'Suyun üzerinde aynı ritmi bul, tekrarın gücünü keşfet.', seal: 'Köprü Mimarı' },
-      { name: 'Nilüfer Tapınağı', symbol: '❋', color: '#c5a2ef', story: 'Bazı yollar yalnızca bir kez açılır. Önce düşün, sonra geç.', seal: 'Tapınak Koruyucusu' },
-      { name: 'Gelgit Kıyıları', symbol: '◷', color: '#f4bd78', story: 'Doğru adım kadar, doğru an da önemlidir.', seal: 'Gelgit Ustası' },
-      { name: 'Bilgelik Zirvesi', symbol: '◇', color: '#f1d782', story: 'Haritalar değişir. İyi bir algoritma yolunu yine bulur.', seal: 'Algoritma Ustası' }
-    ];
-
-    // DOM References
-    const editor = document.getElementById('code-editor');
-    const gutter = document.getElementById('line-gutter');
-    const preview = document.getElementById('code-display-preview');
-    const runBtn = document.getElementById('btn-run');
-    const stepBtn = document.getElementById('btn-step');
-    const stepBackBtn = document.getElementById('btn-step-back');
-    const smartRouteBtn = document.getElementById('btn-smart-route');
-    const stopBtn = document.getElementById('btn-stop');
-    const speedSlider = document.getElementById('speed-slider');
-    const soundBtn = document.getElementById('btn-sound-toggle');
-    const resetBtn = document.getElementById('btn-reset-code');
-    const clearConsoleBtn = document.getElementById('btn-clear-console');
-    const consoleOutput = document.getElementById('console-output');
-
-    const prevLvlBtn = document.getElementById('btn-prev-level');
-    const nextLvlBtn = document.getElementById('btn-next-level');
-    const levelTitle = document.getElementById('active-level-title');
-    const bananaCounter = document.getElementById('banana-counter');
-    const instructionsCard = document.getElementById('instructions-card');
-
-    const themeBtn = document.getElementById('btn-theme-toggle');
-    const rulerBtn = document.getElementById('btn-ruler');
-    const syntaxModeSelect = document.getElementById('syntax-mode');
-    const devBtn = document.getElementById('btn-dev-toggle');
-    const sidebar = document.getElementById('level-sidebar');
-    const sidebarOpenBtn = document.getElementById('btn-sidebar-open');
-    const sidebarCloseBtn = document.getElementById('btn-sidebar-close');
-    const sidebarBackdrop = document.getElementById('sidebar-backdrop');
-    const levelSearch = document.getElementById('level-search');
-    const consolePanel = document.getElementById('console-panel');
-    const consoleToggleBtn = document.getElementById('btn-console-toggle');
-    const runtimeStatus = document.getElementById('runtime-status');
-    const directionChip = document.getElementById('direction-chip');
-    const settingsMenu = document.getElementById('settings-menu');
-    const welcomeOverlay = document.getElementById('welcome-overlay');
-    const welcomeStartBtn = document.getElementById('btn-welcome-start');
-    const welcomeCloseBtn = document.getElementById('btn-welcome-close');
-
-    // Modal References
-    const modal = document.getElementById('success-modal');
-    const modalTitle = document.getElementById('modal-title');
-    const modalDesc = document.getElementById('modal-desc');
-    const modalStars = document.getElementById('modal-stars').children;
-    const modalRetryBtn = document.getElementById('modal-btn-retry');
-    const modalNextBtn = document.getElementById('modal-btn-next');
-
-    // Initialize Page
-    window.addEventListener('DOMContentLoaded', () => {
-      // Initialize Theme
-      const savedTheme = safeStorageGet('kodmaymunu_theme') || 'dark';
-      if (savedTheme === 'light') {
-        document.body.classList.add('light-theme');
-      } else {
-        document.body.classList.remove('light-theme');
-      }
-
-      game = new Game('game-canvas');
-      game.startRenderLoop();
-      updateThemeUI(savedTheme);
-
-      // Initialize Syntax Mode
-      const savedSyntaxMode = safeStorageGet('kodmaymunu_syntax_mode') || 'indent';
-      if (syntaxModeSelect) {
-        syntaxModeSelect.value = savedSyntaxMode;
-      }
-      updateSyntaxModeUI(savedSyntaxMode);
-      game.syntaxMode = savedSyntaxMode;
-
-      // Load progress
-      const savedUnlocked = safelyParseJSON(safeStorageGet('kodmaymunu_unlocked'), null);
-      if (Array.isArray(savedUnlocked)) {
-        unlockedLevels = [...new Set([0, ...savedUnlocked.filter(idx => Number.isInteger(idx) && idx >= 0 && idx < LEVELS.length)])];
-      }
-      const savedBest = safelyParseJSON(safeStorageGet('kodmaymunu_best_lines'), null);
-      if (savedBest && typeof savedBest === 'object' && !Array.isArray(savedBest)) {
-        bestLines = Object.fromEntries(
-          Object.entries(savedBest)
-            .filter(([idx, lines]) => Number.isInteger(Number(idx)) && Number(idx) >= 0 && Number(idx) < LEVELS.length && Number.isFinite(Number(lines)) && Number(lines) > 0)
-            .map(([idx, lines]) => [idx, Number(lines)])
-        );
-      }
-
-      const savedStars = safelyParseJSON(safeStorageGet('kodmaymunu_stars'), null);
-      if (savedStars && typeof savedStars === 'object' && !Array.isArray(savedStars)) {
-        completedStars = Object.fromEntries(
-          Object.entries(savedStars)
-            .filter(([idx, stars]) => Number.isInteger(Number(idx)) && Number(idx) >= 0 && Number(idx) < LEVELS.length && Number.isFinite(Number(stars)))
-            .map(([idx, stars]) => [idx, Math.max(0, Math.min(3, Number(stars)))])
-        );
-      }
-
-      const savedMastery = safelyParseJSON(safeStorageGet('kodmaymunu_mastery_v4'), {});
-      masteryBadges = savedMastery && typeof savedMastery === 'object' && !Array.isArray(savedMastery) ? savedMastery : {};
-      // Changed boards keep old unlocks/stars, but records belong to their revision.
-      const revisionRecords = safelyParseJSON(safeStorageGet('kodmaymunu_best_lines_v4'), {});
-      for (const [idx, level] of LEVELS.entries()) {
-        if (!level.revision) continue;
-        delete bestLines[idx];
-        if (Number.isInteger(revisionRecords?.[idx]) && revisionRecords[idx] > 0) bestLines[idx] = revisionRecords[idx];
-      }
-
-      // Initialize Dev Mode
-      const savedDev = safeStorageGet('kodmaymunu_dev_mode') || 'false';
-      devMode = (savedDev === 'true');
-      updateDevUI(devMode);
-
-      setupEventListeners();
-      if (!devMode && !unlockedLevels.includes(game.currentLevelIdx)) {
-        game.currentLevelIdx = Math.max(...unlockedLevels);
-      }
-      game.loadLevel(game.currentLevelIdx);
-      game.executionSpeed = getExecutionSpeed(Number(speedSlider.value));
-      loadActiveLevel();
-
-      const savedSound = safeStorageGet('kodmaymunu_sound');
-      if (savedSound === 'false' && soundEngine.isSoundEnabled()) {
-        soundEngine.toggleSound();
-      }
-      updateSoundUI(soundEngine.isSoundEnabled());
-      updateSpeedUI();
-
-      // Browsers only start audio from a user gesture; the first one also
-      // brings in the island ambience.
-      const unlockAudio = () => soundEngine.unlock();
-      document.addEventListener('pointerdown', unlockAudio, { once: true });
-      document.addEventListener('keydown', unlockAudio, { once: true });
-
-      if (!safeStorageGet('kodmaymunu_welcome_seen')) {
-        window.setTimeout(() => setOverlayVisibility(welcomeOverlay, true, welcomeStartBtn), 180);
-      }
-    });
-
-    function safeStorageGet(key) {
-      try {
-        return localStorage.getItem(key);
-      } catch (_) {
-        return null;
-      }
-    }
-
-    function safeStorageSet(key, value) {
-      try {
-        localStorage.setItem(key, value);
-        return true;
-      } catch (_) {
-        return false;
-      }
-    }
-
-    function safelyParseJSON(value, fallback) {
-      if (!value) return fallback;
-      try {
-        return JSON.parse(value);
-      } catch (_) {
-        return fallback;
-      }
-    }
-
-    function setSafeHTML(element, htmlString) {
-      element.replaceChildren();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlString, 'text/html');
-      doc.body.querySelectorAll('script, style, iframe, object, embed, link, meta').forEach(node => node.remove());
-      doc.body.querySelectorAll('*').forEach(node => {
-        [...node.attributes].forEach(attribute => {
-          const name = attribute.name.toLowerCase();
-          const value = attribute.value.trim().toLowerCase();
-          if (name.startsWith('on') || ((name === 'href' || name === 'src') && value.startsWith('javascript:'))) {
-            node.removeAttribute(attribute.name);
-          }
-        });
-      });
-      while (doc.body.firstChild) {
-        element.appendChild(doc.body.firstChild);
-      }
-    }
-
-    function setupEventListeners() {
-      editor.addEventListener('input', () => {
-        markEditorChanged();
-        clearErrorLine();
-      });
-
-      editor.addEventListener('scroll', () => {
-        gutter.scrollTop = editor.scrollTop;
-        preview.scrollTop = editor.scrollTop;
-        preview.scrollLeft = editor.scrollLeft;
-      });
-
-      document.querySelectorAll('.btn-command').forEach(btn => {
-        btn.addEventListener('click', () => insertCommand(btn.getAttribute('data-cmd')));
-      });
-
-      syntaxModeSelect.addEventListener('change', () => {
-        const previousMode = game.syntaxMode;
-        const mode = syntaxModeSelect.value;
-        saveCurrentCode(previousMode);
-        safeStorageSet('kodmaymunu_syntax_mode', mode);
-        game.syntaxMode = mode;
-        updateSyntaxModeUI(mode);
-
-        const idx = game.currentLevelIdx;
-        const modeDraft = safeStorageGet(getCodeStorageKey(idx, mode));
-        editor.value = modeDraft ?? createStarterCode(idx, mode);
-        markEditorChanged(true);
-        showToast(`${mode === 'indent' ? 'Python' : 'JavaScript'} taslağı açıldı. Önceki taslağın korundu.`);
-      });
-
-      themeBtn.addEventListener('click', () => {
-        const isLight = document.body.classList.toggle('light-theme');
-        const theme = isLight ? 'light' : 'dark';
-        safeStorageSet('kodmaymunu_theme', theme);
-        updateThemeUI(theme);
-        game.draw();
-      });
-
-      rulerBtn.addEventListener('click', () => {
-        game.rulerActive = !game.rulerActive;
-        rulerBtn.classList.toggle('btn-active', game.rulerActive);
-        rulerBtn.setAttribute('aria-pressed', String(game.rulerActive));
-        if (!game.rulerActive) game.hoveredCell = null;
-        game.draw();
-      });
-
-      const canvasEl = document.getElementById('game-canvas');
-      // The renderer centres and scales the island inside the canvas, so only
-      // it knows which board cell sits under the pointer.
-      const updateRulerCell = event => {
-        if (!game || !game.rulerActive) return;
-        const cell = game.renderer.cellFromClient(event.clientX, event.clientY);
-        if (!cell) return;
-        if (!game.hoveredCell || game.hoveredCell.x !== cell.x || game.hoveredCell.y !== cell.y) {
-          game.hoveredCell = cell;
-          game.draw();
-        }
-      };
-      canvasEl.addEventListener('pointermove', updateRulerCell);
-      canvasEl.addEventListener('pointerdown', updateRulerCell);
-      canvasEl.addEventListener('pointerleave', () => {
-        if (game && game.rulerActive) {
-          game.hoveredCell = null;
-          game.draw();
-        }
-      });
-
-      editor.addEventListener('keydown', event => {
-        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') return;
-
-        const start = editor.selectionStart;
-        const end = editor.selectionEnd;
-        const text = editor.value;
-
-        if (event.key === 'Tab') {
-          event.preventDefault();
-          const insertion = event.shiftKey ? '' : '    ';
-          if (event.shiftKey) {
-            const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-            const removable = Math.min(4, (text.slice(lineStart).match(/^ +/) || [''])[0].length);
-            editor.value = text.slice(0, lineStart) + text.slice(lineStart + removable);
-            editor.selectionStart = editor.selectionEnd = Math.max(lineStart, start - removable);
-          } else {
-            editor.value = text.slice(0, start) + insertion + text.slice(end);
-            editor.selectionStart = editor.selectionEnd = start + insertion.length;
-          }
-          markEditorChanged();
-        } else if (event.key === 'Enter' && !event.altKey && !event.shiftKey) {
-          const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-          const currentLine = text.substring(lineStart, start);
-          const indent = (currentLine.match(/^(\s*)/) || ['', ''])[1];
-          const extraIndent = (currentLine.trim().endsWith('{') || currentLine.trim().endsWith(':')) ? '    ' : '';
-          event.preventDefault();
-          const insertion = '\n' + indent + extraIndent;
-          editor.value = text.substring(0, start) + insertion + text.substring(end);
-          editor.selectionStart = editor.selectionEnd = start + insertion.length;
-          markEditorChanged();
-        } else if (event.key === '{' && game.syntaxMode === 'bracket') {
-          event.preventDefault();
-          const selected = text.slice(start, end);
-          editor.value = text.slice(0, start) + '{' + selected + '}' + text.slice(end);
-          editor.selectionStart = start + 1;
-          editor.selectionEnd = start + 1 + selected.length;
-          markEditorChanged();
-        } else if (event.key === '(') {
-          event.preventDefault();
-          const selected = text.slice(start, end);
-          editor.value = text.slice(0, start) + '(' + selected + ')' + text.slice(end);
-          editor.selectionStart = start + 1;
-          editor.selectionEnd = start + 1 + selected.length;
-          markEditorChanged();
-        } else if ((event.key === ')' || event.key === '}') && text[start] === event.key && start === end) {
-          event.preventDefault();
-          editor.selectionStart = editor.selectionEnd = start + 1;
-        }
-      });
-
-      runBtn.addEventListener('click', () => {
-        saveCurrentCode();
-        setupExecutionPreview(editor.value);
-        setExecutionUI(true);
-        runtimeStatus.textContent = 'Algoritma çalışıyor';
-        game.isDebugMode = false;
-        game.runCodeText(editor.value);
-      });
-
-      stepBtn.addEventListener('click', () => {
-        if (!game.isRunning) {
-          saveCurrentCode();
-          setupExecutionPreview(editor.value);
-          setExecutionUI(true, true);
-          runtimeStatus.textContent = 'Adım modu etkin';
-          game.isDebugMode = true;
-          game.isWaitingForStep = false;
-          game.runCodeText(editor.value);
-        } else if (game.isWaitingForStep) {
-          game.isWaitingForStep = false;
-          stepBtn.disabled = true;
-          stepBackBtn.disabled = true;
-          game.step();
-        }
-      });
-
-      stepBackBtn.addEventListener('click', () => {
-        if (game && game.isRunning && game.isDebugMode && game.isWaitingForStep && game.stepBack()) {
-          stepBackBtn.disabled = game.historyStack.length === 0;
-          updateLoopBadges();
-          logToConsole('Bir adım geri alındı.', 'info');
-          updateRuntimeHUD();
-        }
-      });
-
-      smartRouteBtn.addEventListener('click', () => {
-        openCoach();
-      });
-
-      document.getElementById('btn-use-solution').addEventListener('click', () => {
-        const meaningfulCode = editor.value
-          .replace(/\/\/.*$/gm, '')
-          .replace(/#.*$/gm, '')
-          .replace(/\/\*[\s\S]*?\*\//g, '')
-          .trim();
-        if (meaningfulCode && !confirm('Mevcut kodun rota önerisiyle değiştirilecek. Devam edilsin mi?')) return;
-
-        const routeCode = game.createSmartRouteCode();
-        if (!routeCode) {
-          logToConsole('Bu seviye için referans çözüm oluşturulamadı.', 'error');
-          return;
-        }
-        editor.value = routeCode;
-        markEditorChanged(true);
-        saveCurrentCode();
-        const par = game.getStarTargets().par;
-        logToConsole(`Referans çözüm editöre yazıldı (${par} satır, 3 yıldız).`, 'success');
-        showToast(`Referans çözüm ${par} satır. Daha kısasını bulursan rekor kırarsın.`);
-        setOverlayVisibility(document.getElementById('coach-modal'), false);
-      });
-
-      for (const id of ['btn-atlas', 'btn-atlas-main']) document.getElementById(id).addEventListener('click', openAtlas);
-      document.getElementById('btn-atlas-close').addEventListener('click', () => setOverlayVisibility(document.getElementById('atlas-modal'), false));
-      document.getElementById('btn-coach-close').addEventListener('click', () => setOverlayVisibility(document.getElementById('coach-modal'), false));
-      document.getElementById('btn-next-hint').addEventListener('click', () => {
-        hintDepth[game.level.id] = (hintDepth[game.level.id] || 0) + 1;
-        renderCoachHints();
-      });
-
-      stopBtn.addEventListener('click', () => game.stop());
-
-      resetBtn.addEventListener('click', () => {
-        if (!confirm('Bu seviyedeki kod taslağın temizlensin mi?')) return;
-        editor.value = '';
-        markEditorChanged(true);
-        saveCurrentCode();
-        settingsMenu.open = false;
-        logToConsole('Bu seviyedeki kod taslağı temizlendi.', 'info');
-      });
-
-      clearConsoleBtn.addEventListener('click', () => {
-        consoleOutput.replaceChildren();
-        updateConsoleStatus('Hazır', '');
-      });
-
-      prevLvlBtn.addEventListener('click', () => navigateToLevel(game.currentLevelIdx - 1));
-      nextLvlBtn.addEventListener('click', () => navigateToLevel(game.currentLevelIdx + 1));
-
-      speedSlider.addEventListener('input', () => {
-        game.executionSpeed = getExecutionSpeed(Number(speedSlider.value));
-        updateSpeedUI();
-      });
-
-      soundBtn.addEventListener('click', () => {
-        const enabled = soundEngine.toggleSound();
-        safeStorageSet('kodmaymunu_sound', String(enabled));
-        updateSoundUI(enabled);
-        logToConsole(enabled ? 'Sesler açıldı.' : 'Sesler kapatıldı.', 'info');
-      });
-
-      devBtn.addEventListener('click', () => {
-        saveCurrentCode();
-        devMode = !devMode;
-        safeStorageSet('kodmaymunu_dev_mode', String(devMode));
-        updateDevUI(devMode);
-        if (!devMode && !unlockedLevels.includes(game.currentLevelIdx)) {
-          navigateToLevel(Math.max(...unlockedLevels));
-        } else {
-          renderSidebarList();
-          loadActiveLevel();
-        }
-      });
-
-      modalRetryBtn.addEventListener('click', () => {
-        setOverlayVisibility(modal, false);
-        game.stop();
-      });
-
-      modalNextBtn.addEventListener('click', () => {
-        setOverlayVisibility(modal, false);
-        navigateToLevel(game.currentLevelIdx + 1);
-      });
-
-      const openSidebar = () => {
-        document.body.classList.add('sidebar-open');
-        sidebarOpenBtn.setAttribute('aria-expanded', 'true');
-        window.setTimeout(() => levelSearch.focus(), 220);
-      };
-      const closeSidebar = () => {
-        document.body.classList.remove('sidebar-open');
-        sidebarOpenBtn.setAttribute('aria-expanded', 'false');
-      };
-      sidebarOpenBtn.addEventListener('click', openSidebar);
-      sidebarCloseBtn.addEventListener('click', closeSidebar);
-      sidebarBackdrop.addEventListener('click', closeSidebar);
-
-      levelSearch.addEventListener('input', renderSidebarList);
-      consoleToggleBtn.addEventListener('click', () => {
-        const collapsed = consolePanel.classList.toggle('collapsed');
-        consoleToggleBtn.setAttribute('aria-expanded', String(!collapsed));
-        safeStorageSet('kodmaymunu_console_collapsed', String(collapsed));
-      });
-      if (safeStorageGet('kodmaymunu_console_collapsed') === 'true') {
-        consolePanel.classList.add('collapsed');
-        consoleToggleBtn.setAttribute('aria-expanded', 'false');
-      }
-
-      const finishWelcome = () => {
-        safeStorageSet('kodmaymunu_welcome_seen', 'true');
-        setOverlayVisibility(welcomeOverlay, false);
-        editor.focus();
-      };
-      welcomeStartBtn.addEventListener('click', finishWelcome);
-      welcomeCloseBtn.addEventListener('click', finishWelcome);
-
-      document.addEventListener('pointerdown', event => {
-        if (settingsMenu.open && !settingsMenu.contains(event.target)) settingsMenu.open = false;
-      });
-
-      document.addEventListener('keydown', event => {
-        if (document.querySelector('.modal-overlay.show, .welcome-overlay.show') && !['Escape', 'Tab'].includes(event.key)) return;
-        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-          event.preventDefault();
-          if (!runBtn.disabled) runBtn.click();
-          return;
-        }
-        if (event.key === '/' && !event.ctrlKey && !event.metaKey && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
-          event.preventDefault();
-          if (window.matchMedia('(max-width: 1180px)').matches) openSidebar();
-          levelSearch.focus();
-          return;
-        }
-        if (event.key === 'Escape') {
-          if (welcomeOverlay.classList.contains('show')) finishWelcome();
-          else if (document.getElementById('coach-modal').classList.contains('show')) setOverlayVisibility(document.getElementById('coach-modal'), false);
-          else if (document.getElementById('atlas-modal').classList.contains('show')) setOverlayVisibility(document.getElementById('atlas-modal'), false);
-          else if (modal.classList.contains('show')) setOverlayVisibility(modal, false);
-          else if (document.body.classList.contains('sidebar-open')) closeSidebar();
-          else if (settingsMenu.open) settingsMenu.open = false;
-          else if (game.isRunning) game.stop();
-        }
-        if (event.key === 'Tab') trapModalFocus(event);
-      });
-
-      window.addEventListener('pagehide', () => saveCurrentCode());
-
-      game.onLogMessage = (msg, type) => {
-        logToConsole(msg, type);
-        if (type === 'error') markErrorLine(msg);
-      };
-      game.onBananaChange = () => {
-        updateBananaCounter();
-        updateRuntimeHUD();
-      };
-      game.onExecutionStep = lineNum => {
-        highlightExecutingLine(lineNum);
-        updateLoopBadges();
-        window.setTimeout(updateRuntimeHUD, 0);
-      };
-      game.onConditionEvaluated = (lineNum, condition, result) => {
-        setRunLineBadge(lineNum, result ? '✓ doğru' : '✗ yanlış', result ? 'true' : 'false');
-      };
-      game.onExecutionFinished = () => restoreEditorState();
-      game.onHint = () => {
-        const tipToggle = document.getElementById('tip-toggle');
-        if (tipToggle?.getAttribute('aria-expanded') === 'false') tipToggle.click();
-        showToast('Mojo yeni bir ipucu bıraktı.');
-      };
-      game.onDebugStepComplete = () => {
-        stepBackBtn.disabled = game.historyStack.length === 0;
-        stepBtn.disabled = false;
-        runtimeStatus.textContent = 'Sonraki adımı bekliyor';
-        updateRuntimeHUD();
-      };
-      game.onLevelComplete = (stars, lineCount, meta) => {
-        restoreEditorState();
-        showVictoryScreen(stars, lineCount, meta);
-      };
-      game.onScenarioChange = () => {
-        renderScenarios();
-        updateBananaCounter();
-        updateRuntimeHUD();
-      };
-    }
-
-    function getCodeStorageKey(idx, mode = game?.syntaxMode || 'indent') {
-      return `kodmaymunu_code_lvl_${idx}_${mode}${LEVELS[idx]?.revision ? '_' + LEVELS[idx].revision : ''}`;
-    }
-
-    function createStarterCode(idx, mode = game?.syntaxMode || 'indent') {
-      const comment = mode === 'indent' ? '#' : '//';
-      return `${comment} Seviye ${idx + 1} · Mojo'nun rotası\n${comment} Muzlar üzerinden geçince otomatik toplanır.\n`;
-    }
-
-    function saveCurrentCode(mode = game?.syntaxMode || 'indent') {
-      if (!game || !editor) return;
-      const idx = game.currentLevelIdx;
-      const stored = safeStorageSet(getCodeStorageKey(idx, mode), editor.value);
-      // Legacy key is kept in sync so existing installations remain compatible.
-      if (!LEVELS[idx].revision) safeStorageSet(`kodmaymunu_code_lvl_${idx}`, editor.value);
-      const autosaveState = document.querySelector('.autosave-state');
-      if (autosaveState) autosaveState.lastChild.textContent = stored ? 'Kaydedildi' : 'Yerel kayıt kapalı';
-    }
-
-    function markEditorChanged(immediate = false) {
-      updateLineNumbers();
-      updateCharCounter();
-      const autosaveState = document.querySelector('.autosave-state');
-      if (autosaveState) autosaveState.lastChild.textContent = immediate ? 'Kaydediliyor' : 'Değişiklik var';
-      window.clearTimeout(autosaveTimer);
-      if (immediate) {
-        saveCurrentCode();
-      } else {
-        autosaveTimer = window.setTimeout(saveCurrentCode, 350);
-      }
-    }
-
-    function getExecutionSpeed(sliderValue) {
-      return ({ 1: 1000, 2: 720, 3: 500, 4: 300, 5: 150 })[sliderValue] || 500;
-    }
-
-    function updateSpeedUI() {
-      const value = Number(speedSlider.value);
-      const labels = { 1: 'Yavaş', 2: 'Rahat', 3: 'Orta', 4: 'Hızlı', 5: 'Turbo' };
-      const speedValue = document.getElementById('speed-value');
-      if (speedValue) speedValue.textContent = labels[value] || 'Orta';
-      speedSlider.setAttribute('aria-valuetext', labels[value] || 'Orta');
-    }
-
-    function updateSoundUI(enabled) {
-      const icon = document.getElementById('sound-icon');
-      const text = document.getElementById('sound-text');
-      if (icon) icon.textContent = enabled ? '🔊' : '🔇';
-      if (text) text.textContent = enabled ? 'Ses açık' : 'Ses kapalı';
-      soundBtn.setAttribute('aria-pressed', String(enabled));
-    }
-
-    function setExecutionUI(running, debugMode = false) {
-      document.body.classList.toggle('is-running', running);
-      runBtn.disabled = running;
-      stepBtn.disabled = running;
-      stepBackBtn.disabled = true;
-      smartRouteBtn.disabled = running;
-      stopBtn.disabled = !running;
-      syntaxModeSelect.disabled = running;
-      resetBtn.disabled = running;
-      devBtn.disabled = running;
-      disableQuickButtons(running);
-      editor.setAttribute('aria-readonly', String(running));
-      editor.readOnly = running;
-      prevLvlBtn.disabled = running || game.currentLevelIdx === 0;
-      nextLvlBtn.disabled = running || game.currentLevelIdx === LEVELS.length - 1 || (!devMode && !unlockedLevels.includes(game.currentLevelIdx + 1));
-      document.getElementById('level-list').toggleAttribute('inert', running);
-      for (const id of ['btn-atlas', 'btn-atlas-main']) document.getElementById(id).disabled = running;
-      document.querySelectorAll('#scenario-bar button').forEach(button => { button.disabled = running; });
-      if (running) updateConsoleStatus(debugMode ? 'Adım modu' : 'Çalışıyor', '');
-    }
-
-    function navigateToLevel(idx) {
-      if (!game || idx < 0 || idx >= LEVELS.length) return;
-      if (!devMode && idx > 0 && !unlockedLevels.includes(idx)) {
-        showToast('Bu görev henüz kilitli.', 'error');
-        return;
-      }
-      saveCurrentCode();
-      if (game.isRunning) game.stop();
-      game.loadLevel(idx);
-      loadActiveLevel();
-      document.body.classList.remove('sidebar-open');
-      sidebarOpenBtn.setAttribute('aria-expanded', 'false');
-      settingsMenu.open = false;
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    function updateConsoleStatus(label, type = '') {
-      const badge = document.getElementById('console-status-badge');
-      if (!badge) return;
-      badge.textContent = label;
-      badge.className = `console-status-badge${type ? ` ${type}` : ''}`;
-    }
-
-    function updateRuntimeHUD() {
-      if (!game || !game.player) return;
-      const directions = { UP: 'KUZEY', RIGHT: 'DOĞU', DOWN: 'GÜNEY', LEFT: 'BATI' };
-      directionChip.textContent = `MOJO · ${directions[game.player.dir] || game.player.dir}`;
-      renderFieldGuide();
-    }
-
-    function showToast(message, type = '') {
-      const region = document.getElementById('toast-region');
-      if (!region) return;
-      const toast = document.createElement('div');
-      toast.className = `toast${type ? ` ${type}` : ''}`;
-      toast.textContent = message;
-      region.appendChild(toast);
-      window.setTimeout(() => toast.remove(), 3200);
-    }
-
-    function setOverlayVisibility(overlay, visible, focusTarget = null) {
-      if (!overlay) return;
-      overlay.inert = !visible;
-      if (visible) {
-        lastFocusedBeforeModal = document.activeElement;
-        overlay.classList.add('show');
-        overlay.setAttribute('aria-hidden', 'false');
-        document.body.classList.add('modal-open');
-        window.setTimeout(() => (focusTarget || overlay.querySelector('button:not([disabled])'))?.focus(), 40);
-      } else {
-        overlay.classList.remove('show');
-        overlay.setAttribute('aria-hidden', 'true');
-        if (!document.querySelector('.modal-overlay.show, .welcome-overlay.show')) {
-          document.body.classList.remove('modal-open');
-        }
-      }
-      const hasOverlay = Boolean(document.querySelector('.modal-overlay.show, .welcome-overlay.show'));
-      document.querySelectorAll('main, #level-sidebar').forEach(element => { element.inert = hasOverlay; });
-      if (!visible && lastFocusedBeforeModal && document.contains(lastFocusedBeforeModal)) lastFocusedBeforeModal.focus();
-    }
-
-    function trapModalFocus(event) {
-      const activeOverlay = document.querySelector('.welcome-overlay.show, .modal-overlay.show');
-      if (!activeOverlay) return;
-      const focusable = [...activeOverlay.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')]
-        .filter(element => element.offsetParent !== null);
-      if (!focusable.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    }
-
-    function loadActiveLevel() {
-      const idx = game.currentLevelIdx;
-      const level = LEVELS[idx];
-
-      // Auto-expand group of active level
-      const activeGroup = getLevelGroup(level.id);
-      expandedGroups.add(activeGroup);
-
-      levelTitle.textContent = level.title;
-      document.getElementById('active-level-group').textContent = getChapter(level.id).eyebrow;
-      document.getElementById('level-position-label').textContent = `${String(level.id).padStart(2, '0')} / ${LEVELS.length}`;
-      document.getElementById('level-position-fill').style.width = `${((idx + 1) / LEVELS.length) * 100}%`;
-
-      const targets = game.getStarTargets();
-      const record = bestLines[idx];
-      const unlock = COMMAND_UNLOCKS.find(entry => entry.from === level.id);
-      renderExpedition();
-      renderScenarios();
-      renderCommandGuide();
-
-      let chipsHtml = `
-        <div class="mission-chips">
-          <span class="mission-chip mission-skill">${level.kind === 'finale' || level.id % 20 === 0 ? '◆ MUHAFIZ GÖREVİ' : level.skill || 'İlk keşif'}</span>
-          <span class="mission-chip mission-chip-target" title="Referans çözümün satır sayısı">
-            <span class="chip-key">⭐⭐⭐</span><span class="chip-value">≤ ${targets.three} satır</span>
-          </span>
-          <span class="mission-chip" title="İki yıldız sınırı">
-            <span class="chip-key">⭐⭐</span><span class="chip-value">≤ ${targets.two} satır</span>
-          </span>
-          ${record !== undefined ? `<span class="mission-chip mission-chip-record" title="Bu seviyedeki en iyi çözümün"><span class="chip-key">🏅</span><span class="chip-value">${record} satır</span></span>` : ''}
-          ${unlock ? `<span class="mission-chip mission-chip-unlock" title="Bu seviyede açılan komut"><span class="chip-key">✦ YENİ</span><span class="chip-value">${unlock.label}</span></span>` : ''}
-          ${level.revision && masteryBadges[level.id] === level.revision ? '<span class="mission-chip mission-chip-record">◇ Ustalık kazanıldı</span>' : ''}
-        </div>`;
-
-      let instructionHtml = `
-        <div class="mission-copy">
-          <span class="mission-icon" aria-hidden="true">◎</span>
-          <div class="instruction-text"><strong>Görev</strong><span>${level.instructions}</span></div>
-          ${level.tip ? '<button class="tip-toggle" id="tip-toggle" type="button" aria-expanded="false" aria-controls="level-tip">💡 İpucu</button>' : ''}
-        </div>
-        ${chipsHtml}`;
-      if (level.tip) {
-        instructionHtml += `
-          <div class="tip-box" id="level-tip" hidden>
-            <span class="tip-icon">💡</span>
-            <div class="tip-content">
-              <strong>Mojo'nun İpucu:</strong> ${level.tip}
+          <div class="editor" id="editor-wrap">
+            <div class="gutter" id="gutter" aria-hidden="true"></div>
+            <div class="code-area">
+              <pre class="code-layer" id="code-layer" aria-hidden="true"></pre>
+              <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Kod" placeholder="Komutlarını buraya yaz ya da aşağıdaki düğmelere dokun…"></textarea>
             </div>
           </div>
-        `;
-      }
-      setSafeHTML(instructionsCard, instructionHtml);
-      const tipToggle = document.getElementById('tip-toggle');
-      tipToggle?.addEventListener('click', openCoach);
-      if (level.mastery) {
-        const goal = document.createElement('div');
-        goal.className = 'mastery-objective';
-        goal.textContent = `◇ Ustalık hedefi · ${level.mastery.label}`;
-        instructionsCard.appendChild(goal);
-      }
-
-      // Reset ruler state on level switch
-      if (game) {
-        game.rulerActive = false;
-        game.hoveredCell = null;
-        rulerBtn.classList.remove('btn-active');
-        rulerBtn.setAttribute('aria-pressed', 'false');
-      }
-
-      // Level limits
-      prevLvlBtn.disabled = idx === 0;
-      nextLvlBtn.disabled = idx === LEVELS.length - 1 || (!devMode && !unlockedLevels.includes(idx + 1));
-
-      updateBananaCounter();
-      updateStarsSummary();
-
-      // Populate sidebar list
-      renderSidebarList();
-
-      // Configure quick buttons according to allowed level actions
-      configureQuickButtons(level.allowedCommands);
-
-      const modeDraft = safeStorageGet(getCodeStorageKey(idx, game.syntaxMode));
-      const legacyDraft = level.revision ? null : safeStorageGet(`kodmaymunu_code_lvl_${idx}`);
-      editor.value = modeDraft ?? legacyDraft ?? createStarterCode(idx, game.syntaxMode);
-
-      updateLineNumbers();
-      updateCharCounter();
-      updateRuntimeHUD();
-      runtimeStatus.textContent = 'Planlamaya hazır';
-      setExecutionUI(false);
-      logToConsole(`${level.title} hazır. Rotayı incele ve algoritmanı kur.`, 'info');
-    }
-
-    function updateStarsSummary() {
-      const summaryEl = document.getElementById('stars-summary');
-      if (!summaryEl) return;
-
-      let totalEarned = 0;
-      LEVELS.forEach((_, i) => {
-        totalEarned += completedStars[i] || 0;
-      });
-      const maxPossible = LEVELS.length * 3;
-      const completedCount = LEVELS.reduce((count, _, idx) => count + ((completedStars[idx] || 0) > 0 ? 1 : 0), 0);
-      const percent = Math.round((completedCount / LEVELS.length) * 100);
-      summaryEl.querySelector('.stars-summary-value').textContent = `${totalEarned} / ${maxPossible}`;
-      document.getElementById('overall-progress-fill').style.width = `${percent}%`;
-      document.getElementById('overall-progress-text').textContent = `${completedCount} / ${LEVELS.length} görev`;
-      document.getElementById('overall-progress-percent').textContent = `%${percent}`;
-    }
-
-    function renderExpedition() {
-      const chapter = getChapter(game.level.id);
-      const world = WORLDS[chapter.id - 1];
-      document.body.dataset.world = chapter.id;
-      document.getElementById('expedition-banner').style.setProperty('--world-color', world.color);
-      document.getElementById('expedition-seal').textContent = world.symbol;
-      document.getElementById('expedition-kicker').textContent = `ADA ${String(chapter.id).padStart(2, '0')} / 05 · KEŞİF GÜNLÜĞÜ`;
-      document.getElementById('expedition-name').textContent = world.name;
-      document.getElementById('expedition-summary').textContent = world.story;
-      const solved = LEVELS.filter((level, idx) => getLevelGroup(level.id) === chapter.id && completedStars[idx] > 0).length;
-      document.getElementById('expedition-progress-label').textContent = `${solved} / 20 görev`;
-      document.getElementById('expedition-progress-fill').style.width = `${solved * 5}%`;
-    }
-
-    function openAtlas() {
-      if (game.isRunning) return;
-      const container = document.getElementById('atlas-worlds');
-      container.replaceChildren();
-      WORLDS.forEach((world, i) => {
-        const start = i * CHAPTER_SIZE;
-        const chapterLevels = LEVELS.slice(start, start + CHAPTER_SIZE);
-        const solved = chapterLevels.filter((_, n) => completedStars[start + n] > 0).length;
-        const stars = chapterLevels.reduce((sum, _, n) => sum + (completedStars[start + n] || 0), 0);
-        const available = devMode || unlockedLevels.some(n => n >= start && n < start + CHAPTER_SIZE);
-        const card = document.createElement('button');
-        card.type = 'button';
-        card.className = `world-card${getLevelGroup(game.level.id) === i + 1 ? ' current' : ''}`;
-        card.style.setProperty('--world-color', world.color);
-        card.disabled = !available;
-        card.setAttribute('aria-label', `${world.name}, ${solved}/20 görev, ${available ? 'aç' : 'kilitli'}`);
-        setSafeHTML(card, `<span class="world-number">ADA 0${i + 1}<span>${available ? '↗' : 'KİLİTLİ'}</span></span>
-          <div class="world-art" aria-hidden="true"><div class="island-shape"></div><span>${world.symbol}</span><i></i><i></i><i></i></div>
-          <strong>${world.name}</strong><span class="world-topic">${CHAPTERS[i].name}</span>
-          <div class="world-nodes" aria-hidden="true">${chapterLevels.map((_, n) => `<i class="${completedStars[start + n] > 0 ? 'done' : ''}"></i>`).join('')}</div>
-          <span class="world-score">${solved}/20 görev <span>★ ${stars}/60</span></span>
-          <span class="world-seal">${completedStars[start + 19] > 0 ? '◆ ' + world.seal : '◇ Mühür için muhafız görevini tamamla'}</span>`);
-        card.addEventListener('click', () => {
-          const next = chapterLevels.findIndex((_, n) => !completedStars[start + n] && (devMode || unlockedLevels.includes(start + n)));
-          setOverlayVisibility(document.getElementById('atlas-modal'), false);
-          navigateToLevel(start + (next >= 0 ? next : 0));
-        });
-        container.appendChild(card);
-      });
-      const medals = LEVELS.filter(l => l.revision && masteryBadges[l.id] === l.revision).length;
-      document.getElementById('atlas-mastery-count').textContent = `◇ ${medals} / ${LEVELS.filter(l => l.mastery).length} ustalık rozeti`;
-      setOverlayVisibility(document.getElementById('atlas-modal'), true);
-    }
-
-    function renderScenarios() {
-      const bar = document.getElementById('scenario-bar');
-      bar.replaceChildren();
-      const count = 1 + (game.level.scenarios?.length || 0);
-      bar.hidden = count < 2;
-      if (count < 2) return;
-      const label = document.createElement('span');
-      label.textContent = 'AYNI KOD · HER PARKUR';
-      bar.appendChild(label);
-      for (let n = 0; n < count; n++) {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.textContent = `0${n + 1}`;
-        button.setAttribute('aria-label', `Parkur ${n + 1} haritasını incele`);
-        button.setAttribute('aria-pressed', String(game.scenarioIndex === n));
-        button.disabled = game.isRunning;
-        button.addEventListener('click', () => {
-          if (game.isRunning) return;
-          game.loadLevel(game.currentLevelIdx, n);
-          renderScenarios();
-          updateRuntimeHUD();
-          updateBananaCounter();
-        });
-        bar.appendChild(button);
-      }
-    }
-
-    function renderFieldGuide() {
-      const guide = document.getElementById('field-guide');
-      if (!game.level || !guide) return;
-      const tiles = game.level.grid.join('');
-      const parts = [`<span>📦 Tüm muzları topla, sandığa ulaş</span>`];
-      if (tiles.includes('L')) parts.push('<span>❋ Yaprak · tek geçiş</span>');
-      if (tiles.includes('G')) parts.push(`<span>⚿ Anahtar · ${game.keys.filter(k => k.collected).length}/${game.keys.length}</span>`);
-      if (game.turtles?.length && !game.level.pilotTurtles) {
-        const time = game.executionStepCount;
-        parts.push(`<span class="tide-clock">GELGİT ${[0, 1, 2, 3].map(n => `<i class="${time % 4 === n ? 'active' : ''}">${n + 1}</i>`).join('')}</span>`);
-        game.turtles.forEach((turtle, i) => {
-          const phase = (time + turtle.phase) % 4;
-          const safe = phase === 0;
-          parts.push(`<span class="turtle-phase ${safe ? 'safe' : ''}">🐢 ${i + 1} · ${safe ? 'Geçiş zamanı' : phase === 1 ? 'Sonraki adımda dalar' : 'Su altında'}</span>`);
-        });
-      }
-      setSafeHTML(guide, parts.join(''));
-    }
-
-    function renderCommandGuide() {
-      const entries = [
-        ['ilerle()', 'Baktığın yönde bir kare ilerle.'],
-        ['sagaDon() / solaDon()', 'Yerinde 90° dön. Bir zaman adımı harcar.']
-      ];
-      if (game.level.id >= 6) entries.push(['tekrarla(N)', 'İçindeki komutları N kez uygula.']);
-      if (game.level.id >= 29) entries.push(['adimla(N)', 'N kare ilerle. Negatif N ile yön değiştirmeden geri yürü.']);
-      if (game.level.id >= 61) entries.push(['bekle()', 'Bir zaman adımı bekle. Kaplumbağanın üzerinde beklemek tehlikelidir.']);
-      if (game.level.id >= 81) entries.push(
-        ['ise / degilse', 'Koşul doğruysa ilk blok, yanlışsa ikinci blok çalışır.'],
-        ['onumdeKayaVar()', 'Öndeki kare kaya mı? Dönüş kararları için kullan.'],
-        ['onumdeGuvenliYolVar()', 'Öndeki kare hem şimdi hem bir sonraki adımda güvenli mi? Kaplumbağaya çıkmadan önce kontrol et.'],
-        ['onumdeEngelVar()', 'Öndeki kare şu an kapalı mı? Dalışın bir sonraki anını kontrol etmez.'],
-        ['hedefteDegilim()', 'Mojo henüz sandığa ulaşmadı mı?']
-      );
-      if (game.level.id >= 91) entries.push(['iken(hedefteDegilim())', 'Sandığa varana kadar içindeki kodu tekrarla. İçeride ilerleme sağlayan bir komut olmalı.']);
-      const content = document.getElementById('command-guide-content');
-      content.replaceChildren();
-      entries.forEach(([command, explanation]) => {
-        const row = document.createElement('p');
-        const code = document.createElement('code');
-        code.textContent = command;
-        row.append(code, document.createTextNode(explanation));
-        content.appendChild(row);
-      });
-    }
-
-    function openCoach() {
-      if (game.isRunning) return;
-      renderCoachHints();
-      document.getElementById('solution-disclosure').open = false;
-      document.getElementById('solution-preview').textContent = game.createSmartRouteCode() || 'Örnek çözüm bulunamadı.';
-      setOverlayVisibility(document.getElementById('coach-modal'), true);
-    }
-
-    function renderCoachHints() {
-      const level = game.level;
-      const hints = level.hints || [level.tip, 'Rotayı küçük parçalara ayır; önce ilk dönüşe kadar olan kodu dene.', 'Adım modunda Mojo’nun yönünü kontrol et. Uzun düzlükleri ve tekrar eden parçaları kısalt.'];
-      const depth = Math.min(hints.length, hintDepth[level.id] || 0);
-      const list = document.getElementById('coach-hints');
-      list.replaceChildren();
-      hints.forEach((hint, i) => {
-        const item = document.createElement('li');
-        item.className = i < depth ? 'revealed' : '';
-        if (i < depth) setSafeHTML(item, `<strong>${['Yolu oku', 'Planını kur', 'Kodu düşün'][i]}</strong><span>${hint}</span>`);
-        else item.textContent = `${i + 1}. ipucu · henüz açılmadı`;
-        list.appendChild(item);
-      });
-      const button = document.getElementById('btn-next-hint');
-      button.disabled = depth >= hints.length;
-      button.textContent = depth === 0 ? 'İlk ipucunu aç' : depth < hints.length ? `Sonraki ipucunu aç (${depth}/3)` : 'Tüm ipuçları açık';
-    }
-
-    function updateThemeUI(theme) {
-      const themeIcon = document.getElementById('theme-icon');
-      const themeText = document.getElementById('theme-text');
-      const themeColor = document.querySelector('meta[name="theme-color"]');
-      if (theme === 'light') {
-        if (themeIcon) themeIcon.textContent = '☀️';
-        if (themeText) themeText.textContent = 'Açık';
-        if (themeColor) themeColor.content = '#f0f6f2';
-      } else {
-        if (themeIcon) themeIcon.textContent = '🌙';
-        if (themeText) themeText.textContent = 'Koyu';
-        if (themeColor) themeColor.content = '#07110e';
-      }
-    }
-
-    function updateDevUI(enabled) {
-      const devText = document.getElementById('dev-text');
-      if (devText) {
-        devText.textContent = enabled ? 'Geliştirici modu açık' : 'Geliştirici modu';
-      }
-      devBtn.classList.toggle('btn-active', enabled);
-      devBtn.setAttribute('aria-pressed', String(enabled));
-    }
-
-    function renderSidebarList() {
-      const listContainer = document.getElementById('level-list');
-      listContainer.replaceChildren();
-      const searchTerm = (levelSearch?.value || '').trim().toLocaleLowerCase('tr-TR');
-
-      const groups = {};
-      for (let g = 1; g <= CHAPTERS.length; g++) groups[g] = [];
-      LEVELS.forEach((lvl, idx) => {
-        const g = getLevelGroup(lvl.id);
-        groups[g].push({ lvl, idx });
-      });
-
-      for (let g = 1; g <= CHAPTERS.length; g++) {
-        const visibleItems = searchTerm
-          ? groups[g].filter(({ lvl }) => `${lvl.id} ${lvl.title}`.toLocaleLowerCase('tr-TR').includes(searchTerm))
-          : groups[g];
-        if (!visibleItems.length) continue;
-
-        const isExpanded = searchTerm ? true : expandedGroups.has(g);
-        const groupWrapper = document.createElement('div');
-        groupWrapper.className = `level-group-wrapper ${isExpanded ? 'expanded' : 'collapsed'}`;
-
-        const header = document.createElement('button');
-        header.type = 'button';
-        header.className = 'level-group-header';
-        header.setAttribute('aria-expanded', String(isExpanded));
-        header.setAttribute('aria-controls', `level-group-${g}`);
-
-        const titleSpan = document.createElement('span');
-        titleSpan.className = 'group-title';
-        const chevron = document.createElement('span');
-        chevron.className = 'group-chevron';
-        chevron.textContent = '▶';
-        titleSpan.appendChild(chevron);
-        titleSpan.append(CHAPTERS[g - 1].name);
-        header.title = CHAPTERS[g - 1].summary;
-
-        let groupStars = 0;
-        groups[g].forEach(item => {
-          groupStars += completedStars[item.idx] || 0;
-        });
-        const groupMaxStars = groups[g].length * 3;
-
-        const badge = document.createElement('span');
-        badge.className = 'group-stars-badge';
-        badge.textContent = `⭐ ${groupStars}/${groupMaxStars}`;
-
-        header.appendChild(titleSpan);
-        header.appendChild(badge);
-        groupWrapper.appendChild(header);
-
-        header.addEventListener('click', () => {
-          if (searchTerm) return;
-          if (expandedGroups.has(g)) {
-            expandedGroups.delete(g);
-          } else {
-            expandedGroups.add(g);
-          }
-          renderSidebarList();
-        });
-
-        const levelsContainer = document.createElement('div');
-        levelsContainer.className = 'level-group-items';
-        levelsContainer.id = `level-group-${g}`;
-
-        visibleItems.forEach(({ lvl, idx }) => {
-          const item = document.createElement('button');
-          item.type = 'button';
-          item.className = 'level-item';
-          if (idx === game.currentLevelIdx) {
-            item.classList.add('active');
-            item.setAttribute('aria-current', 'step');
-          }
-
-          const isLocked = !devMode && idx > 0 && !unlockedLevels.includes(idx);
-          if (isLocked) {
-            item.classList.add('locked');
-            item.disabled = true;
-            item.title = 'Bu görevi açmak için bir önceki görevi tamamla.';
-          } else {
-            item.title = `${lvl.title} görevini aç`;
-          }
-
-          const number = document.createElement('span');
-          number.className = 'level-number';
-          number.textContent = String(lvl.id).padStart(2, '0');
-          item.appendChild(number);
-
-          const info = document.createElement('div');
-          info.className = 'level-info';
-
-          const nameSpan = document.createElement('span');
-          nameSpan.className = 'level-name';
-          nameSpan.textContent = lvl.title.replace(/^\d+\.\s*/, '');
-          info.appendChild(nameSpan);
-
-          const starsContainer = document.createElement('div');
-          starsContainer.className = 'level-stars';
-
-          const earnedStarsCount = completedStars[idx] || 0;
-          for (let s = 1; s <= 3; s++) {
-            const starIcon = document.createElement('span');
-            starIcon.className = 'star';
-            if (s <= earnedStarsCount) {
-              starIcon.classList.add('earned');
-            }
-            starIcon.textContent = '★';
-            starsContainer.appendChild(starIcon);
-          }
-          const record = bestLines[idx];
-          if (record !== undefined) {
-            const recordBadge = document.createElement('span');
-            recordBadge.className = 'level-record';
-            recordBadge.textContent = `${record} satır`;
-            recordBadge.title = `En iyi çözümün: ${record} etkin satır`;
-            starsContainer.appendChild(recordBadge);
-          }
-
-          info.appendChild(starsContainer);
-          item.appendChild(info);
-
-          if (isLocked) {
-            const lock = document.createElement('span');
-            lock.className = 'lock-icon';
-            lock.textContent = '🔒';
-            item.appendChild(lock);
-          }
-
-          if (!isLocked) {
-            item.addEventListener('click', () => navigateToLevel(idx));
-          }
-
-          levelsContainer.appendChild(item);
-        });
-
-        groupWrapper.appendChild(levelsContainer);
-        listContainer.appendChild(groupWrapper);
-      }
-
-      if (!listContainer.children.length) {
-        const empty = document.createElement('p');
-        empty.className = 'level-search-empty';
-        empty.textContent = 'Bu aramayla eşleşen seviye bulunamadı.';
-        listContainer.appendChild(empty);
-      } else if (!searchTerm) {
-        window.requestAnimationFrame(() => listContainer.querySelector('.level-item.active')?.scrollIntoView({ block: 'nearest' }));
-      }
-    }
-
-    function updateBananaCounter() {
-      const totalBananas = game.bananas.length;
-      const collectedCount = game.bananas.filter(b => b.collected).length;
-      const value = bananaCounter.querySelector('strong');
-      if (value) value.textContent = `${collectedCount} / ${totalBananas}`;
-      bananaCounter.setAttribute('aria-label', `${totalBananas} muzdan ${collectedCount} tanesi toplandı`);
-    }
-
-    function configureQuickButtons(allowedCommands) {
-      // Allowed keys map
-      const btns = {
-        "ilerle": document.getElementById('cmd-ilerle'),
-        "adimla": document.getElementById('cmd-adimla'),
-        "solaDon": document.getElementById('cmd-solaDon'),
-        "sagaDon": document.getElementById('cmd-sagaDon'),
-        "bekle": document.getElementById('cmd-bekle'),
-        "kaplumbaga.adimla": document.getElementById('cmd-kaplumbaga'),
-        "tekrarla": document.getElementById('cmd-tekrarla'),
-        "ise": document.getElementById('cmd-ise')
-      };
-
-      for (const [key, btn] of Object.entries(btns)) {
-        if (btn) {
-          const show = allowedCommands.includes(key);
-          btn.style.display = show ? 'inline-block' : 'none';
-        }
-      }
-      document.getElementById('cmd-iken').style.display = allowedCommands.includes('iken') ? 'inline-block' : 'none';
-    }
-
-    function disableQuickButtons(disable) {
-      document.querySelectorAll('.btn-command').forEach(btn => {
-        btn.disabled = disable;
-      });
-    }
-
-    function updateSyntaxModeUI(mode) {
-      const cmdTekrarla = document.getElementById('cmd-tekrarla');
-      const cmdIse = document.getElementById('cmd-ise');
-      const cmdIken = document.getElementById('cmd-iken');
-      cmdIken.dataset.cmd = mode === 'indent' ? 'iken(hedefteDegilim()):\n    ilerle()' : 'iken(hedefteDegilim()) {\n  ilerle()\n}';
-      cmdIken.textContent = mode === 'indent' ? 'iken:' : 'iken() {}';
-
-      // Snippets only ever use `ilerle()`, which every mission allows; the
-      // palette used to paste `adimla()` into levels that had not unlocked it.
-      if (mode === 'indent') {
-        if (cmdTekrarla) {
-          cmdTekrarla.setAttribute('data-cmd', 'tekrarla(3):\n    ilerle()');
-          cmdTekrarla.textContent = 'tekrarla:';
-        }
-        if (cmdIse) {
-          cmdIse.setAttribute('data-cmd', 'ise(onumdeEngelVar()):\n    sagaDon()\ndegilse:\n    ilerle()');
-          cmdIse.textContent = 'ise / degilse:';
-        }
-      } else {
-        if (cmdTekrarla) {
-          cmdTekrarla.setAttribute('data-cmd', 'tekrarla(3) {\n  ilerle()\n}');
-          cmdTekrarla.textContent = 'tekrarla() {}';
-        }
-        if (cmdIse) {
-          cmdIse.setAttribute('data-cmd', 'ise(onumdeEngelVar()) {\n  sagaDon()\n} degilse {\n  ilerle()\n}');
-          cmdIse.textContent = 'ise / degilse {}';
-        }
-      }
-    }
-
-    function insertCommand(cmd) {
-      const startPos = editor.selectionStart;
-      const endPos = editor.selectionEnd;
-      const text = editor.value;
-      const lineStart = text.lastIndexOf('\n', startPos - 1) + 1;
-      const linePrefix = text.slice(lineStart, startPos);
-      const indent = (linePrefix.match(/^\s*/) || [''])[0];
-      const startsOnEmptyIndent = linePrefix.trim() === '';
-      const formattedCmd = cmd.replace(/\\n/g, '\n');
-      const indentedCommand = formattedCmd.split('\n').map((line, index) => index === 0 ? line : indent + line).join('\n');
-      const insertText = (startsOnEmptyIndent ? '' : '\n' + indent) + indentedCommand + '\n' + indent;
-
-      editor.value = text.substring(0, startPos) + insertText + text.substring(endPos);
-      editor.focus();
-      const bodyToken = insertText.indexOf('adimla()');
-      const newCursor = bodyToken >= 0 ? startPos + bodyToken + 'adimla'.length : startPos + insertText.length;
-      editor.setSelectionRange(newCursor, newCursor);
-      markEditorChanged(true);
-    }
-
-    function updateLineNumbers() {
-      const code = editor.value;
-      const lines = code.split('\n');
-      gutter.replaceChildren();
-      for (let i = 1; i <= lines.length; i++) {
-        const num = document.createElement('div');
-        num.textContent = i;
-        num.className = 'line-num';
-        num.id = `line-num-${i}`;
-        gutter.appendChild(num);
-      }
-    }
-
-    function updateCharCounter() {
-      const display = document.getElementById('code-length-display');
-      const cleanCode = editor.value
-        .replace(/\/\/.*$/gm, '')
-        .replace(/#.*$/gm, '')
-        .replace(/\/\*[\s\S]*?\*\//g, '');
-      const activeLines = cleanCode.split('\n').map(line => line.trim()).filter(line => line && line !== '}').length;
-      const target = game?.getStarTargets?.().three;
-      display.textContent = target ? `${activeLines} satır · hedef ≤ ${target}` : `${activeLines} satır`;
-      display.classList.toggle('over-target', Boolean(target && activeLines > target));
-    }
-
-    function logToConsole(text, type = 'info') {
-      const line = document.createElement('div');
-      line.className = `log-entry ${type}`;
-
-      const timeSpan = document.createElement('span');
-      timeSpan.className = 'log-time';
-      const now = new Date();
-      timeSpan.textContent = `[${now.toTimeString().split(' ')[0]}]`;
-
-      const msgSpan = document.createElement('span');
-      msgSpan.textContent = text;
-
-      line.appendChild(timeSpan);
-      line.appendChild(msgSpan);
-      consoleOutput.appendChild(line);
-      while (consoleOutput.children.length > 120) consoleOutput.firstElementChild.remove();
-      consoleOutput.scrollTop = consoleOutput.scrollHeight;
-
-      if (type === 'error') {
-        updateConsoleStatus('Hata', 'error');
-        consolePanel.classList.remove('collapsed');
-        consoleToggleBtn.setAttribute('aria-expanded', 'true');
-        const sourceLine = text.match(/Satır\s+(\d+)/i)?.[1];
-        if (sourceLine) {
-          const lineMarker = document.getElementById(`line-num-${sourceLine}`);
-          lineMarker?.classList.add('error');
-          if (lineMarker) lineMarker.title = text;
-        }
-      } else if (type === 'success') {
-        updateConsoleStatus('Başarılı', 'success');
-      } else if (type === 'hint') {
-        updateConsoleStatus('İpucu', '');
-      } else {
-        updateConsoleStatus(game?.isRunning ? 'Çalışıyor' : 'Hazır', '');
-      }
-    }
-
-    // Overlay code execution runner preview
-    function setupExecutionPreview(code) {
-      preview.replaceChildren();
-      document.querySelectorAll('.line-num.error').forEach(element => element.classList.remove('error'));
-      const lines = code.split('\n');
-
-      lines.forEach((lineText, idx) => {
-        const lineDiv = document.createElement('div');
-        lineDiv.className = 'run-line';
-        lineDiv.id = `run-line-${idx + 1}`;
-
-        const numSpan = document.createElement('span');
-        numSpan.className = 'run-line-num';
-        numSpan.textContent = idx + 1;
-
-        const codeSpan = document.createElement('span');
-        codeSpan.className = 'run-line-code';
-        codeSpan.textContent = lineText;
-
-        lineDiv.appendChild(numSpan);
-        lineDiv.appendChild(codeSpan);
-        preview.appendChild(lineDiv);
-      });
-
-      preview.scrollTop = editor.scrollTop;
-      preview.style.display = 'block';
-    }
-
-    // Engine errors are prefixed with "Satır N:", so the offending line can be
-    // flagged in the gutter instead of leaving the player to count lines.
-    function markErrorLine(message) {
-      clearErrorLine();
-      const match = /Satır (\d+)/.exec(message);
-      if (!match) return;
-      const lineNum = Number(match[1]);
-      document.getElementById(`line-num-${lineNum}`)?.classList.add('error');
-      document.getElementById(`run-line-${lineNum}`)?.classList.add('run-line-error');
-    }
-
-    function clearErrorLine() {
-      document.querySelectorAll('.line-num.error').forEach(el => el.classList.remove('error'));
-      document.querySelectorAll('.run-line-error').forEach(el => el.classList.remove('run-line-error'));
-    }
-
-    function highlightExecutingLine(lineNum) {
-      // Gutter highlighting
-      document.querySelectorAll('.line-num').forEach(el => el.classList.remove('active'));
-      const activeGutter = document.getElementById(`line-num-${lineNum}`);
-      if (activeGutter) activeGutter.classList.add('active');
-
-      // Overlay container highlighting
-      document.querySelectorAll('.run-line').forEach(el => el.classList.remove('running-active'));
-      const activeLine = document.getElementById(`run-line-${lineNum}`);
-      if (activeLine) {
-        activeLine.classList.add('running-active');
-        // Scroll active preview line into center view
-        activeLine.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-
-      updateBananaCounter();
-    }
-
-    // While a program runs, counted loops show which pass they are on and each
-    // ise/iken shows what its sensor answered, so the run explains itself.
-    function setRunLineBadge(lineNum, text, tone) {
-      const line = document.getElementById(`run-line-${lineNum}`);
-      if (!line) return;
-      let badge = line.querySelector('.run-line-badge');
-      if (!badge) {
-        badge = document.createElement('span');
-        badge.className = 'run-line-badge';
-        line.appendChild(badge);
-      }
-      badge.textContent = text;
-      badge.dataset.tone = tone;
-    }
-
-    function updateLoopBadges() {
-      const active = new Set();
-      for (const loop of game.getActiveLoops()) {
-        active.add(`run-line-${loop.line}`);
-        setRunLineBadge(loop.line, `tur ${loop.iteration}/${loop.count}`, 'loop');
-      }
-      preview.querySelectorAll('.run-line-badge[data-tone="loop"]').forEach(badge => {
-        if (!active.has(badge.parentElement.id)) badge.remove();
-      });
-    }
-
-    function restoreEditorState() {
-      if (game?.crashType) {
-        runtimeStatus.textContent = 'Mojo toparlanıyor';
-        window.setTimeout(() => {
-          if (!game.isRunning && preview.style.display === 'block') restoreEditorState();
-        }, 620);
-        return;
-      }
-      preview.style.display = 'none';
-      setExecutionUI(false);
-      document.querySelectorAll('.line-num').forEach(el => el.classList.remove('active'));
-      updateBananaCounter();
-      updateRuntimeHUD();
-      saveCurrentCode();
-      runtimeStatus.textContent = 'Planlamaya hazır';
-      game.isDebugMode = false;
-      game.isWaitingForStep = false;
-    }
-
-    // Finishing a chapter is the only milestone worth interrupting for, and it
-    // is announced once: the last mission of the chapter earning its stars.
-    function announceChapterProgress(level, stars) {
-      const chapter = getChapter(level.id);
-      const isChapterFinale = level.id % CHAPTER_SIZE === 0;
-      if (!isChapterFinale || stars < 1) return;
-
-      const chapterIndices = LEVELS
-        .map((candidate, index) => ({ candidate, index }))
-        .filter(entry => getLevelGroup(entry.candidate.id) === chapter.id);
-      const solved = chapterIndices.filter(entry => (completedStars[entry.index] || 0) > 0).length;
-      if (solved < chapterIndices.length) return;
-
-      const earned = chapterIndices.reduce((sum, entry) => sum + (completedStars[entry.index] || 0), 0);
-      showToast(`🎉 ${chapter.name} bölümü tamamlandı — ${earned}/${chapterIndices.length * 3} yıldız.`);
-    }
-
-    function showVictoryScreen(stars, lineCount, meta = {}) {
-      const level = LEVELS[game.currentLevelIdx];
-      const par = meta.par || game.getStarTargets().par;
-      const twoStarLimit = meta.twoStarLimit || game.getStarTargets().two;
-      const previousBest = bestLines[game.currentLevelIdx];
-      const isNewRecord = Number.isFinite(lineCount) && (previousBest === undefined || lineCount < previousBest);
-      const beatPar = Boolean(meta.beatPar);
-
-      modalTitle.textContent = level.id === 100 ? 'Algoritma Adası senin!' : level.id % 20 === 0 ? `${WORLDS[getLevelGroup(level.id) - 1].seal}!` : `Seviye ${level.id} tamamlandı!`;
-      document.querySelector('#success-modal .modal-eyebrow').textContent = level.id % 20 === 0 ? 'ADA MÜHRÜ KAZANILDI' : 'GÖREV TAMAMLANDI';
-
-      let descHtml = `Çözümün <strong>${lineCount} etkin satır</strong>, referans çözüm <strong>${par} satır</strong>.`;
-      if (beatPar) {
-        descHtml += ` Referansı <strong>${par - lineCount} satır</strong> geçtin — bu bir rekor.`;
-      } else if (lineCount === par) {
-        descHtml += ' Tam referans uzunluğunda çözdün.';
-      }
-      setSafeHTML(modalDesc, descHtml);
-
-      for (let i = 0; i < 3; i++) {
-        modalStars[i].classList.remove('earned');
-        void modalStars[i].offsetWidth;
-        if (i < stars) modalStars[i].classList.add('earned');
-      }
-
-      const starDetails = document.getElementById('star-details');
-      const allowed = level.allowedCommands || [];
-      const hasLoops = allowed.includes('tekrarla');
-      const hasCompact = allowed.includes('adimla');
-
-      let detailsHtml = '<div class="star-detail-row earned">⭐ <strong>Görev tamamlandı:</strong> Mojo tüm muzları topladı ve sandığa ulaştı.</div>';
-      if (meta.scenarios > 1) detailsHtml += `<div class="star-detail-row earned">✓ <strong>Dayanıklı algoritma:</strong> Aynı kod ${meta.scenarios} farklı parkuru geçti.</div>`;
-      if (meta.mastery) {
-        detailsHtml += `<div class="star-detail-row ${meta.mastery.earned ? 'record' : 'neutral'}">◇ <strong>${meta.mastery.earned ? 'Ustalık rozeti kazanıldı' : 'Sıradaki ustalık hedefin'}:</strong> ${meta.mastery.label}</div>`;
-        if (meta.mastery.earned) {
-          masteryBadges[level.id] = level.revision;
-          safeStorageSet('kodmaymunu_mastery_v4', JSON.stringify(masteryBadges));
-        }
-      }
-
-      if (stars >= 2) {
-        detailsHtml += `<div class="star-detail-row earned">⭐ <strong>Verimli kod:</strong> ${lineCount} satır, ${twoStarLimit} satırlık sınırın altında.</div>`;
-      } else {
-        detailsHtml += `<div class="star-detail-row missed">☆ <strong>Verimli kod:</strong> ${lineCount} satır yazdın; hedef ${twoStarLimit} satır veya daha az.`;
-        detailsHtml += hasCompact
-          ? ' <em>Uzun düzlükleri <code>adimla(N)</code> ile tek satıra indir.</em>'
-          : (hasLoops ? ' <em>Tekrar eden komutları <code>tekrarla(N)</code> içine al.</em>' : '');
-        detailsHtml += '</div>';
-      }
-
-      if (stars >= 3) {
-        detailsHtml += `<div class="star-detail-row earned">⭐ <strong>Referans çözüm:</strong> ${par} satırlık hedefi tuttun.</div>`;
-      } else {
-        const gap = lineCount - par;
-        detailsHtml += `<div class="star-detail-row missed">☆ <strong>Referans çözüm:</strong> ${par} satır veya altında çöz — ${gap} satır fazlan var.`;
-        detailsHtml += hasLoops
-          ? ' <em>Örnek çözüm butonuyla referans programı görebilirsin.</em>'
-          : ' <em>Gereksiz adımları kaldırarak kısaltabilirsin.</em>';
-        detailsHtml += '</div>';
-      }
-
-      if (beatPar) {
-        detailsHtml += `<div class="star-detail-row record">🏅 <strong>Rekor:</strong> Referans çözümden kısa bir program yazdın (${lineCount} < ${par}).</div>`;
-      } else if (previousBest !== undefined) {
-        detailsHtml += `<div class="star-detail-row neutral">📈 <strong>En iyin:</strong> ${Math.min(previousBest, lineCount)} satır.</div>`;
-      }
-
-      setSafeHTML(starDetails, detailsHtml);
-
-      if (isNewRecord) {
-        bestLines[game.currentLevelIdx] = lineCount;
-        safeStorageSet('kodmaymunu_best_lines_v4', JSON.stringify(bestLines));
-        if (!level.revision) {
-          const legacyBest = safelyParseJSON(safeStorageGet('kodmaymunu_best_lines'), {}) || {};
-          safeStorageSet('kodmaymunu_best_lines', JSON.stringify({ ...legacyBest, [game.currentLevelIdx]: lineCount }));
-        }
-      }
-      if (beatPar) showToast(`🏅 Rekor! ${lineCount} satırla referansı geçtin.`);
-
-      // Update unlock progression
-      const currentIdx = game.currentLevelIdx;
-      if (currentIdx < LEVELS.length - 1) {
-        const nextIdx = currentIdx + 1;
-        if (!unlockedLevels.includes(nextIdx)) {
-          unlockedLevels.push(nextIdx);
-          safeStorageSet('kodmaymunu_unlocked', JSON.stringify(unlockedLevels));
-        }
-      }
-
-      // Save star scores
-      const currentStoredStars = completedStars[currentIdx] || 0;
-      if (stars > currentStoredStars) {
-        completedStars[currentIdx] = stars;
-        safeStorageSet('kodmaymunu_stars', JSON.stringify(completedStars));
-      }
-      if (currentStoredStars === 0) announceChapterProgress(level, stars);
-
-      // Toggle next button if last level
-      modalNextBtn.hidden = currentIdx === LEVELS.length - 1;
-
-      // Update UI state
-      renderSidebarList();
-      updateStarsSummary();
-      prevLvlBtn.disabled = currentIdx === 0;
-      renderExpedition();
-      nextLvlBtn.disabled = currentIdx === LEVELS.length - 1 || (!devMode && !unlockedLevels.includes(currentIdx + 1));
-
-      runtimeStatus.textContent = 'Görev tamamlandı';
-      setOverlayVisibility(modal, true, currentIdx === LEVELS.length - 1 ? modalRetryBtn : modalNextBtn);
-    }
-  </script>
+          <div class="vars" id="vars" hidden></div>
+          <div class="palette" id="palette" aria-label="Komut paleti"></div>
+        </section>
+
+        <section class="controls" aria-label="Çalıştırma">
+          <button id="btn-run" class="btn-run" type="button"><svg><use href="#i-play"></use></svg><span>Çalıştır</span><kbd>Ctrl ↵</kbd></button>
+          <div class="control-row">
+            <button id="btn-step" class="btn-ctl" type="button" title="Programı adım adım çalıştır: her basışta Mojo bir şey yapar"><svg><use href="#i-step"></use></svg><span>Adım adım</span></button>
+            <button id="btn-back" class="btn-ctl" type="button" title="Bir adım geri" disabled><svg><use href="#i-back"></use></svg><span>Geri</span></button>
+            <button id="btn-reset" class="btn-ctl" type="button" title="Mojo'yu başlangıca al"><svg><use href="#i-reset"></use></svg><span>Baştan</span></button>
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Ada haritası -->
+  <div class="overlay" id="map-overlay" role="dialog" aria-modal="true" aria-labelledby="map-title" hidden>
+    <div class="sheet map-sheet">
+      <button class="btn-icon sheet-close" type="button" data-close aria-label="Kapat"><svg><use href="#i-close"></use></svg></button>
+      <header class="sheet-head">
+        <span class="eyebrow">MOJO'NUN ADA HARİTASI</span>
+        <h2 id="map-title">Beş ada, beş düşünme biçimi</h2>
+        <p>Her ada yeni bir programlama fikri öğretir. Bir görevi bitirince sıradaki açılır; yıldızlar kısa kodu ödüllendirir.</p>
+      </header>
+      <div class="islands" id="islands"></div>
+    </div>
+  </div>
+
+  <!-- Zafer -->
+  <div class="overlay" id="win-overlay" role="dialog" aria-modal="true" aria-labelledby="win-title" hidden>
+    <div class="sheet win-sheet">
+      <span class="eyebrow" id="win-eyebrow">GÖREV TAMAM</span>
+      <div class="win-stars" id="win-stars" aria-label="Kazanılan yıldızlar"><span>★</span><span>★</span><span>★</span></div>
+      <h2 id="win-title">Harika!</h2>
+      <p id="win-text"></p>
+      <ul class="win-facts" id="win-facts"></ul>
+      <div class="sheet-actions">
+        <button id="btn-win-retry" class="btn-secondary" type="button">Kodu kısalt</button>
+        <button id="btn-win-next" class="btn-primary" type="button">Sonraki görev <svg><use href="#i-right"></use></svg></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- İpuçları -->
+  <div class="overlay" id="hint-overlay" role="dialog" aria-modal="true" aria-labelledby="hint-title" hidden>
+    <div class="sheet hint-sheet">
+      <button class="btn-icon sheet-close" type="button" data-close aria-label="Kapat"><svg><use href="#i-close"></use></svg></button>
+      <span class="eyebrow">MOJO'NUN İPUÇLARI</span>
+      <h2 id="hint-title">Birlikte düşünelim</h2>
+      <p class="muted">Her ipucu biraz daha yol gösterir. İpuçları yıldızlarını etkilemez.</p>
+      <ol class="hint-list" id="hint-list"></ol>
+      <button id="btn-more-hint" class="btn-primary" type="button">İlk ipucunu göster</button>
+      <details class="solution" id="solution-box">
+        <summary>Örnek bir çözüm göster</summary>
+        <p class="muted">Bu, çözümlerden yalnızca biri. Kendi kodun editörde kalır.</p>
+        <pre id="solution-code"></pre>
+        <button id="btn-use-solution" class="btn-secondary" type="button">Editöre kopyala</button>
+      </details>
+    </div>
+  </div>
+
+  <!-- Yeni beceri / rehber -->
+  <div class="overlay" id="learn-overlay" role="dialog" aria-modal="true" aria-labelledby="learn-title" hidden>
+    <div class="sheet learn-sheet">
+      <button class="btn-icon sheet-close" type="button" data-close aria-label="Kapat"><svg><use href="#i-close"></use></svg></button>
+      <span class="eyebrow" id="learn-eyebrow">YENİ BECERİ</span>
+      <h2 id="learn-title">Döngüler</h2>
+      <div class="learn-body" id="learn-body"></div>
+      <div class="sheet-actions"><button class="btn-primary" type="button" data-close>Anladım</button></div>
+    </div>
+  </div>
+
+  <!-- Hoş geldin -->
+  <div class="overlay" id="welcome-overlay" role="dialog" aria-modal="true" aria-labelledby="welcome-title" hidden>
+    <div class="sheet welcome-sheet">
+      <div class="welcome-art" aria-hidden="true">🐒</div>
+      <span class="eyebrow">ALGORİTMA ADASI'NA HOŞ GELDİN</span>
+      <h2 id="welcome-title">Mojo'yu kodla yönet.</h2>
+      <p>Mojo bütün muzları toplayıp sandığa ulaşmak istiyor. Komutları yaz, <b>Çalıştır</b>'a bas ve Mojo'nun kodunu adım adım izle.</p>
+      <ul class="welcome-points">
+        <li><b>Her görevin birden çok çözümü var.</b> Rotanı sen seçersin.</li>
+        <li><b>★</b> çalışan her çözüme, <b>★★★</b> kısa koda verilir.</li>
+        <li>Takılırsan <b>Adım</b> ile programı satır satır izle ya da ipucu al.</li>
+      </ul>
+      <div class="sheet-actions"><button id="btn-welcome" class="btn-primary" type="button"><svg><use href="#i-play"></use></svg> Maceraya başla</button></div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script type="module" src="ui.js?v=20261007-v5"></script>
 </body>
 </html>
